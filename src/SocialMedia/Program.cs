@@ -10,8 +10,9 @@ namespace SocialMedia
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
-            builder.Services.AddDbContext<SocialMediaContext>(options =>
-                options.UseNpgsql("Host=localhost;Username=myuser;Password=mypassword;Database=mydatabase"));
+            builder.Services.AddDbContext<SocialMediaDbContext>(options =>
+                options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

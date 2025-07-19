@@ -2,7 +2,6 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SocialMedia.Database;
@@ -11,12 +10,10 @@ using SocialMedia.Database;
 
 namespace SocialMedia.Migrations
 {
-    [DbContext(typeof(SocialMediaContext))]
-    [Migration("20250716160048_InitialCreate")]
-    partial class InitialCreate
+    [DbContext(typeof(SocialMediaDbContext))]
+    partial class SocialMediaContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

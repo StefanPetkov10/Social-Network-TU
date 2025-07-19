@@ -1,16 +1,21 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using SocialMedia.Database.Models;
 using SocialMedia.Models;
 
 namespace SocialMedia.Database
 {
-    public class SocialMediaContext : DbContext
+    public class SocialMediaDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>
     {
-        public SocialMediaContext(DbContextOptions<SocialMediaContext> options)
-            : base(options)
-        {
-        }
+
+        public SocialMediaDbContext(DbContextOptions<SocialMediaDbContext> options)
+            : base(options) { }
+
 
         public DbSet<Post> Posts { get; set; }
+
+
 
         public override int SaveChanges()
         {

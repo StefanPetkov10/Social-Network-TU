@@ -14,9 +14,9 @@ namespace SocialMedia.Controllers
     [ApiController]
     public class PostsController : ControllerBase
     {
-        private readonly SocialMediaContext _context;
+        private readonly SocialMediaDbContext _context;
 
-        public PostsController(SocialMediaContext context)
+        public PostsController(SocialMediaDbContext context)
         {
             _context = context;
         }
