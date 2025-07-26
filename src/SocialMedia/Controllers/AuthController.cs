@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using SocialMedia.Database.Models;
 using SocialMedia.DTOs;
+using SocialMedia.Service.Interfaces;
 
 namespace SocialMedia.Controllers
 {
@@ -15,13 +16,15 @@ namespace SocialMedia.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IConfiguration _config;
+        private readonly IEmailSender _emailSender;
         private readonly ILogger<AuthController> _logger;
 
-        public AuthController(UserManager<ApplicationUser> userManager, IConfiguration config, ILogger<AuthController> logger)
+        public AuthController(UserManager<ApplicationUser> userManager, IConfiguration config, ILogger<AuthController> logger, IEmailSender emailSender)
         {
             _userManager = userManager;
             _config = config;
             _logger = logger;
+            _emailSender = emailSender;
         }
 
         [HttpPost("register")]
@@ -53,8 +56,11 @@ namespace SocialMedia.Controllers
                 return BadRequest(createResult.Errors);
             }
 
+            await _emailSender.SendEmailAsync(model.Email, "Welcome", "Thanks for registering!");
+
             _logger.LogInformation("User registered: {Email}", user.Email);
             return Ok(new { message = "Registration successful" });
+
         }
 
 

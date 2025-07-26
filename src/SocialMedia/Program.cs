@@ -5,6 +5,8 @@ using Microsoft.IdentityModel.Tokens;
 using NLog.Web;
 using SocialMedia.Database;
 using SocialMedia.Database.Models;
+using SocialMedia.Service;
+using SocialMedia.Service.Interfaces;
 
 namespace SocialMedia
 {
@@ -18,7 +20,6 @@ namespace SocialMedia
             builder.Logging.SetMinimumLevel(LogLevel.Information);
             builder.Host.UseNLog();
 
-            // Add services to the container.  
             builder.Services.AddDbContext<SocialMediaDbContext>(options =>
                 options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -51,6 +52,9 @@ namespace SocialMedia
                     ValidateLifetime = true
                 };
             });
+
+            builder.Services.AddScoped<IEmailSender, EmailSender>();
+
 
             builder.Services.AddAuthorization();
             builder.Services.AddControllers();
