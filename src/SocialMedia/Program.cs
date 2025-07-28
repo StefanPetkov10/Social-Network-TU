@@ -20,11 +20,14 @@ namespace SocialMedia
             builder.Logging.SetMinimumLevel(LogLevel.Information);
             builder.Host.UseNLog();
 
+            builder.Services.AddDataProtection();
+
             builder.Services.AddDbContext<SocialMediaDbContext>(options =>
                 options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
             {
+                options.SignIn.RequireConfirmedEmail = true;
                 ConfigureIdentityOptions(options, builder.Configuration);
             })
             .AddEntityFrameworkStores<SocialMediaDbContext>()
