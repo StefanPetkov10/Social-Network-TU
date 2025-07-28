@@ -53,7 +53,14 @@ namespace SocialMedia.Controllers
             {
                 UserName = model.UserName,
                 Email = model.Email,
-                FullName = model.FullName
+            };
+
+            user.Profile = new Profile
+            {
+                FirstName = model.FirstName,
+                LastName = model.LastName,
+                Age = model.Age,
+                Sex = model.Sex
             };
 
             var createResult = await _userManager.CreateAsync(user, model.Password);
@@ -138,7 +145,8 @@ namespace SocialMedia.Controllers
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim(ClaimTypes.Name, user.FullName),
+            new Claim(ClaimTypes.Name, user.Profile.FirstName),
+            new Claim(ClaimTypes.GivenName, user.Profile.FullName),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
         };
 
