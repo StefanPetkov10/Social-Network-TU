@@ -6,8 +6,10 @@ using AutoMapper;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SocialMedia.Common;
+using SocialMedia.Database;
 using SocialMedia.Database.Models;
 using SocialMedia.DTOs;
 using SocialMedia.Service.Interfaces;
@@ -19,17 +21,19 @@ namespace SocialMedia.Controllers
     public class AuthController : ControllerBase
     {
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SocialMediaDbContext _context;
         private readonly IConfiguration _config;
         private readonly IMapper _mapper;
         private readonly IEmailSender _emailSender;
         private readonly ILogger<AuthController> _logger;
         private readonly IValidator<RegisterDto> _registerValidator;
         //private readonly IValidator<RegisterDto> login
-        public AuthController(UserManager<ApplicationUser> userManager, IConfiguration config,
-            IMapper mapper, ILogger<AuthController> logger,
+        public AuthController(UserManager<ApplicationUser> userManager, SocialMediaDbContext context,
+            IConfiguration config, IMapper mapper, ILogger<AuthController> logger,
             IEmailSender emailSender, IValidator<RegisterDto> registerValidator)
         {
             _userManager = userManager;
+            _context = context;
             _config = config;
             _mapper = mapper;
             _logger = logger;
@@ -138,9 +142,17 @@ namespace SocialMedia.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto model)
         {
-            ApplicationUser user = model.Identifier.Contains("@")
-                ? await _userManager.FindByEmailAsync(model.Identifier)
-                : await _userManager.FindByNameAsync(model.Identifier);
+            /* ApplicationUser user = model.Identifier.Contains("@")
+                 ? await _userManager.FindByEmailAsync(model.Identifier)
+                 : await _userManager.FindByNameAsync(model.Identifier);*/
+
+            ApplicationUser user = await _context.Users
+                .Include(u => u.Profile)
+                .FirstOrDefaultAsync(u =>
+                    model.Identifier.Contains("@")
+                        ? u.Email == model.Identifier
+                        : u.UserName == model.Identifier);
+
 
             if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password))
             {
@@ -162,6 +174,7 @@ namespace SocialMedia.Controllers
                     Errors = new[] { "You must confirm your email before logging in." }
                 });
             }
+
 
             var claims = new List<Claim>
             {
