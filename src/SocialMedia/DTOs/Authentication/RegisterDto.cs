@@ -1,6 +1,6 @@
 ﻿using SocialMedia.Database.Models.Enums;
 
-namespace SocialMedia.DTOs
+namespace SocialMedia.DTOs.Authentication
 {
     public class RegisterDto
     {

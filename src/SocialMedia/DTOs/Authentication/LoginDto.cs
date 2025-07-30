@@ -1,4 +1,4 @@
-﻿namespace SocialMedia.DTOs
+﻿namespace SocialMedia.DTOs.Authentication
 {
     public class LoginDto
     {

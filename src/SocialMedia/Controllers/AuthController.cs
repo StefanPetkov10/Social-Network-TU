@@ -11,7 +11,7 @@ using Microsoft.IdentityModel.Tokens;
 using SocialMedia.Common;
 using SocialMedia.Database;
 using SocialMedia.Database.Models;
-using SocialMedia.DTOs;
+using SocialMedia.DTOs.Authentication;
 using SocialMedia.Service.Interfaces;
 
 namespace SocialMedia.Controllers

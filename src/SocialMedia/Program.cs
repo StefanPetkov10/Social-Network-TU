@@ -6,7 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using NLog.Web;
 using SocialMedia.Database;
 using SocialMedia.Database.Models;
-using SocialMedia.DTOs;
+using SocialMedia.DTOs.Authentication;
 using SocialMedia.Service;
 using SocialMedia.Service.Interfaces;
 using SocialMedia.Validators;
@@ -64,7 +64,7 @@ namespace SocialMedia
 
             builder.Services.AddAutoMapper(config =>
             {
-                config.AddProfile<MappingProfile>();
+                config.AddProfile<MappingProfileRegister>();
             });
 
             builder.Services.AddAuthorization();

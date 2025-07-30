@@ -1,6 +1,6 @@
 ﻿using FluentValidation;
 using SocialMedia.Database;
-using SocialMedia.DTOs;
+using SocialMedia.DTOs.Authentication;
 
 namespace SocialMedia.Validators
 {

@@ -1,9 +1,9 @@
 ﻿using SocialMedia.Database.Models;
-using SocialMedia.DTOs;
+using SocialMedia.DTOs.Authentication;
 
-public class MappingProfile : AutoMapper.Profile
+public class MappingProfileRegister : AutoMapper.Profile
 {
-    public MappingProfile()
+    public MappingProfileRegister()
     {
         CreateMap<RegisterDto, Profile>();
 
