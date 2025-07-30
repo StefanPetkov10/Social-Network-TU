@@ -12,8 +12,8 @@ using SocialMedia.Database;
 namespace SocialMedia.Migrations
 {
     [DbContext(typeof(SocialMediaDbContext))]
-    [Migration("20250724182916_AddAuthorization")]
-    partial class AddAuthorization
+    [Migration("20250730092834_InitialMigration")]
+    partial class InitialMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -175,10 +175,6 @@ namespace SocialMedia.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean");
 
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
 
@@ -222,6 +218,39 @@ namespace SocialMedia.Migrations
                         .HasDatabaseName("UserNameIndex");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("SocialMedia.Database.Models.Profile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Age")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ApplicationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("LastName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Photo")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Sex")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationId")
+                        .IsUnique();
+
+                    b.ToTable("Profile");
                 });
 
             modelBuilder.Entity("SocialMedia.Models.Post", b =>
@@ -295,6 +324,23 @@ namespace SocialMedia.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SocialMedia.Database.Models.Profile", b =>
+                {
+                    b.HasOne("SocialMedia.Database.Models.ApplicationUser", "User")
+                        .WithOne("Profile")
+                        .HasForeignKey("SocialMedia.Database.Models.Profile", "ApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SocialMedia.Database.Models.ApplicationUser", b =>
+                {
+                    b.Navigation("Profile")
                         .IsRequired();
                 });
 #pragma warning restore 612, 618

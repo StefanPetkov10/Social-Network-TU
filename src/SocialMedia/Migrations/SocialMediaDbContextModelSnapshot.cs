@@ -11,7 +11,7 @@ using SocialMedia.Database;
 namespace SocialMedia.Migrations
 {
     [DbContext(typeof(SocialMediaDbContext))]
-    partial class SocialMediaContextModelSnapshot : ModelSnapshot
+    partial class SocialMediaDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
@@ -234,16 +234,13 @@ namespace SocialMedia.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("LastName")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Photo")
-                        .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("Sex")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<int>("Sex")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 

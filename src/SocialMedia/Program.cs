@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -5,8 +6,10 @@ using Microsoft.IdentityModel.Tokens;
 using NLog.Web;
 using SocialMedia.Database;
 using SocialMedia.Database.Models;
+using SocialMedia.DTOs;
 using SocialMedia.Service;
 using SocialMedia.Service.Interfaces;
+using SocialMedia.Validators;
 
 namespace SocialMedia
 {
@@ -57,7 +60,12 @@ namespace SocialMedia
             });
 
             builder.Services.AddScoped<IEmailSender, EmailSender>();
+            builder.Services.AddScoped<IValidator<RegisterDto>, RegistrationValidator>();
 
+            builder.Services.AddAutoMapper(config =>
+            {
+                config.AddProfile<MappingProfile>();
+            });
 
             builder.Services.AddAuthorization();
             builder.Services.AddControllers();

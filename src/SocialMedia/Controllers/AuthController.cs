@@ -2,9 +2,12 @@
 using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
+using AutoMapper;
+using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using SocialMedia.Common;
 using SocialMedia.Database.Models;
 using SocialMedia.DTOs;
 using SocialMedia.Service.Interfaces;
@@ -17,62 +20,52 @@ namespace SocialMedia.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IConfiguration _config;
+        private readonly IMapper _mapper;
         private readonly IEmailSender _emailSender;
         private readonly ILogger<AuthController> _logger;
-
-        public AuthController(UserManager<ApplicationUser> userManager, IConfiguration config, ILogger<AuthController> logger, IEmailSender emailSender)
+        private readonly IValidator<RegisterDto> _registerValidator;
+        //private readonly IValidator<RegisterDto> login
+        public AuthController(UserManager<ApplicationUser> userManager, IConfiguration config,
+            IMapper mapper, ILogger<AuthController> logger,
+            IEmailSender emailSender, IValidator<RegisterDto> registerValidator)
         {
             _userManager = userManager;
             _config = config;
+            _mapper = mapper;
             _logger = logger;
             _emailSender = emailSender;
+            _registerValidator = registerValidator;
         }
-
 
         [HttpPost("register")]
         public async Task<IActionResult> Register(RegisterDto model)
         {
-            if (await _userManager.FindByEmailAsync(model.Email) != null)
+            var validationResult = await _registerValidator.ValidateAsync(model);
+            if (!validationResult.IsValid)
             {
-                _logger.LogWarning("Attempt to register with existing email: {Email}", model.Email);
-                return BadRequest(new { message = "Email already exists" });
+                return BadRequest(validationResult);
             }
 
-            if (await _userManager.FindByNameAsync(model.UserName) != null)
-            {
-                _logger.LogWarning("Attempt to register with existing username: {UserName}", model.UserName);
-                return BadRequest(new { message = "Username already exists" });
-            }
+            var user = _mapper.Map<ApplicationUser>(model);
 
-            if (string.IsNullOrWhiteSpace(model.Email))
-            {
-                return StatusCode(500, "Email is required for confirmation.");
-            }
-
-            var user = new ApplicationUser
-            {
-                UserName = model.UserName,
-                Email = model.Email,
-            };
-
-            user.Profile = new Profile
-            {
-                FirstName = model.FirstName,
-                LastName = model.LastName,
-                Age = model.Age,
-                Sex = model.Sex
-            };
 
             var createResult = await _userManager.CreateAsync(user, model.Password);
 
             if (!createResult.Succeeded)
             {
-                _logger.LogWarning("Registration failed: {Errors}", string.Join(", ", createResult.Errors.Select(e => e.Description)));
-                return BadRequest(createResult.Errors);
+                var errors = createResult.Errors.Select(e => e.Description).ToArray();
+
+                _logger.LogWarning("Registration failed: {Errors}", string.Join(", ", errors));
+
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Registration failed.",
+                    Errors = errors
+                });
             }
 
             user = await _userManager.FindByEmailAsync(user.Email);
-
             var rawToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
             var encodedToken = UrlEncoder.Default.Encode(rawToken);
 
@@ -85,43 +78,62 @@ namespace SocialMedia.Controllers
             _logger.LogInformation("Confirmation link generated: {Link}", confirmationLink);
 
             await _emailSender.SendEmailAsync(user.Email, "Confirm your registration", $@"
-        <h3>Welcome to our social network!</h3>
-        <p>To complete your registration, please click the button below:</p>
-        <a href='{confirmationLink}' style='padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none;'>Confirm email</a>
-    ");
+                <h3>Welcome to our social network!</h3>
+                <p>To complete your registration, please click the button below:</p>
+                <a href='{confirmationLink}' style='padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none;'>Confirm email</a>
+            ");
 
-            return Ok("Registration was successful. Please check your email for confirmation.");
+            return Ok(new ApiResponse<object>
+            {
+                Success = true,
+                Message = "Registration successful. Please check your email for confirmation."
+            });
         }
-
 
         [HttpGet("confirmemail")]
         public async Task<IActionResult> ConfirmEmail(Guid userId, string token)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
             if (user == null)
-                return BadRequest("User does not exist.");
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "User not found.",
+                    Errors = new[] { "No user with that ID." }
+                });
+            }
 
             if (user.EmailConfirmed)
             {
-                _logger.LogInformation("Email already confirmed for user {Email}", user.Email);
-                return Ok("Email is already confirmed.");
+                return Ok(new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "Email is already confirmed."
+                });
             }
 
             var decodedToken = Uri.UnescapeDataString(token);
-
             var result = await _userManager.ConfirmEmailAsync(user, decodedToken);
+
             if (!result.Succeeded)
             {
-                _logger.LogWarning("Email confirmation failed for user {Email}: {Errors}",
-                    user.Email, string.Join(", ", result.Errors.Select(e => e.Description)));
+                var errors = result.Errors.Select(e => e.Description).ToArray();
 
-                return BadRequest("The verification link is invalid or has expired.");
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Email confirmation failed.",
+                    Errors = errors
+                });
             }
 
-            _logger.LogInformation("Email confirmed for user {Email}", user.Email);
-            return Ok("Email was successfully verified. You can log in.");
+            return Ok(new ApiResponse<object>
+            {
+                Success = true,
+                Message = "Email successfully confirmed."
+            });
         }
-
 
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto model)
@@ -130,25 +142,35 @@ namespace SocialMedia.Controllers
                 ? await _userManager.FindByEmailAsync(model.Identifier)
                 : await _userManager.FindByNameAsync(model.Identifier);
 
-            if (!user.EmailConfirmed)
-            {
-                return Unauthorized("Email address not confirmed. Please check your email.");
-            }
-
             if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password))
             {
                 _logger.LogWarning("Login failed for: {Identifier}", model.Identifier);
-                return Unauthorized();
+                return Unauthorized(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Invalid login credentials.",
+                    Errors = new[] { "Wrong username/email or password." }
+                });
+            }
+
+            if (!user.EmailConfirmed)
+            {
+                return Unauthorized(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Email not confirmed.",
+                    Errors = new[] { "You must confirm your email before logging in." }
+                });
             }
 
             var claims = new List<Claim>
-        {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim(ClaimTypes.Name, user.Profile.FirstName),
-            new Claim(ClaimTypes.GivenName, user.Profile.FullName),
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
-        };
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+                new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                new Claim(ClaimTypes.Name, user.Profile.FirstName),
+                new Claim(ClaimTypes.GivenName, user.Profile.FullName),
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
+            };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:SecretKey"]));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -161,8 +183,12 @@ namespace SocialMedia.Controllers
                 signingCredentials: creds
             );
 
-            _logger.LogInformation("Login successful for: {Email}", user.Email);
-            return Ok(new { token = new JwtSecurityTokenHandler().WriteToken(token) });
+            return Ok(new ApiResponse<string>
+            {
+                Success = true,
+                Message = "Login successful.",
+                Data = new JwtSecurityTokenHandler().WriteToken(token)
+            });
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
+using SocialMedia.Database.Models.Enums;
 
 namespace SocialMedia.Database.Models
 {
@@ -10,17 +11,19 @@ namespace SocialMedia.Database.Models
         public Guid Id { get; set; }
 
         [Required]
-        public string FirstName { get; set; }
-
-        public string LastName { get; set; } = null!;
+        public string FirstName { get; set; } = null!;
 
         [AllowNull]
-        public string Photo { get; set; }
+        public string? LastName { get; set; }
+
+        [AllowNull]
+        public string? Photo { get; set; }
 
         [Required]
         public int Age { get; set; }
 
-        public string Sex { get; set; }
+        [Required]
+        public Gender Sex { get; set; }
 
         [ForeignKey(nameof(User))]
         public Guid ApplicationId { get; set; }
