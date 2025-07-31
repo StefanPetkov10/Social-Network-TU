@@ -36,12 +36,8 @@ namespace SocialMedia.Validators
                 .Matches("[a-z]").WithMessage("Password must contain at least one lowercase letter.")
                 .Matches("[^a-zA-Z0-9]").WithMessage("Password must contain at least one special character.");
 
-
             RuleFor(x => x.Sex)
                 .IsInEnum().WithMessage("Invalid gender selected.");
-
-
-
         }
     }
 }

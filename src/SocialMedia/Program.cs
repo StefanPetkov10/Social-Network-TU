@@ -64,7 +64,7 @@ namespace SocialMedia
 
             builder.Services.AddAutoMapper(config =>
             {
-                config.AddProfile<MappingProfileRegister>();
+                config.AddProfile<ProfileRegisterMapping>();
             });
 
             builder.Services.AddAuthorization();
