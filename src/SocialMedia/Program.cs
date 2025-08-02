@@ -1,15 +1,22 @@
+using AutoMapper;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using NLog.Web;
+using SocialMedia.Data.Repository;
+using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database;
 using SocialMedia.Database.Models;
 using SocialMedia.DTOs.Authentication;
 using SocialMedia.Service;
 using SocialMedia.Service.Interfaces;
+using SocialMedia.Services;
+using SocialMedia.Services.Interfaces;
 using SocialMedia.Validators;
+using SocialMedia.Validators.Profile_Validation;
 
 namespace SocialMedia
 {
@@ -59,8 +66,45 @@ namespace SocialMedia
                 };
             });
 
+
+            builder.Services.AddAuthorization();
+
+            builder.Services.AddSwaggerGen(options =>
+            {
+                options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Description = "JWT Authorization header using the Bearer scheme.",
+                    Name = "Authorization",
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.ApiKey,
+                    Scheme = "Bearer"
+                });
+
+                options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+            });
+
+
             builder.Services.AddScoped<IEmailSender, EmailSender>();
             builder.Services.AddScoped<IValidator<RegisterDto>, RegistrationValidator>();
+            builder.Services.AddScoped<IProfileService, ProfileService>();
+            builder.Services.AddScoped(typeof(IRepository<,>), typeof(BaseRepository<,>));
+            builder.Services.AddScoped<IProfileService, ProfileService>();
+            builder.Services.AddValidatorsFromAssemblyContaining<UpdateProfileValidator>();
+            builder.Services.AddValidatorsFromAssemblyContaining<ChangePasswordValidator>();
+
 
             builder.Services.AddAutoMapper(config =>
             {
