@@ -24,13 +24,13 @@ namespace SocialMedia.Controllers
         private readonly SocialMediaDbContext _context;
         private readonly IConfiguration _config;
         private readonly IMapper _mapper;
-        private readonly IEmailSender _emailSender;
+        private readonly IEmailSenderService _emailSender;
         private readonly ILogger<AuthController> _logger;
         private readonly IValidator<RegisterDto> _registerValidator;
         //private readonly IValidator<RegisterDto> login
         public AuthController(UserManager<ApplicationUser> userManager, SocialMediaDbContext context,
             IConfiguration config, IMapper mapper, ILogger<AuthController> logger,
-            IEmailSender emailSender, IValidator<RegisterDto> registerValidator)
+            IEmailSenderService emailSender, IValidator<RegisterDto> registerValidator)
         {
             _userManager = userManager;
             _context = context;

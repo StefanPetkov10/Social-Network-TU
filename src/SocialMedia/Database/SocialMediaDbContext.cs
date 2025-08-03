@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using SocialMedia.Database.Models;
-using SocialMedia.Models;
 
 namespace SocialMedia.Database
 {

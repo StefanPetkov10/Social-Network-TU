@@ -1,6 +1,6 @@
 ﻿namespace SocialMedia.Service.Interfaces
 {
-    public interface IEmailSender
+    public interface IEmailSenderService
     {
         Task SendEmailAsync(string toEmail, string subject, string body);
     }

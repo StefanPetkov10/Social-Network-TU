@@ -26,15 +26,19 @@ namespace SocialMedia.Services
 
         public async Task<ApiResponse<UpdateProfileDto>> GetProfileAsync(ClaimsPrincipal userClaims)
         {
-            var userId = _userManager.GetUserId(userClaims);
-            var user = await _profileRepo
-                .GetByIdAsync(new Guid(userId));
+            //var userId = _userManager.GetUserId(userClaims);
+            //var user = await _profileRepo
+            //.GetByIdAsync(new Guid(userId));
 
-            if (user == null)
+            var userId = new Guid(_userManager.GetUserId(userClaims));
+            var profile = await _profileRepo.GetByIdAsync(userId);
+
+            if (profile == null)
                 return new ApiResponse<UpdateProfileDto> { Success = false, Message = "User not found." };
 
-            var dto = _mapper.Map<UpdateProfileDto>(user);
+            var dto = _mapper.Map<UpdateProfileDto>(profile);
             return new ApiResponse<UpdateProfileDto> { Success = true, Data = dto };
+
         }
 
         public async Task<ApiResponse<object>> UpdateProfileAsync(ClaimsPrincipal userClaims, UpdateProfileDto dto)

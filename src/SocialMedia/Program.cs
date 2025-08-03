@@ -6,14 +6,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using NLog.Web;
-using SocialMedia.Data.Repository;
-using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database;
 using SocialMedia.Database.Models;
 using SocialMedia.DTOs.Authentication;
-using SocialMedia.Service;
-using SocialMedia.Service.Interfaces;
-using SocialMedia.Services;
+using SocialMedia.Extensions;
 using SocialMedia.Services.Interfaces;
 using SocialMedia.Validators;
 using SocialMedia.Validators.Profile_Validation;
@@ -97,11 +93,9 @@ namespace SocialMedia
             });
 
 
-            builder.Services.AddScoped<IEmailSender, EmailSender>();
+            builder.Services.RegisterRepositories(typeof(ApplicationUser).Assembly);
+            builder.Services.RegisterUserDefinedServices(typeof(IProfileService).Assembly);
             builder.Services.AddScoped<IValidator<RegisterDto>, RegistrationValidator>();
-            builder.Services.AddScoped<IProfileService, ProfileService>();
-            builder.Services.AddScoped(typeof(IRepository<,>), typeof(BaseRepository<,>));
-            builder.Services.AddScoped<IProfileService, ProfileService>();
             builder.Services.AddValidatorsFromAssemblyContaining<UpdateProfileValidator>();
             builder.Services.AddValidatorsFromAssemblyContaining<ChangePasswordValidator>();
 

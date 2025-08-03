@@ -1,6 +1,4 @@
-using System.ComponentModel.DataAnnotations.Schema;
-
-namespace SocialMedia.Models
+namespace SocialMedia.Database.Models
 {
     public class BaseModel
     {

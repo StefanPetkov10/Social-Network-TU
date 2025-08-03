@@ -1,5 +1,6 @@
 ﻿using SocialMedia.Database.Models;
 using SocialMedia.DTOs.Authentication;
+using DbProfile = SocialMedia.Database.Models.Profile;
 
 namespace AutoMapper
 {
@@ -7,10 +8,11 @@ namespace AutoMapper
     {
         public ProfileRegisterMapping()
         {
-            CreateMap<RegisterDto, Profile>();
+            CreateMap<RegisterDto, DbProfile>();
 
             CreateMap<RegisterDto, ApplicationUser>()
                 .ForMember(dest => dest.Profile, opt => opt.MapFrom(src => src));
+
         }
     }
 }

@@ -5,11 +5,11 @@ using SocialMedia.Service.Interfaces;
 
 namespace SocialMedia.Service
 {
-    public class EmailSender : IEmailSender
+    public class EmailSenderService : IEmailSenderService
     {
         private readonly IConfiguration _config;
 
-        public EmailSender(IConfiguration config)
+        public EmailSenderService(IConfiguration config)
         {
             _config = config;
         }

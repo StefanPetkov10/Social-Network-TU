@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SocialMedia.Database;
-using SocialMedia.Models;
+using SocialMedia.Database.Models;
 
 namespace SocialMedia.Controllers
 {
