@@ -30,9 +30,16 @@ namespace SocialMedia.Data.Repository
         {
             TType entity = await this.dbSet
                 .FindAsync(id);
-
             return entity;
         }
+
+        public async Task<TType> GetByApplicationIdAsync(TId id)
+        {
+            TType user = await this.dbSet
+                .FirstOrDefaultAsync(u => EF.Property<TId>(u, "ApplicationId").Equals(id));
+            return user;
+        }
+
         public async Task<TType> GetByIdAsync(params TId[] id)
         {
             //Temp patch... Fix ASAP

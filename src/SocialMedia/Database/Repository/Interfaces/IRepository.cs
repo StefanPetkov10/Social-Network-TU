@@ -6,11 +6,10 @@ namespace SocialMedia.Data.Repository.Interfaces
     {
         TType GetById(TId id);
         Task<TType> GetByIdAsync(TId id);
+        Task<TType> GetByApplicationIdAsync(TId id);
         Task<TType> GetByIdAsync(params TId[] id);
-
         IEnumerable<TType> GetAll();
         Task<IEnumerable<TType>> GetAllAsync();
-
         TType FirstOrDefault(Func<TType, bool> predicate);
         Task<TType> FirstOrDefaultAsync(Expression<Func<TType, bool>> predicate);
 
