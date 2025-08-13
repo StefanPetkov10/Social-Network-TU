@@ -103,6 +103,7 @@ namespace SocialMedia
             builder.Services.AddAutoMapper(config =>
             {
                 config.AddProfile<ProfileRegisterMapping>();
+                config.AddProfile<ProfileMapping>();
             });
 
             builder.Services.AddAuthorization();

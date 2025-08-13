@@ -32,29 +32,21 @@ namespace SocialMedia.Services
             if (profile == null)
                 return new ApiResponse<UpdateProfileDto> { Success = false, Message = "User not found." };
 
-            var dto = new UpdateProfileDto
-            {
-                Id = profile.Id,
-                FirstName = profile.FirstName,
-                LastName = profile.LastName,
-                UserName = profile.User?.UserName ?? string.Empty,
-                Age = profile.Age,
-                Sex = profile.Sex,
-                PhotoBase64 = profile.Photo
-            };
+            var dto = _mapper.Map<UpdateProfileDto>(profile);
 
             return new ApiResponse<UpdateProfileDto> { Success = true, Data = dto };
         }
 
         public async Task<ApiResponse<object>> UpdateProfileAsync(ClaimsPrincipal userClaims, UpdateProfileDto dto)
         {
-            var user = await _userManager.GetUserAsync(userClaims);
-            if (user?.Profile == null)
+            var appUserId = _userManager.GetUserId(userClaims);
+            var profile = await _profileRepo.GetByApplicationIdAsync(new Guid(appUserId));
+            if (profile == null)
                 return new ApiResponse<object> { Success = false, Message = "User not found." };
 
-            _mapper.Map(dto, user.Profile);
+            _mapper.Map(dto, profile);
 
-            var result = await _profileRepo.UpdateAsync(user.Profile);
+            var result = await _profileRepo.UpdateAsync(profile);
             if (!result)
                 return new ApiResponse<object> { Success = false, Message = "Failed to update profile." };
 
