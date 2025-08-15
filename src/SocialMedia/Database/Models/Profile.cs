@@ -5,9 +5,10 @@ using SocialMedia.Database.Models.Enums;
 
 namespace SocialMedia.Database.Models
 {
-    public class Profile
+    public class Profile : BaseModel
     {
         [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public Guid Id { get; set; }
 
         [Required]
