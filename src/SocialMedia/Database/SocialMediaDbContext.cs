@@ -31,21 +31,23 @@ namespace SocialMedia.Database
         private void AddTimestamps()
         {
             var entities = ChangeTracker.Entries()
-                .Where(x => x.Entity is BaseModel && (x.State == EntityState.Added || x.State == EntityState.Modified));
+                .Where(x => x.Entity is BaseModel &&
+                            (x.State == EntityState.Added || x.State == EntityState.Modified));
 
             foreach (var entity in entities)
             {
-                var now = DateTime.UtcNow; // current datetime
+                var now = DateTime.UtcNow;
 
                 if (entity.State == EntityState.Added)
                 {
                     ((BaseModel)entity.Entity).CreatedDate = now;
+                    ((BaseModel)entity.Entity).UpdatedDate = null;
                 }
-                else
+                else if (entity.State == EntityState.Modified)
                 {
                     entity.Property("CreatedDate").IsModified = false;
+                    ((BaseModel)entity.Entity).UpdatedDate = now;
                 }
-                ((BaseModel)entity.Entity).UpdatedDate = now;
             }
         }
     }

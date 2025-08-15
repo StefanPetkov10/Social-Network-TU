@@ -21,10 +21,11 @@ namespace SocialMedia.Data.Repository.Interfaces
         void AddRange(TType[] entities);
         Task AddRangeAsync(TType[] entities);
 
-        bool Delete(TType entity);
+        void Delete(TType entity);
+        Task DeleteAsync(TType entity);
 
-        bool Update(TType entity);
-        Task<bool> UpdateAsync(TType entity);
+        void Update(TType entity);
+        Task UpdateAsync(TType entity);
 
         void SaveChanges();
         Task SaveChangesAsync();
