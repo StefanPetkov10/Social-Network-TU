@@ -17,7 +17,7 @@ namespace SocialMedia.Validators.Profile_Validation
 
             RuleFor(x => x.UserName)
                 .NotEmpty().WithMessage("Username is required.")
-                .Must((dto, username) => !db.Users.Any(u => u.UserName == username && u.Id != dto.Id))
+                .Must((dto, username) => !db.Users.Any(u => u.UserName == username))
                 .WithMessage("Username already exists.");
 
             RuleFor(x => x.Sex).IsInEnum();

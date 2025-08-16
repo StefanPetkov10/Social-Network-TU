@@ -9,59 +9,47 @@ using SocialMedia.Services.Interfaces;
 
 namespace SocialMedia.Services
 {
-    public class ProfileService : IProfileService
+    public class ProfileService : BaseService, IProfileService
     {
-        private readonly UserManager<ApplicationUser> _userManager;
         private readonly IRepository<Database.Models.Profile, Guid> _profileRepo;
         private readonly IMapper _mapper;
 
-        public ProfileService(UserManager<ApplicationUser> userManager,
-                              IRepository<Database.Models.Profile, Guid> profileRepo,
-                              IMapper mapper)
+        public ProfileService(
+            UserManager<ApplicationUser> userManager,
+            IRepository<Database.Models.Profile, Guid> profileRepo,
+            IMapper mapper
+        ) : base(userManager)
         {
-            _userManager = userManager;
             _profileRepo = profileRepo;
             _mapper = mapper;
         }
 
-        public async Task<ApiResponse<UpdateProfileDto>> GetProfileAsync(ClaimsPrincipal userClaims)
+        public async Task<ApiResponse<ProfileDto>> GetProfileAsync(ClaimsPrincipal userClaims)
         {
-            var appUserId = new Guid(_userManager.GetUserId(userClaims)!);
+            var invalidUserResponse = GetUserIdOrUnauthorized<ProfileDto>(userClaims, out var appUserId);
+            if (invalidUserResponse != null)
+                return invalidUserResponse;
+
             var profile = await _profileRepo.GetByApplicationIdAsync(appUserId);
-
             if (profile == null)
-                return ApiResponse<UpdateProfileDto>.ErrorResponse(
-                    "User not found.",
-                    new[] { "Profile does not exist." }
-                );
+                return NotFoundResponse<ProfileDto>("Profile");
 
-            var dto = _mapper.Map<UpdateProfileDto>(profile);
-
-            return ApiResponse<UpdateProfileDto>.SuccessResponse(dto, "Profile retrieved successfully.");
+            var dto = _mapper.Map<ProfileDto>(profile);
+            dto.UserName = userClaims.Identity.Name ?? string.Empty;
+            return ApiResponse<ProfileDto>.SuccessResponse(dto, "Profile retrieved successfully.");
         }
 
         public async Task<ApiResponse<object>> UpdateProfileAsync(ClaimsPrincipal userClaims, UpdateProfileDto dto)
         {
-            var appUserId = _userManager.GetUserId(userClaims);
-            if (string.IsNullOrEmpty(appUserId))
-            {
-                return ApiResponse<object>.ErrorResponse(
-                    "Unauthorized.",
-                    new[] { "Invalid user claim." }
-                );
-            }
+            var invalidUserResponse = GetUserIdOrUnauthorized<object>(userClaims, out var appUserId);
+            if (invalidUserResponse != null)
+                return invalidUserResponse;
 
-            var profile = await _profileRepo.GetByApplicationIdAsync(new Guid(appUserId));
+            var profile = await _profileRepo.GetByApplicationIdAsync(appUserId);
             if (profile == null)
-            {
-                return ApiResponse<object>.ErrorResponse(
-                    "User not found.",
-                    new[] { "Profile not found for the given user." }
-                );
-            }
+                return NotFoundResponse<object>("Profile");
 
             _mapper.Map(dto, profile);
-
             await _profileRepo.UpdateAsync(profile);
             await _profileRepo.SaveChangesAsync();
 
@@ -72,21 +60,11 @@ namespace SocialMedia.Services
         {
             var user = await _userManager.GetUserAsync(userClaims);
             if (user == null)
-            {
-                return ApiResponse<object>.ErrorResponse(
-                    "User not found.",
-                    new[] { "Invalid user." }
-                );
-            }
+                return NotFoundResponse<object>("User");
 
             var result = await _userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
             if (!result.Succeeded)
-            {
-                return ApiResponse<object>.ErrorResponse(
-                    "Password change failed.",
-                    result.Errors.Select(e => e.Description).ToArray()
-                );
-            }
+                return IdentityErrorResponse<object>(result, "Password change failed.");
 
             return ApiResponse<object>.SuccessResponse(null, "Password changed successfully.");
         }

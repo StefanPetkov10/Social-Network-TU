@@ -1,5 +1,6 @@
 using AutoMapper;
 using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -8,10 +9,10 @@ using Microsoft.OpenApi.Models;
 using NLog.Web;
 using SocialMedia.Database;
 using SocialMedia.Database.Models;
-using SocialMedia.DTOs.Authentication;
 using SocialMedia.Extensions;
 using SocialMedia.Services.Interfaces;
 using SocialMedia.Validators;
+using SocialMedia.Validators.PostValidation;
 using SocialMedia.Validators.Profile_Validation;
 
 namespace SocialMedia
@@ -95,10 +96,6 @@ namespace SocialMedia
 
             builder.Services.RegisterRepositories(typeof(ApplicationUser).Assembly);
             builder.Services.RegisterUserDefinedServices(typeof(IProfileService).Assembly);
-            builder.Services.AddScoped<IValidator<RegisterDto>, RegistrationValidator>();
-            builder.Services.AddValidatorsFromAssemblyContaining<UpdateProfileValidator>();
-            builder.Services.AddValidatorsFromAssemblyContaining<ChangePasswordValidator>();
-
 
             builder.Services.AddAutoMapper(config =>
             {
@@ -108,6 +105,18 @@ namespace SocialMedia
 
             builder.Services.AddAuthorization();
             builder.Services.AddControllers();
+
+            builder.Services.AddValidatorsFromAssemblies(new[] {
+                typeof(RegistrationValidator).Assembly,
+                typeof(UpdateProfileValidator).Assembly,
+                typeof(ChangePasswordValidator).Assembly,
+                typeof(UpdatePostValidator).Assembly,
+                typeof(CreatePostValidator).Assembly,
+            }
+           );
+
+            builder.Services.AddFluentValidationAutoValidation();
+            builder.Services.AddFluentValidationClientsideAdapters();
 
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();

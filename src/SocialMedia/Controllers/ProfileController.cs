@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SocialMedia.Common;
 using SocialMedia.DTOs.Profile;
 using SocialMedia.Services.Interfaces;
 
@@ -22,11 +23,36 @@ namespace SocialMedia.Controllers
             Ok(await _profileService.GetProfileAsync(User));
 
         [HttpPut]
-        public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateProfileDto dto) =>
-            Ok(await _profileService.UpdateProfileAsync(User, dto));
+        public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateProfileDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToArray();
+                return BadRequest(ApiResponse<object>.ErrorResponse("Validation failed", errors));
+            }
+
+            var response = await _profileService.UpdateProfileAsync(User, dto);
+            return Ok(response);
+        }
 
         [HttpPut("change-password")]
-        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto) =>
-            Ok(await _profileService.ChangePasswordAsync(User, dto));
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToArray();
+
+                return BadRequest(ApiResponse<object>.ErrorResponse("Validation failed", errors));
+            }
+            var response = await _profileService.ChangePasswordAsync(User, dto);
+            return Ok(response);
+        }
+
     }
 }
