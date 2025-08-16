@@ -12,8 +12,8 @@ using SocialMedia.Database;
 namespace SocialMedia.Migrations
 {
     [DbContext(typeof(SocialMediaDbContext))]
-    [Migration("20250815081617_AddPostProperties")]
-    partial class AddPostProperties
+    [Migration("20250816185123_InitialMigration")]
+    partial class InitialMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -222,11 +222,9 @@ namespace SocialMedia.Migrations
 
             modelBuilder.Entity("SocialMedia.Database.Models.Post", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<int>("CommentsCount")
                         .HasColumnType("integer");

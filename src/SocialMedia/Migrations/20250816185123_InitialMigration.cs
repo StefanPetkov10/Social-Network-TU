@@ -52,21 +52,6 @@ namespace SocialMedia.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Posts",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Content = table.Column<string>(type: "text", nullable: false),
-                    CreatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Posts", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "AspNetRoleClaims",
                 columns: table => new
                 {
@@ -182,7 +167,9 @@ namespace SocialMedia.Migrations
                     Photo = table.Column<string>(type: "text", nullable: true),
                     Age = table.Column<int>(type: "integer", nullable: false),
                     Sex = table.Column<int>(type: "integer", nullable: false),
-                    ApplicationId = table.Column<Guid>(type: "uuid", nullable: false)
+                    ApplicationId = table.Column<Guid>(type: "uuid", nullable: false),
+                    CreatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -191,6 +178,31 @@ namespace SocialMedia.Migrations
                         name: "FK_Profile_AspNetUsers_ApplicationId",
                         column: x => x.ApplicationId,
                         principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Posts",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Content = table.Column<string>(type: "text", nullable: false),
+                    MediaUrl = table.Column<string>(type: "text", nullable: true),
+                    ProfileId = table.Column<Guid>(type: "uuid", nullable: false),
+                    LikesCount = table.Column<int>(type: "integer", nullable: false),
+                    CommentsCount = table.Column<int>(type: "integer", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false),
+                    CreatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Posts", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Posts_Profile_ProfileId",
+                        column: x => x.ProfileId,
+                        principalTable: "Profile",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -233,6 +245,11 @@ namespace SocialMedia.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Posts_ProfileId",
+                table: "Posts",
+                column: "ProfileId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Profile_ApplicationId",
                 table: "Profile",
                 column: "ApplicationId",
@@ -261,10 +278,10 @@ namespace SocialMedia.Migrations
                 name: "Posts");
 
             migrationBuilder.DropTable(
-                name: "Profile");
+                name: "AspNetRoles");
 
             migrationBuilder.DropTable(
-                name: "AspNetRoles");
+                name: "Profile");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");

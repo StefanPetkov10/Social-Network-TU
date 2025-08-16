@@ -6,8 +6,7 @@ namespace SocialMedia.Database.Models
     public class Post : BaseModel
     {
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
+        public Guid Id { get; set; }
 
         [Required]
         public string Content { get; set; } = null!;

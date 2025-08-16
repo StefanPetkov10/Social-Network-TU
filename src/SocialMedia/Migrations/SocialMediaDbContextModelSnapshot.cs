@@ -219,11 +219,9 @@ namespace SocialMedia.Migrations
 
             modelBuilder.Entity("SocialMedia.Database.Models.Post", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<int>("CommentsCount")
                         .HasColumnType("integer");
@@ -254,7 +252,7 @@ namespace SocialMedia.Migrations
 
                     b.HasIndex("ProfileId");
 
-                    b.ToTable("Posts", (string)null);
+                    b.ToTable("Posts");
                 });
 
             modelBuilder.Entity("SocialMedia.Database.Models.Profile", b =>
@@ -293,7 +291,7 @@ namespace SocialMedia.Migrations
                     b.HasIndex("ApplicationId")
                         .IsUnique();
 
-                    b.ToTable("Profile", (string)null);
+                    b.ToTable("Profile");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>

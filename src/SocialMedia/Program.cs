@@ -101,6 +101,7 @@ namespace SocialMedia
             {
                 config.AddProfile<ProfileRegisterMapping>();
                 config.AddProfile<ProfileMapping>();
+                config.AddProfile<PostMapping>();
             });
 
             builder.Services.AddAuthorization();
