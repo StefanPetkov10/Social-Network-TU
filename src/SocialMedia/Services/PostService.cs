@@ -46,21 +46,41 @@ namespace SocialMedia.Services
 
             return ApiResponse<PostDto>.SuccessResponse(postDto, "Post created successfully.");
         }
+        public async Task<ApiResponse<PostDto>> GetPostByIdAsync(ClaimsPrincipal userClaims, Guid postId)
+        {
+            var post = await _postRepository.GetByIdAsync(postId);
+            if (post == null)
+                return NotFoundResponse<PostDto>("Post");
+
+            var postDto = _mapper.Map<PostDto>(post);
+            postDto.AuthorName = userClaims.Identity?.Name ?? "Unknown Author";
+            //postDto.AuthorName = post.Profile?.User.UserName ?? "Unknown Author";
+
+            return ApiResponse<PostDto>.SuccessResponse(postDto, "Post retrieved successfully.");
+        }
+
+        public async Task<ApiResponse<IEnumerable<PostDto>>> GetAllPostsAsync(ClaimsPrincipal userClaims)
+        {
+            var posts = await _postRepository.GetAllAsync();
+            if (posts == null || !posts.Any())
+                return NotFoundResponse<IEnumerable<PostDto>>("Posts");
+
+            var postDtos = _mapper.Map<IEnumerable<PostDto>>(posts);
+            foreach (var postDto in postDtos)
+            {
+                var profile = await _profileRepository.GetByIdAsync(postDto.Id);
+                postDto.AuthorName = userClaims.Identity?.Name ?? "Unknown Author";
+            }
+
+            return ApiResponse<IEnumerable<PostDto>>.SuccessResponse(postDtos, "Posts retrieved successfully.");
+        }
 
         public async Task<ApiResponse<object>> DeletePostAsync(ClaimsPrincipal userId, Guid postId)
         {
             throw new NotImplementedException();
         }
 
-        public async Task<ApiResponse<IEnumerable<PostDto>>> GetAllPostsAsync()
-        {
-            throw new NotImplementedException();
-        }
 
-        public async Task<ApiResponse<PostDto>> GetPostByIdAsync(Guid postId)
-        {
-            throw new NotImplementedException();
-        }
 
         public async Task<ApiResponse<object>> LikePostAsync(ClaimsPrincipal userClaims, Guid postId)
         {

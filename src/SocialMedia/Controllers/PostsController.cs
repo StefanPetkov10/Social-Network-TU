@@ -32,5 +32,27 @@ namespace SocialMedia.Controllers
             var response = await _postService.CreatePostAsPost(User, dto);
             return Ok(response);
         }
+
+        [HttpGet("{postId}")]
+        public async Task<IActionResult> GetPostById(Guid postId)
+        {
+            var response = await _postService.GetPostByIdAsync(User, postId);
+            if (response.Success)
+            {
+                return Ok(response);
+            }
+            return NotFound(response);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAllPosts()
+        {
+            var response = await _postService.GetAllPostsAsync(User);
+            if (response.Success)
+            {
+                return Ok(response);
+            }
+            return NotFound(response);
+        }
     }
 }
