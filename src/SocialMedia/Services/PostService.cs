@@ -74,6 +74,26 @@ namespace SocialMedia.Services
 
             return ApiResponse<IEnumerable<PostDto>>.SuccessResponse(postDtos, "Posts retrieved successfully.");
         }
+        public async Task<ApiResponse<object>> UpdatePostAsync(ClaimsPrincipal userClaims, Guid postId, UpdatePostDto dto)
+        {
+            var invalidUserResponse = GetUserIdOrUnauthorized<object>(userClaims, out var userId);
+            if (invalidUserResponse != null)
+                return invalidUserResponse;
+
+            var post = await _postRepository.GetByIdAsync(postId);
+            if (post == null)
+                return NotFoundResponse<object>("Post");
+
+            var updatePost = _mapper.Map(dto, post);
+
+            await _postRepository.UpdateAsync(updatePost);
+            await _postRepository.SaveChangesAsync();
+
+            var postDto = _mapper.Map<PostDto>(updatePost);
+            postDto.AuthorName = userClaims.Identity?.Name ?? "Unknown Author";
+
+            return ApiResponse<object>.SuccessResponse(postDto, "Post updated successfully.");
+        }
 
         public async Task<ApiResponse<object>> DeletePostAsync(ClaimsPrincipal userId, Guid postId)
         {
@@ -92,9 +112,5 @@ namespace SocialMedia.Services
             throw new NotImplementedException();
         }
 
-        public async Task<ApiResponse<object>> UpdatePostAsync(ClaimsPrincipal userClaims, Guid postId, UpdatePostDto dto)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

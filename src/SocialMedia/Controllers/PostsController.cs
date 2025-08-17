@@ -54,5 +54,24 @@ namespace SocialMedia.Controllers
             }
             return NotFound(response);
         }
+
+        [HttpPut("{postId}")]
+        public async Task<IActionResult> UpdatePost(Guid postId, [FromBody] UpdatePostDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToArray();
+                return BadRequest(ApiResponse<object>.ErrorResponse("Validation failed", errors));
+            }
+            var response = await _postService.UpdatePostAsync(User, postId, dto);
+            if (response.Success)
+            {
+                return Ok(response);
+            }
+            return NotFound(response);
+        }
     }
 }
