@@ -73,5 +73,16 @@ namespace SocialMedia.Controllers
             }
             return NotFound(response);
         }
+
+        [HttpDelete("{postId}")]
+        public async Task<IActionResult> DeletePost(Guid postId)
+        {
+            var response = await _postService.DeletePostAsync(User, postId);
+            if (response.Success)
+            {
+                return Ok(response);
+            }
+            return NotFound(response);
+        }
     }
 }

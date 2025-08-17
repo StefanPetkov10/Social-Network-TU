@@ -49,7 +49,7 @@ namespace SocialMedia.Services
         public async Task<ApiResponse<PostDto>> GetPostByIdAsync(ClaimsPrincipal userClaims, Guid postId)
         {
             var post = await _postRepository.GetByIdAsync(postId);
-            if (post == null)
+            if (post == null || post.IsDeleted)
                 return NotFoundResponse<PostDto>("Post");
 
             var postDto = _mapper.Map<PostDto>(post);
@@ -62,10 +62,13 @@ namespace SocialMedia.Services
         public async Task<ApiResponse<IEnumerable<PostDto>>> GetAllPostsAsync(ClaimsPrincipal userClaims)
         {
             var posts = await _postRepository.GetAllAsync();
-            if (posts == null || !posts.Any())
+
+            var activePosts = posts.Where(x => !x.IsDeleted).ToList();
+
+            if (!activePosts.Any())
                 return NotFoundResponse<IEnumerable<PostDto>>("Posts");
 
-            var postDtos = _mapper.Map<IEnumerable<PostDto>>(posts);
+            var postDtos = _mapper.Map<IEnumerable<PostDto>>(activePosts);
             foreach (var postDto in postDtos)
             {
                 var profile = await _profileRepository.GetByIdAsync(postDto.Id);
@@ -97,7 +100,22 @@ namespace SocialMedia.Services
 
         public async Task<ApiResponse<object>> DeletePostAsync(ClaimsPrincipal userId, Guid postId)
         {
-            throw new NotImplementedException();
+            var invalidUserResponse = GetUserIdOrUnauthorized<object>(userId, out var userIdValue);
+            if (invalidUserResponse != null)
+                return invalidUserResponse;
+
+            var post = await _postRepository.GetByIdAsync(postId);
+            if (post == null)
+                return NotFoundResponse<object>("Post");
+
+            if (post.IsDeleted == true)
+                return ApiResponse<object>.ErrorResponse("Delete failed", new[] { "Post already deleted." });
+
+            post.IsDeleted = true;
+            await _postRepository.UpdateAsync(post);
+            await _postRepository.SaveChangesAsync();
+
+            return ApiResponse<object>.SuccessResponse(null, "Post deleted successfully.");
         }
 
 
