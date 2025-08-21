@@ -63,8 +63,12 @@ namespace SocialMedia
                 };
             });
 
+            builder.Services.AddAuthorization(options =>
+            {
+                options.AddPolicy("RequireAdmin", policy => policy.RequireRole("Admin"));
+                options.AddPolicy("ModOrAdmin", policy => policy.RequireRole("Moderator", "Admin"));
+            });
 
-            builder.Services.AddAuthorization();
 
             builder.Services.AddSwaggerGen(options =>
             {
@@ -124,7 +128,10 @@ namespace SocialMedia
 
             var app = builder.Build();
 
-
+            using (var scope = app.Services.CreateScope())
+            {
+                await RoleSeeder.SeedRolesAsync(scope.ServiceProvider);
+            }
 
             // Configure the HTTP request pipeline.  
             if (app.Environment.IsDevelopment())
