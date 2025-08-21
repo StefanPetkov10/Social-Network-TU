@@ -74,11 +74,26 @@ namespace SocialMedia.Services
 
         public async Task<ApiResponse<object>> RemoveRoleAsync(ClaimsPrincipal user, RoleRemoveDto dto)
         {
-            throw new NotImplementedException();
+            var targetUser = await _userManager.FindByIdAsync(dto.UserId.ToString());
+            if (targetUser == null)
+                return ApiResponse<object>.ErrorResponse("User not found.", Array.Empty<string>());
+
+            var result = await _userManager.RemoveFromRoleAsync(targetUser, dto.Role);
+            if (!result.Succeeded)
+                return ApiResponse<object>.ErrorResponse("Failed to remove role.", result.Errors.Select(e => e.Description).ToArray());
+
+            return ApiResponse<object>.SuccessResponse(null, $"Role '{dto.Role}' removed from user.");
         }
         public async Task<ApiResponse<object>> CreateRoleAsync(string roleName)
         {
-            throw new NotImplementedException();
+            if (await _roleManager.RoleExistsAsync(roleName))
+                return ApiResponse<object>.ErrorResponse("Role already exists.", Array.Empty<string>());
+
+            var result = await _roleManager.CreateAsync(new IdentityRole<Guid>(roleName));
+            if (!result.Succeeded)
+                return ApiResponse<object>.ErrorResponse("Failed to create role.", result.Errors.Select(e => e.Description).ToArray());
+
+            return ApiResponse<object>.SuccessResponse(null, $"Role '{roleName}' created.");
         }
     }
 }

@@ -55,5 +55,27 @@ namespace SocialMedia.Controllers
             var response = await _roleService.AssignRoleByEmailAsync(User, dto);
             return Ok(response);
         }
+
+        [HttpDelete("remove")]
+        public async Task<IActionResult> RemoveRole([FromBody] RoleRemoveDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToArray();
+                return BadRequest(ApiResponse<object>.ErrorResponse("Validation failed", errors));
+            }
+            var response = await _roleService.RemoveRoleAsync(User, dto);
+            return Ok(response);
+        }
+
+        [HttpPost("create")]
+        public async Task<IActionResult> CreateRole(string roleName)
+        {
+            var response = await _roleService.CreateRoleAsync(roleName);
+            return Ok(response);
+        }
     }
 }
