@@ -130,7 +130,8 @@ namespace SocialMedia
 
             using (var scope = app.Services.CreateScope())
             {
-                await RoleSeeder.SeedRolesAsync(scope.ServiceProvider);
+                var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+                await RoleSeeder.SeedRolesAndAdminAsync(scope.ServiceProvider, config);
             }
 
             // Configure the HTTP request pipeline.  

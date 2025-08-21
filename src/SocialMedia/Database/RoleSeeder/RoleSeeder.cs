@@ -13,7 +13,6 @@ public static class RoleSeeder
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var db = scope.ServiceProvider.GetRequiredService<SocialMediaDbContext>();
 
-        // 1) Ensure roles
         string[] roles = { "Admin", "Moderator", "User" };
         foreach (var role in roles)
         {
@@ -23,7 +22,6 @@ public static class RoleSeeder
             }
         }
 
-        // 2) Ensure admin user
         var adminEmail = config["Admin:Email"];
         var adminPassword = config["Admin:Password"];
         var adminRole = config["Admin:Role"] ?? "Admin";
