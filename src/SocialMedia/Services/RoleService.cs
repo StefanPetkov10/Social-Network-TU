@@ -21,12 +21,38 @@ namespace SocialMedia.Services
 
         public async Task<ApiResponse<object>> AssignRoleAsync(ClaimsPrincipal user, RoleAssignDto dto)
         {
-            throw new NotImplementedException();
+            var targetUser = await _userManager.FindByIdAsync(dto.UserId.ToString());
+            if (targetUser == null)
+                return ApiResponse<object>.ErrorResponse("User not found.", Array.Empty<string>());
+
+            var role = await _roleManager.FindByNameAsync(dto.Role);
+            if (role == null)
+                return ApiResponse<object>.ErrorResponse("Role not found.", Array.Empty<string>());
+
+            var result = await _userManager.AddToRoleAsync(targetUser, role.Name);
+            if (!result.Succeeded)
+                return ApiResponse<object>.ErrorResponse("Failed to assign role.", result.Errors
+                    .Select(e => e.Description).ToArray());
+
+            return ApiResponse<object>.SuccessResponse(null, "Role assigned successfully.");
         }
 
         public async Task<ApiResponse<object>> AssignRoleByEmailAsync(ClaimsPrincipal user, RoleAssignByEmailDto dto)
         {
-            throw new NotImplementedException();
+            var targetUser = await _userManager.FindByEmailAsync(dto.Email);
+            if (targetUser == null)
+                return ApiResponse<object>.ErrorResponse("User not found.", Array.Empty<string>());
+
+            var role = await _roleManager.FindByNameAsync(dto.Role);
+            if (role == null)
+                return ApiResponse<object>.ErrorResponse("Role not found.", Array.Empty<string>());
+
+            var result = await _userManager.AddToRoleAsync(targetUser, role.Name);
+            if (!result.Succeeded)
+                return ApiResponse<object>.ErrorResponse("Failed to assign role.", result.Errors
+                    .Select(e => e.Description).ToArray());
+
+            return ApiResponse<object>.SuccessResponse(null, "Role assigned successfully.");
         }
 
 
