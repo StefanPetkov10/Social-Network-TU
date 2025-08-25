@@ -13,8 +13,9 @@ namespace SocialMedia.Database
 
 
         public DbSet<Post> Posts { get; set; }
-
-
+        public DbSet<Profile> Profiles { get; set; }
+        public DbSet<Friendship> Friendships { get; set; }
+        public DbSet<Follow> Follows { get; set; }
 
         public override int SaveChanges()
         {
