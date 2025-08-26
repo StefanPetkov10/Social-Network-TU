@@ -26,5 +26,16 @@ namespace SocialMedia.Controllers
             return BadRequest(response);
         }
 
+        [HttpPost("accept-request/{requestId:guid}")]
+        public async Task<IActionResult> AcceptRequest(Guid requestId)
+        {
+            var userClaims = User;
+            var response = await _friendshipService.AcceptFriendRequestAsync(userClaims, requestId);
+
+            if (!response.Success)
+                return BadRequest(response);
+
+            return Ok(response);
+        }
     }
 }
