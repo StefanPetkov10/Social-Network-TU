@@ -130,9 +130,36 @@ namespace SocialMedia.Services
             return ApiResponse<IEnumerable<FriendDto>>.SuccessResponse(friendDtos, "Pending friend requests retrieved successfully.");
         }
 
-        public Task<ApiResponse<IEnumerable<FriendDto>>> GetFriendsListAsync(ClaimsPrincipal userClaims)
+        public async Task<ApiResponse<IEnumerable<FriendDto>>> GetFriendsListAsync(ClaimsPrincipal userClaims)
         {
-            throw new NotImplementedException();
+            var invalidUserResponse = GetUserIdOrUnauthorized<PostDto>(userClaims, out var userId);
+            if (invalidUserResponse != null)
+                return ApiResponse<IEnumerable<FriendDto>>.ErrorResponse("Unauthorized.", new[] { "Invalid user claim." });
+
+            var userProfile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (userProfile == null)
+                return ApiResponse<IEnumerable<FriendDto>>.ErrorResponse("Profile not found.", new[] { "User profile does not exist." });
+
+            var friendships = await _friendshipRepository
+                .GetAllAttached()
+                .Where(f => (f.RequesterId == userProfile.Id || f.AddresseeId == userProfile.Id)
+                            && f.Status == FriendshipStatus.Accepted)
+                .Include(f => f.Requester)
+                    .ThenInclude(p => p.User)
+                .Include(f => f.Addressee)
+                    .ThenInclude(p => p.User)
+                .ToListAsync();
+
+            var friendEntities = friendships
+                .Select(f => f.RequesterId == userProfile.Id ? f.Addressee : f.Requester)
+                .ToList();
+
+            var friendDtos = _mapper.Map<List<FriendDto>>(friendEntities);
+
+            //var friendDtos = _mapper.Map<List<FriendDto>>(
+            //friendships.Select(f => f.RequesterId == userProfile.Id ? f.Addressee : f.Requester)
+
+            return ApiResponse<IEnumerable<FriendDto>>.SuccessResponse(friendDtos, "Friends list retrieved successfully.");
         }
 
         public Task<ApiResponse<bool>> DeclineFriendRequestAsync(ClaimsPrincipal userClaims, Guid requestId)

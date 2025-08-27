@@ -47,5 +47,15 @@ namespace SocialMedia.Controllers
                 return BadRequest(response);
             return Ok(response);
         }
+
+        [HttpGet("friends")]
+        public async Task<IActionResult> GetFriends()
+        {
+            var userClaims = User;
+            var response = await _friendshipService.GetFriendsListAsync(userClaims);
+            if (!response.Success)
+                return BadRequest(response);
+            return Ok(response);
+        }
     }
 }
