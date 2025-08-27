@@ -1,10 +1,12 @@
 ﻿using System.Security.Claims;
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using SocialMedia.Common;
 using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database.Models;
 using SocialMedia.Database.Models.Enums;
+using SocialMedia.DTOs.Friendship;
 using SocialMedia.DTOs.Post;
 using SocialMedia.Services.Interfaces;
 
@@ -105,25 +107,44 @@ namespace SocialMedia.Services
             return ApiResponse<bool>.SuccessResponse(true, "Friend request accepted successfully.");
         }
 
-        public Task<ApiResponse<bool>> DeclineFriendRequestAsync(ClaimsPrincipal userClaims, Guid requestId)
+        public async Task<ApiResponse<IEnumerable<FriendDto>>> GetPendingFriendRequestsAsync(ClaimsPrincipal userClaims)
+        {
+            var invalidUserResponse = GetUserIdOrUnauthorized<PostDto>(userClaims, out var userId);
+            if (invalidUserResponse != null)
+                return ApiResponse<IEnumerable<FriendDto>>.ErrorResponse("Unauthorized.", new[] { "Invalid user claim." });
+
+            var userProfile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (userProfile == null)
+                return ApiResponse<IEnumerable<FriendDto>>.ErrorResponse("Profile not found.", new[] { "User profile does not exist." });
+
+            var pendingRequests = await _friendshipRepository.GetAllAttached()
+                .Where(f => f.AddresseeId == userProfile.Id
+                    && f.Status == FriendshipStatus.Pending)
+                .Include(f => f.Requester)
+                    .ThenInclude(r => r.User)
+                .Select(f => f.Requester)
+                .ToListAsync();
+
+            var friendDtos = _mapper.Map<IEnumerable<FriendDto>>(pendingRequests);
+
+            return ApiResponse<IEnumerable<FriendDto>>.SuccessResponse(friendDtos, "Pending friend requests retrieved successfully.");
+        }
+
+        public Task<ApiResponse<IEnumerable<FriendDto>>> GetFriendsListAsync(ClaimsPrincipal userClaims)
         {
             throw new NotImplementedException();
         }
 
+        public Task<ApiResponse<bool>> DeclineFriendRequestAsync(ClaimsPrincipal userClaims, Guid requestId)
+        {
+            throw new NotImplementedException();
+        }
 
         public Task<ApiResponse<bool>> RemoveFriendAsync(ClaimsPrincipal userClaims, Guid friendProfileId)
         {
             throw new NotImplementedException();
         }
 
-        Task<ApiResponse<IEnumerable<Database.Models.Profile>>> IFriendshipService.GetFriendsListAsync(ClaimsPrincipal userClaims)
-        {
-            throw new NotImplementedException();
-        }
 
-        Task<ApiResponse<IEnumerable<Database.Models.Profile>>> IFriendshipService.GetPendingFriendRequestsAsync(ClaimsPrincipal userClaims)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

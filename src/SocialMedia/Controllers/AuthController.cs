@@ -173,8 +173,9 @@ namespace SocialMedia.Controllers
         public IActionResult Me()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userName = User.Identity?.Name;
             var roles = User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
-            return Ok(new { userId, roles });
+            return Ok(new { userId, userName, roles });
         }
     }
 }

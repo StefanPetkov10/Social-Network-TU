@@ -37,5 +37,15 @@ namespace SocialMedia.Controllers
 
             return Ok(response);
         }
+
+        [HttpGet("pending-requests")]
+        public async Task<IActionResult> GetPendingRequests()
+        {
+            var userClaims = User;
+            var response = await _friendshipService.GetPendingFriendRequestsAsync(userClaims);
+            if (!response.Success)
+                return BadRequest(response);
+            return Ok(response);
+        }
     }
 }

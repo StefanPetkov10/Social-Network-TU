@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using SocialMedia.Common;
+using SocialMedia.DTOs.Friendship;
 
 namespace SocialMedia.Services.Interfaces
 {
@@ -9,7 +10,7 @@ namespace SocialMedia.Services.Interfaces
         Task<ApiResponse<bool>> AcceptFriendRequestAsync(ClaimsPrincipal userClaims, Guid requestId);
         Task<ApiResponse<bool>> DeclineFriendRequestAsync(ClaimsPrincipal userClaims, Guid requestId);
         Task<ApiResponse<bool>> RemoveFriendAsync(ClaimsPrincipal userClaims, Guid friendProfileId);
-        Task<ApiResponse<IEnumerable<Database.Models.Profile>>> GetFriendsListAsync(ClaimsPrincipal userClaims);
-        Task<ApiResponse<IEnumerable<Database.Models.Profile>>> GetPendingFriendRequestsAsync(ClaimsPrincipal userClaims);
+        Task<ApiResponse<IEnumerable<FriendDto>>> GetFriendsListAsync(ClaimsPrincipal userClaims);
+        Task<ApiResponse<IEnumerable<FriendDto>>> GetPendingFriendRequestsAsync(ClaimsPrincipal userClaims);
     }
 }

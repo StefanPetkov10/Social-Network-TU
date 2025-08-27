@@ -106,6 +106,7 @@ namespace SocialMedia
                 config.AddProfile<ProfileRegisterMapping>();
                 config.AddProfile<ProfileMapping>();
                 config.AddProfile<PostMapping>();
+                config.AddProfile<FriendshipMapping>();
             });
 
             builder.Services.AddAuthorization();
