@@ -162,9 +162,30 @@ namespace SocialMedia.Services
             return ApiResponse<IEnumerable<FriendDto>>.SuccessResponse(friendDtos, "Friends list retrieved successfully.");
         }
 
-        public Task<ApiResponse<bool>> DeclineFriendRequestAsync(ClaimsPrincipal userClaims, Guid requestId)
+        public async Task<ApiResponse<bool>> DeclineFriendRequestAsync(ClaimsPrincipal userClaims, Guid requestId)
         {
-            throw new NotImplementedException();
+            var invalidUserResponse = GetUserIdOrUnauthorized<PostDto>(userClaims, out var userId);
+            if (invalidUserResponse != null)
+                return ApiResponse<bool>.ErrorResponse("Unauthorized.", new[] { "Invalid user claim." });
+
+            var userProfile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (userProfile == null)
+                return ApiResponse<bool>.ErrorResponse("Profile not found.", new[] { "User profile does not exist." });
+
+            var request = await _friendshipRepository.GetByIdAsync(requestId);
+            if (request == null)
+                return ApiResponse<bool>.ErrorResponse("Friend request not found.");
+
+            if (request.AddresseeId != userProfile.Id)
+                return ApiResponse<bool>.ErrorResponse("You are not authorized to decline this friend request.");
+
+            if (request.Status != FriendshipStatus.Pending || request.Status == FriendshipStatus.Accepted)
+                return ApiResponse<bool>.ErrorResponse("This friend request cannot be declined.", new[] { "This status is not suitable for declined" });
+
+            await _friendshipRepository.DeleteAsync(request);
+            await _friendshipRepository.SaveChangesAsync();
+
+            return ApiResponse<bool>.SuccessResponse(true, "Friend request declined successfully.");
         }
 
         public Task<ApiResponse<bool>> RemoveFriendAsync(ClaimsPrincipal userClaims, Guid friendProfileId)

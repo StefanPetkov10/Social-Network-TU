@@ -57,5 +57,15 @@ namespace SocialMedia.Controllers
                 return BadRequest(response);
             return Ok(response);
         }
+
+        [HttpDelete("decline/{requestId:guid}")]
+        public async Task<IActionResult> DeclineRequest(Guid requestId)
+        {
+            var userClaims = User;
+            var response = await _friendshipService.DeclineFriendRequestAsync(userClaims, friendProfileId);
+            if (!response.Success)
+                return BadRequest(response);
+            return Ok(response);
+        }
     }
 }
