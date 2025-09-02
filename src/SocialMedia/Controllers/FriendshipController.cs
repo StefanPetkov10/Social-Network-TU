@@ -62,7 +62,17 @@ namespace SocialMedia.Controllers
         public async Task<IActionResult> DeclineRequest(Guid requestId)
         {
             var userClaims = User;
-            var response = await _friendshipService.DeclineFriendRequestAsync(userClaims, friendProfileId);
+            var response = await _friendshipService.DeclineFriendRequestAsync(userClaims, requestId);
+            if (!response.Success)
+                return BadRequest(response);
+            return Ok(response);
+        }
+
+        [HttpDelete("remove-friend/{friendProfileId:guid}")]
+        public async Task<IActionResult> RemoveFriend(Guid friendProfileId)
+        {
+            var userClaims = User;
+            var response = await _friendshipService.RemoveFriendAsync(userClaims, friendProfileId);
             if (!response.Success)
                 return BadRequest(response);
             return Ok(response);

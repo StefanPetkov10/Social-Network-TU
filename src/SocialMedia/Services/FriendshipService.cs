@@ -188,9 +188,31 @@ namespace SocialMedia.Services
             return ApiResponse<bool>.SuccessResponse(true, "Friend request declined successfully.");
         }
 
-        public Task<ApiResponse<bool>> RemoveFriendAsync(ClaimsPrincipal userClaims, Guid friendProfileId)
+        public async Task<ApiResponse<bool>> RemoveFriendAsync(ClaimsPrincipal userClaims, Guid friendProfileId)
         {
-            throw new NotImplementedException();
+            var invalidUserResponse = GetUserIdOrUnauthorized<PostDto>(userClaims, out var userId);
+            if (invalidUserResponse != null)
+                return ApiResponse<bool>.ErrorResponse("Unauthorized.", new[] { "Invalid user claim." });
+
+            var userProfile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (userProfile == null)
+                return ApiResponse<bool>.ErrorResponse("Profile not found.", new[] { "User profile does not exist." });
+
+            if (userProfile.Id == friendProfileId)
+                return ApiResponse<bool>.ErrorResponse("You cannot remove yourself from friends.");
+
+            var friendship = await _friendshipRepository.GetAllAttached()
+                .FirstOrDefaultAsync(f => (f.RequesterId == userProfile.Id && f.AddresseeId == friendProfileId ||
+                                           f.RequesterId == friendProfileId && f.AddresseeId == userProfile.Id)
+                                           && f.Status == FriendshipStatus.Accepted);
+
+            if (friendship == null)
+                return ApiResponse<bool>.ErrorResponse("Friendship not found.", new[] { "You are not friends with this user." });
+
+            await _friendshipRepository.DeleteAsync(friendship);
+            await _friendshipRepository.SaveChangesAsync();
+
+            return ApiResponse<bool>.SuccessResponse(true, "Friend removed successfully.");
         }
 
 
