@@ -59,5 +59,16 @@ namespace SocialMedia.Controllers
             }
             return BadRequest(response);
         }
+
+        [HttpGet("following")]
+        public async Task<IActionResult> Following()
+        {
+            var response = await _followService.GetFollowingAsync(User);
+            if (response.Success)
+            {
+                return Ok(response);
+            }
+            return BadRequest(response);
+        }
     }
 }

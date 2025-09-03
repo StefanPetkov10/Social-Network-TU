@@ -124,21 +124,38 @@ namespace SocialMedia.Services
 
             var followerDto = _mapper.Map<IEnumerable<FollowDto>>(followers);
 
-            return ApiResponse<IEnumerable<FollowDto>>.SuccessResponse(followerDto, "Friends list retrieved successfully");
+            return ApiResponse<IEnumerable<FollowDto>>.SuccessResponse(followerDto, "Followers list retrieved successfully");
         }
 
-        public Task<ApiResponse<int>> GetFollowersCountAsync(Guid profileId)
+        public Task<ApiResponse<int>> GetFollowersCountAsync(ClaimsPrincipal userClaims)
         {
             throw new NotImplementedException();
         }
 
-        public Task<ApiResponse<IEnumerable<FollowDto>>> GetFollowingAsync(Guid profileId)
+        public async Task<ApiResponse<IEnumerable<FollowDto>>> GetFollowingAsync(ClaimsPrincipal userClaims)
         {
-            throw new NotImplementedException();
+            var invalidUserResponse = GetUserIdOrUnauthorized<PostDto>(userClaims, out var userId);
+            if (invalidUserResponse != null)
+                return ApiResponse<IEnumerable<FollowDto>>.ErrorResponse("Unauthorized.", new[] { "Invalid user claim." });
+
+            var userProfile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (userProfile == null)
+                return ApiResponse<IEnumerable<FollowDto>>.ErrorResponse("Profile not found.", new[] { "User profile does not exist." });
+
+            var followers = await _followRepository.GetAllAttached()
+                .Where(f => f.FollowerId == userProfile.Id)
+                .Include(f => f.Following)
+                    .ThenInclude(u => u.User)
+                .Select(f => f.Following)
+                .ToListAsync();
+
+            var followerDto = _mapper.Map<IEnumerable<FollowDto>>(followers);
+
+            return ApiResponse<IEnumerable<FollowDto>>.SuccessResponse(followerDto, "Following list retrieved successfully");
         }
 
 
-        public Task<ApiResponse<int>> GetFollowingCountAsync(Guid profileId)
+        public Task<ApiResponse<int>> GetFollowingCountAsync(ClaimsPrincipal userClaims)
         {
             throw new NotImplementedException();
         }
