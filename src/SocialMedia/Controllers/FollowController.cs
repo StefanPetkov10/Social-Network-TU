@@ -33,5 +33,12 @@ namespace SocialMedia.Controllers
             var result = await _followService.UnfollowAsync(User, followingId);
             return Ok(result);
         }
+
+        [HttpGet("isFollowing")]
+        public async Task<IActionResult> IsFollowing(Guid followingId)
+        {
+            var response = await _followService.IsFollowingAsync(User, followingId);
+            return Ok(response);
+        }
     }
 }

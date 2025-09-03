@@ -39,6 +39,9 @@ namespace SocialMedia.Data.Repository
         public async Task<TType> FirstOrDefaultAsync(Expression<Func<TType, bool>> predicate) =>
             await this.dbSet.FirstOrDefaultAsync(predicate);
 
+        public async Task<bool> AnyAsync(Expression<Func<TType, bool>> predicate) =>
+           await this.dbSet.AnyAsync(predicate);
+
         public IQueryable<TType> GetAllAttached() => this.dbSet.AsQueryable();
 
         public void Add(TType entity) => this.dbSet.Add(entity);

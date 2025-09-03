@@ -12,7 +12,7 @@ namespace SocialMedia.Data.Repository.Interfaces
         Task<IEnumerable<TType>> GetAllAsync();
         TType FirstOrDefault(Func<TType, bool> predicate);
         Task<TType> FirstOrDefaultAsync(Expression<Func<TType, bool>> predicate);
-
+        Task<bool> AnyAsync(Expression<Func<TType, bool>> predicate);
         IQueryable<TType> GetAllAttached();
 
         void Add(TType entity);

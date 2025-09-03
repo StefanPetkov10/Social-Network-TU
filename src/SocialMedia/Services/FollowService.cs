@@ -86,6 +86,23 @@ namespace SocialMedia.Services
 
             return ApiResponse<bool>.SuccessResponse(true, "Unfollowed successfully.");
         }
+        public async Task<ApiResponse<bool>> IsFollowingAsync(ClaimsPrincipal userClaims, Guid followingId)
+        {
+            var invalidUserResponse = GetUserIdOrUnauthorized<bool>(userClaims, out var appUserId);
+            if (invalidUserResponse != null)
+                return invalidUserResponse;
+
+            var follower = await _profileRepository.GetByApplicationIdAsync(appUserId);
+            if (follower == null)
+                return NotFoundResponse<bool>("Your profile");
+
+            var followerId = follower.Id;
+            var exists = await _followRepository
+               .AnyAsync(f => f.FollowerId == followerId && f.FollowingId == followingId);
+
+            return ApiResponse<bool>.SuccessResponse(exists);
+        }
+
         public Task<ApiResponse<IEnumerable<FollowDto>>> GetFollowersAsync(Guid profileId)
         {
             throw new NotImplementedException();
@@ -107,10 +124,6 @@ namespace SocialMedia.Services
             throw new NotImplementedException();
         }
 
-        public Task<ApiResponse<bool>> IsFollowingAsync(ClaimsPrincipal userClaims, Guid followingId)
-        {
-            throw new NotImplementedException();
-        }
 
 
     }
