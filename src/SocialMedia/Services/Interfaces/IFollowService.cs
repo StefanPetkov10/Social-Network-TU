@@ -1,0 +1,20 @@
+﻿using System.Security.Claims;
+using SocialMedia.Common;
+using SocialMedia.DTOs.Follow;
+
+namespace SocialMedia.Services.Interfaces
+{
+    public interface IFollowService
+    {
+        Task<ApiResponse<bool>> FollowAsync(ClaimsPrincipal userClaims, Guid followingId);
+        Task<ApiResponse<bool>> UnfollowAsync(ClaimsPrincipal userClaims, Guid followingId);
+
+        Task<ApiResponse<bool>> IsFollowingAsync(ClaimsPrincipal userClaims, Guid followingId);
+
+        Task<ApiResponse<IEnumerable<FollowDto>>> GetFollowersAsync(Guid profileId);
+        Task<ApiResponse<IEnumerable<FollowDto>>> GetFollowingAsync(Guid profileId);
+
+        Task<ApiResponse<int>> GetFollowersCountAsync(Guid profileId);
+        Task<ApiResponse<int>> GetFollowingCountAsync(Guid profileId);
+    }
+}
