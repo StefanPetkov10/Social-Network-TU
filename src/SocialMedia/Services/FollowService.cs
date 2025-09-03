@@ -64,6 +64,25 @@ namespace SocialMedia.Services
 
         public async Task<ApiResponse<bool>> UnfollowAsync(ClaimsPrincipal userClaims, Guid followingId)
         {
+            var invalidUserResponse = GetUserIdOrUnauthorized<bool>(userClaims, out var appUserId);
+            if (invalidUserResponse != null)
+                return invalidUserResponse;
+
+            var follower = await _profileRepository.GetByApplicationIdAsync(appUserId);
+            if (follower == null)
+                return NotFoundResponse<bool>("Your profile");
+
+            if (follower.Id == followingId)
+                return ApiResponse<bool>.ErrorResponse("You cannot unfollow yourself.");
+
+            var follow = await _followRepository
+                .FirstOrDefaultAsync(f => f.FollowerId == follower.Id && f.FollowingId == followingId);
+
+            if (follow == null)
+                return ApiResponse<bool>.ErrorResponse("Not following this profile.");
+
+            await _followRepository.DeleteAsync(follow);
+            await _followRepository.SaveChangesAsync();
 
             return ApiResponse<bool>.SuccessResponse(true, "Unfollowed successfully.");
         }
