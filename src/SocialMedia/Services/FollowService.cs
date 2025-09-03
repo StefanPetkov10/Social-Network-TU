@@ -129,7 +129,24 @@ namespace SocialMedia.Services
 
         public Task<ApiResponse<int>> GetFollowersCountAsync(ClaimsPrincipal userClaims)
         {
-            throw new NotImplementedException();
+            var invalidUserResponse = GetUserIdOrUnauthorized<int>(userClaims, out var userId);
+            if (invalidUserResponse != null)
+                return Task.FromResult(ApiResponse<int>.ErrorResponse("Unauthorized.", new[] { "Invalid user claim." }));
+
+            var userProfileTask = _profileRepository.GetByApplicationIdAsync(userId);
+            return userProfileTask.ContinueWith(profileTask =>
+            {
+                var userProfile = profileTask.Result;
+                if (userProfile == null)
+                    return ApiResponse<int>.ErrorResponse("Profile not found.", new[] { "User profile does not exist." });
+
+                var countTask = _followRepository.CountAsync(f => f.FollowingId == userProfile.Id);
+                return countTask.ContinueWith(countResult =>
+                {
+                    var count = countResult.Result;
+                    return ApiResponse<int>.SuccessResponse(count, "Followers count retrieved successfully");
+                }).Result;
+            });
         }
 
         public async Task<ApiResponse<IEnumerable<FollowDto>>> GetFollowingAsync(ClaimsPrincipal userClaims)

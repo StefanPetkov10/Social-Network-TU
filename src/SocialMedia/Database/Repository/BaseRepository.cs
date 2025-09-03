@@ -42,6 +42,8 @@ namespace SocialMedia.Data.Repository
         public async Task<bool> AnyAsync(Expression<Func<TType, bool>> predicate) =>
            await this.dbSet.AnyAsync(predicate);
 
+        public async Task<int> CountAsync(Expression<Func<TType, bool>> predicate) =>
+            await this.dbSet.CountAsync(predicate);
         public IQueryable<TType> GetAllAttached() => this.dbSet.AsQueryable();
 
         public void Add(TType entity) => this.dbSet.Add(entity);

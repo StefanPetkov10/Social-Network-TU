@@ -38,7 +38,7 @@ namespace SocialMedia.Controllers
             return BadRequest(response);
         }
 
-        [HttpGet("isFollowing")]
+        [HttpGet("is-following")]
         public async Task<IActionResult> IsFollowing(Guid followingId)
         {
             var response = await _followService.IsFollowingAsync(User, followingId);
@@ -64,6 +64,17 @@ namespace SocialMedia.Controllers
         public async Task<IActionResult> Following()
         {
             var response = await _followService.GetFollowingAsync(User);
+            if (response.Success)
+            {
+                return Ok(response);
+            }
+            return BadRequest(response);
+        }
+
+        [HttpGet("followers-count")]
+        public async Task<IActionResult> FollowersCount()
+        {
+            var response = await _followService.GetFollowersCountAsync(User);
             if (response.Success)
             {
                 return Ok(response);
