@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using NLog.Web;
+using SocialMedia.AutoMapper;
 using SocialMedia.Database;
 using SocialMedia.Database.Models;
 using SocialMedia.Extensions;
@@ -107,6 +108,7 @@ namespace SocialMedia
                 config.AddProfile<ProfileMapping>();
                 config.AddProfile<PostMapping>();
                 config.AddProfile<FriendshipMapping>();
+                config.AddProfile<FollowMapping>();
             });
 
             builder.Services.AddAuthorization();

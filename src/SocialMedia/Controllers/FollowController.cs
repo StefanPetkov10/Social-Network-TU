@@ -30,15 +30,34 @@ namespace SocialMedia.Controllers
         [HttpDelete("unfollow/{followingId}")]
         public async Task<IActionResult> Unfollow(Guid followingId)
         {
-            var result = await _followService.UnfollowAsync(User, followingId);
-            return Ok(result);
+            var response = await _followService.UnfollowAsync(User, followingId);
+            if (response.Success)
+            {
+                return Ok(response);
+            }
+            return BadRequest(response);
         }
 
         [HttpGet("isFollowing")]
         public async Task<IActionResult> IsFollowing(Guid followingId)
         {
             var response = await _followService.IsFollowingAsync(User, followingId);
-            return Ok(response);
+            if (response.Success)
+            {
+                return Ok(response);
+            }
+            return BadRequest(response);
+        }
+
+        [HttpGet("followers")]
+        public async Task<IActionResult> Followers()
+        {
+            var response = await _followService.GetFollowersAsync(User);
+            if (response.Success)
+            {
+                return Ok(response);
+            }
+            return BadRequest(response);
         }
     }
 }

@@ -1,10 +1,12 @@
 ﻿using System.Security.Claims;
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using SocialMedia.Common;
 using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database.Models;
 using SocialMedia.DTOs.Follow;
+using SocialMedia.DTOs.Post;
 using SocialMedia.Services.Interfaces;
 
 namespace SocialMedia.Services
@@ -103,9 +105,26 @@ namespace SocialMedia.Services
             return ApiResponse<bool>.SuccessResponse(exists);
         }
 
-        public Task<ApiResponse<IEnumerable<FollowDto>>> GetFollowersAsync(Guid profileId)
+        public async Task<ApiResponse<IEnumerable<FollowDto>>> GetFollowersAsync(ClaimsPrincipal userClaims)
         {
-            throw new NotImplementedException();
+            var invalidUserResponse = GetUserIdOrUnauthorized<PostDto>(userClaims, out var userId);
+            if (invalidUserResponse != null)
+                return ApiResponse<IEnumerable<FollowDto>>.ErrorResponse("Unauthorized.", new[] { "Invalid user claim." });
+
+            var userProfile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (userProfile == null)
+                return ApiResponse<IEnumerable<FollowDto>>.ErrorResponse("Profile not found.", new[] { "User profile does not exist." });
+
+            var followers = await _followRepository.GetAllAttached()
+                .Where(f => f.FollowingId == userProfile.Id)
+                .Include(f => f.Follower)
+                    .ThenInclude(u => u.User)
+                .Select(f => f.Follower)
+                .ToListAsync();
+
+            var followerDto = _mapper.Map<IEnumerable<FollowDto>>(followers);
+
+            return ApiResponse<IEnumerable<FollowDto>>.SuccessResponse(followerDto, "Friends list retrieved successfully");
         }
 
         public Task<ApiResponse<int>> GetFollowersCountAsync(Guid profileId)
