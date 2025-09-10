@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using SocialMedia.Common;
 using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database.Models;
@@ -114,27 +115,74 @@ namespace SocialMedia.Services
             return ApiResponse<PostDto>.ErrorResponse("You are not authorized to view this post.");
         }
 
-        public async Task<ApiResponse<IEnumerable<PostDto>>> GetAllPostsAsync(ClaimsPrincipal userClaims)
+        public async Task<ApiResponse<IEnumerable<PostDto>>> GetFeedAsync(ClaimsPrincipal userClaims,
+            Guid? lastPostId = null, int take = 20)
         {
-            var posts = await _postRepository.GetAllAsync();
+            if (take <= 0 || take > 50) take = 20;
 
-            var activePosts = posts.Where(x => !x.IsDeleted).ToList();
+            var invalidUserResponse = GetUserIdOrUnauthorized<IEnumerable<PostDto>>(userClaims, out var userId);
+            var isGuest = invalidUserResponse != null;
 
-            if (!activePosts.Any())
-                return NotFoundResponse<IEnumerable<PostDto>>("Posts");
+            var query = _postRepository.GetAllAttached()
+                .Where(p => !p.IsDeleted)
+                .Include(p => p.Profile)
+                .OrderByDescending(p => p.CreatedDate)
+                .AsQueryable();
 
-            var postDtos = _mapper.Map<IEnumerable<PostDto>>(activePosts);
-            foreach (var postDto in postDtos)
+            if (lastPostId.HasValue)
             {
-                Post post = activePosts.FirstOrDefault(p => p.Id == postDto.Id);
-                var profile = await _profileRepository.GetByIdAsync(post.ProfileId);
-                postDto.AuthorName = profile.FullName ?? "Unknown Author";
-                postDto.AuthorAvatar = profile.Photo;
-
+                var lastPost = await _postRepository.GetByIdAsync(lastPostId.Value);
+                if (lastPost != null)
+                {
+                    query = query.Where(p => p.CreatedDate < lastPost.CreatedDate);
+                }
             }
 
-            return ApiResponse<IEnumerable<PostDto>>.SuccessResponse(postDtos, "Posts retrieved successfully.");
+            if (isGuest)
+            {
+                query = query.Where(p => p.Visibility == PostVisibility.Public);
+            }
+            else
+            {
+                var viewerProfile = await _profileRepository.GetByApplicationIdAsync(userId);
+                if (viewerProfile == null)
+                    return ApiResponse<IEnumerable<PostDto>>.ErrorResponse("Profile not found.");
+
+                var friendIds = await _friendshipRepository.GetAllAttached()
+                    .Where(f =>
+                        (f.RequesterId == viewerProfile.Id || f.AddresseeId == viewerProfile.Id) &&
+                        f.Status == FriendshipStatus.Accepted)
+                    .Select(f => f.RequesterId == viewerProfile.Id ? f.AddresseeId : f.RequesterId)
+                    .ToListAsync();
+
+                query = query.Where(p =>
+                    p.Visibility == PostVisibility.Public ||
+                    (p.Visibility == PostVisibility.FriendsOnly && friendIds.Contains(p.ProfileId)) ||
+                    p.ProfileId == viewerProfile.Id);
+            }
+
+            var posts = await query.Take(take).ToListAsync();
+            var dtos = _mapper.Map<IEnumerable<PostDto>>(posts);
+
+            foreach (var dto in dtos)
+            {
+                if (string.IsNullOrEmpty(dto.AuthorName))
+                {
+                    var profile = posts.FirstOrDefault(p => p.Id == dto.Id)?.Profile;
+                    dto.AuthorName = profile?.FullName ?? "Unknown";
+                    dto.AuthorAvatar = profile?.Photo;
+                }
+            }
+
+            var last = posts.LastOrDefault()?.Id;
+
+            return ApiResponse<IEnumerable<PostDto>>.SuccessResponse(
+                dtos,
+                "Feed retrieved successfully.",
+                new { lastPostId = last }
+            );
         }
+
         public async Task<ApiResponse<object>> UpdatePostAsync(ClaimsPrincipal userClaims, Guid postId, UpdatePostDto dto)
         {
             var invalidUserResponse = GetUserIdOrUnauthorized<object>(userClaims, out var userId);
@@ -176,8 +224,6 @@ namespace SocialMedia.Services
             return ApiResponse<object>.SuccessResponse(null, "Post deleted successfully.");
         }
 
-
-
         public async Task<ApiResponse<object>> LikePostAsync(ClaimsPrincipal userClaims, Guid postId)
         {
             throw new NotImplementedException();
@@ -188,5 +234,9 @@ namespace SocialMedia.Services
             throw new NotImplementedException();
         }
 
+        public Task<ApiResponse<IEnumerable<PostDto>>> GetUserPostsAsync(ClaimsPrincipal userClaims, Guid? lastPostId = null, int take = 20)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

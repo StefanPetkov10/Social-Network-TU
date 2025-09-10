@@ -45,15 +45,16 @@ namespace SocialMedia.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllPosts()
+        public async Task<IActionResult> GetAllPosts([FromQuery] Guid? lastPostId, [FromQuery] int take = 20)
         {
-            var response = await _postService.GetAllPostsAsync(User);
+            var response = await _postService.GetFeedAsync(User, lastPostId, take);
             if (response.Success)
             {
                 return Ok(response);
             }
             return NotFound(response);
         }
+
 
         [Authorize]
         [HttpPut("{postId}")]
