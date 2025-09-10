@@ -7,6 +7,8 @@ namespace SocialMedia.Validators.PostValidation
     {
         public UpdatePostValidator()
         {
+            RuleFor(x => x.Visibility).IsInEnum();
+
             RuleFor(x => x.Content)
                 .NotEmpty()
                 .WithMessage("Content cannot be empty.")

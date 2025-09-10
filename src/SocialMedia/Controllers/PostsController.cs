@@ -6,7 +6,6 @@ using SocialMedia.Services.Interfaces;
 
 namespace SocialMedia.Controllers
 {
-    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class PostsController : ControllerBase
@@ -18,6 +17,7 @@ namespace SocialMedia.Controllers
             _postService = postService;
         }
 
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> CreatePost([FromBody] CreatePostDto dto)
         {
@@ -36,7 +36,7 @@ namespace SocialMedia.Controllers
         [HttpGet("{postId}")]
         public async Task<IActionResult> GetPostById(Guid postId)
         {
-            var response = await _postService.GetPostByIdAsync(User, postId);
+            var response = await _postService.GetPostByIdAsync(postId);
             if (response.Success)
             {
                 return Ok(response);
@@ -47,7 +47,7 @@ namespace SocialMedia.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllPosts()
         {
-            var response = await _postService.GetAllPostsAsync(User);
+            var response = await _postService.GetAllPostsAsync();
             if (response.Success)
             {
                 return Ok(response);
@@ -55,6 +55,7 @@ namespace SocialMedia.Controllers
             return NotFound(response);
         }
 
+        [Authorize]
         [HttpPut("{postId}")]
         public async Task<IActionResult> UpdatePost(Guid postId, [FromBody] UpdatePostDto dto)
         {
@@ -74,6 +75,7 @@ namespace SocialMedia.Controllers
             return NotFound(response);
         }
 
+        [Authorize]
         [HttpDelete("{postId}")]
         public async Task<IActionResult> DeletePost(Guid postId)
         {

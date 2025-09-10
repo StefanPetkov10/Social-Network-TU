@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using SocialMedia.Database.Models.Enums;
 
 namespace SocialMedia.Database.Models
 {
@@ -18,6 +19,8 @@ namespace SocialMedia.Database.Models
 
         [ForeignKey(nameof(ProfileId))]
         public Profile Profile { get; set; }
+
+        public PostVisibility Visibility { get; set; }
 
         public int LikesCount { get; set; }
         public int CommentsCount { get; set; }
