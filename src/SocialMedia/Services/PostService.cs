@@ -182,6 +182,71 @@ namespace SocialMedia.Services
                 new { lastPostId = last }
             );
         }
+        public async Task<ApiResponse<IEnumerable<PostDto>>> GetUserPostsAsync(ClaimsPrincipal userClaims,
+            Guid profileId, Guid? lastPostId = null, int take = 20)
+        {
+            if (take <= 0 || take > 50) take = 20;
+
+            var invalidUserResponse = GetUserIdOrUnauthorized<IEnumerable<PostDto>>(userClaims, out var userId);
+            var isGuest = invalidUserResponse != null;
+
+            var query = _postRepository.GetAllAttached()
+                .Where(p => !p.IsDeleted && p.ProfileId == profileId)
+                .Include(p => p.Profile)
+                .OrderByDescending(p => p.CreatedDate)
+                .AsQueryable();
+
+            if (lastPostId.HasValue)
+            {
+                var lastPost = await _postRepository.GetByIdAsync(lastPostId.Value);
+                if (lastPost != null)
+                {
+                    query = query.Where(p => p.CreatedDate < lastPost.CreatedDate);
+                }
+            }
+
+            if (isGuest)
+            {
+                query = query.Where(p => p.Visibility == PostVisibility.Public);
+            }
+            else
+            {
+                var viewerProfile = await _profileRepository.GetByApplicationIdAsync(userId);
+                if (viewerProfile == null)
+                    return ApiResponse<IEnumerable<PostDto>>.ErrorResponse("Profile not found.");
+
+                var isOwner = viewerProfile.Id == profileId;
+
+                var isFriend = await _friendshipRepository
+                    .AnyAsync(f =>
+                        (f.RequesterId == viewerProfile.Id && f.AddresseeId == profileId ||
+                         f.AddresseeId == viewerProfile.Id && f.RequesterId == profileId) &&
+                        f.Status == FriendshipStatus.Accepted);
+
+                query = query.Where(p =>
+                    p.Visibility == PostVisibility.Public ||
+                    (p.Visibility == PostVisibility.FriendsOnly && isFriend) ||
+                    isOwner);
+            }
+
+            var posts = await query.Take(take).ToListAsync();
+            var dtos = _mapper.Map<IEnumerable<PostDto>>(posts);
+
+            var profile = await _profileRepository.GetByIdAsync(profileId);
+            foreach (var dto in dtos)
+            {
+                dto.AuthorName = profile?.FullName ?? "Unknown";
+                dto.AuthorAvatar = profile?.Photo;
+            }
+
+            var last = posts.LastOrDefault()?.Id;
+
+            return ApiResponse<IEnumerable<PostDto>>.SuccessResponse(
+                dtos,
+                "User posts retrieved successfully.",
+                new { lastPostId = last }
+            );
+        }
 
         public async Task<ApiResponse<object>> UpdatePostAsync(ClaimsPrincipal userClaims, Guid postId, UpdatePostDto dto)
         {
@@ -234,9 +299,5 @@ namespace SocialMedia.Services
             throw new NotImplementedException();
         }
 
-        public Task<ApiResponse<IEnumerable<PostDto>>> GetUserPostsAsync(ClaimsPrincipal userClaims, Guid? lastPostId = null, int take = 20)
-        {
-            throw new NotImplementedException();
-        }
     }
 }
