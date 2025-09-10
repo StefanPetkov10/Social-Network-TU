@@ -55,24 +55,66 @@ namespace SocialMedia.Services
 
             return ApiResponse<PostDto>.SuccessResponse(postDto, "Post created successfully.");
         }
-        public async Task<ApiResponse<PostDto>> GetPostByIdAsync(Guid postId)
+
+        public async Task<ApiResponse<PostDto>> GetPostByIdAsync(ClaimsPrincipal userClaims, Guid postId)
         {
             var post = await _postRepository.GetByIdAsync(postId);
+
             if (post == null || post.IsDeleted)
                 return NotFoundResponse<PostDto>("Post");
 
-            var postDto = _mapper.Map<PostDto>(post);
+            var profile = await _profileRepository.GetByIdAsync(post.ProfileId);
+
+            if (post.Visibility == PostVisibility.Public)
+            {
+                var dtoPublic = _mapper.Map<PostDto>(post);
+                dtoPublic.AuthorName = profile.FullName ?? "Unknown Author";
+                dtoPublic.AuthorAvatar = profile.Photo;
+                return ApiResponse<PostDto>.SuccessResponse(dtoPublic, "Post retrieved successfully.");
+            }
+
+            var invalidUserResponse = GetUserIdOrUnauthorized<PostDto>(userClaims, out var userId);
+            var isGuest = invalidUserResponse != null;
+
+            if (!isGuest)
+            {
+                var viewerProfile = await _profileRepository.GetByApplicationIdAsync(userId);
+                if (viewerProfile != null && viewerProfile.Id == post.ProfileId)
+                {
+                    var dtoOwner = _mapper.Map<PostDto>(post);
+                    dtoOwner.AuthorName = profile.FullName ?? "Unknown Author";
+                    dtoOwner.AuthorAvatar = profile.Photo;
+                    return ApiResponse<PostDto>.SuccessResponse(dtoOwner, "Post retrieved successfully.");
+                }
+
+                var isFriend = await _friendshipRepository
+                    .AnyAsync(f =>
+                        f.Status == FriendshipStatus.Accepted &&
+                        ((f.RequesterId == viewerProfile.Id && f.AddresseeId == post.ProfileId) ||
+                         (f.RequesterId == post.ProfileId && f.AddresseeId == viewerProfile.Id)));
+
+                if (isFriend)
+                {
+                    var dtoFriend = _mapper.Map<PostDto>(post);
+                    dtoFriend.AuthorName = profile.FullName ?? "Unknown Author";
+                    dtoFriend.AuthorAvatar = profile.Photo;
+                    return ApiResponse<PostDto>.SuccessResponse(dtoFriend, "Post retrieved successfully.");
+                }
+            }
+
+
+            /*var postDto = _mapper.Map<PostDto>(post);
             var profile = await _profileRepository.GetByIdAsync(post.ProfileId);
             postDto.AuthorName = profile.FullName ?? "Unknown Author";
-            postDto.AuthorAvatar = profile.Photo;
+            postDto.AuthorAvatar = profile.Photo;*/
 
             //postDto.AuthorName = _profileRepository.GetByIdAsync(post.ProfileId).Result.User.UserName;
             //postDto.AuthorName = post.Profile?.User.UserName ?? "Unknown Author";
 
-            return ApiResponse<PostDto>.SuccessResponse(postDto, "Post retrieved successfully.");
+            return ApiResponse<PostDto>.ErrorResponse("You are not authorized to view this post.");
         }
 
-        public async Task<ApiResponse<IEnumerable<PostDto>>> GetAllPostsAsync()
+        public async Task<ApiResponse<IEnumerable<PostDto>>> GetAllPostsAsync(ClaimsPrincipal userClaims)
         {
             var posts = await _postRepository.GetAllAsync();
 

@@ -36,7 +36,7 @@ namespace SocialMedia.Controllers
         [HttpGet("{postId}")]
         public async Task<IActionResult> GetPostById(Guid postId)
         {
-            var response = await _postService.GetPostByIdAsync(postId);
+            var response = await _postService.GetPostByIdAsync(User, postId);
             if (response.Success)
             {
                 return Ok(response);
@@ -47,7 +47,7 @@ namespace SocialMedia.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllPosts()
         {
-            var response = await _postService.GetAllPostsAsync();
+            var response = await _postService.GetAllPostsAsync(User);
             if (response.Success)
             {
                 return Ok(response);
