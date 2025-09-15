@@ -20,6 +20,12 @@ namespace SocialMedia.Database.Models
         public GroupRole Role { get; set; }
 
         [Required]
+        public MembershipStatus Status { get; set; }
+
+        [Required]
+        public DateTime RequestedOn { get; set; }
+
+        [Required]
         public DateTime JoinedOn { get; set; }
 
         //Mapping table for many to many relationship between Profile and Group
