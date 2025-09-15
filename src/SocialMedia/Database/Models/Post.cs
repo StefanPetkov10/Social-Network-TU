@@ -16,9 +16,8 @@ namespace SocialMedia.Database.Models
 
         [Required]
         public Guid ProfileId { get; set; }
-
         [ForeignKey(nameof(ProfileId))]
-        public Profile Profile { get; set; }
+        public Profile Profile { get; set; } = null!;
 
         public PostVisibility Visibility { get; set; }
 
@@ -26,5 +25,9 @@ namespace SocialMedia.Database.Models
         public int CommentsCount { get; set; }
 
         public bool IsDeleted { get; set; }
+
+        [ForeignKey(nameof(GroupId))]
+        public Guid? GroupId { get; set; }
+        public Group? Group { get; set; }
     }
 }

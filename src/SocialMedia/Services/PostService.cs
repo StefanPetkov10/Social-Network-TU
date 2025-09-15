@@ -106,9 +106,7 @@ namespace SocialMedia.Services
 
             /*var postDto = _mapper.Map<PostDto>(post);
             var profile = await _profileRepository.GetByIdAsync(post.ProfileId);
-            postDto.AuthorName = profile.FullName ?? "Unknown Author";
-            postDto.AuthorAvatar = profile.Photo;*/
-
+            postDto.AuthorName = profile.FullName ?? "Unknown Author";*/
             //postDto.AuthorName = _profileRepository.GetByIdAsync(post.ProfileId).Result.User.UserName;
             //postDto.AuthorName = post.Profile?.User.UserName ?? "Unknown Author";
 
