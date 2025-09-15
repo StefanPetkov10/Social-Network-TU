@@ -22,14 +22,13 @@ namespace SocialMedia.Database.Models
         public Profile Addressee { get; set; } = null!;
 
         [Required]
-        public FriendshipStatus Status { get; set; } = FriendshipStatus.Pending;
+        public FriendshipStatus Status { get; set; }
 
         [Required]
-        public DateTime RequestedAt { get; set; } = DateTime.UtcNow;
+        public DateTime RequestedAt { get; set; }
 
         [Required]
         public DateTime AcceptedAt { get; set; }
-
 
     }
 }
