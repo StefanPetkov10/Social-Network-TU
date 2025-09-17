@@ -30,5 +30,10 @@ namespace SocialMedia.Data.Repository.Interfaces
 
         void SaveChanges();
         Task SaveChangesAsync();
+
+        TType? FindByKeys(params object[] keyValues);
+        Task<TType?> FindByKeysAsync(params object[] keyValues);
+        Task DeleteByKeysAsync(params object[] keyValues);
+        Task<bool> ExistsByKeysAsync(params object[] keyValues);
     }
 }

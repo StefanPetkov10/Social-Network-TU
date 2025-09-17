@@ -78,5 +78,28 @@ namespace SocialMedia.Data.Repository
         public void SaveChanges() => dbContext.SaveChanges();
 
         public async Task SaveChangesAsync() => await dbContext.SaveChangesAsync();
+
+        public TType? FindByKeys(params object[] keyValues)
+        {
+            return dbSet.Find(keyValues);
+        }
+
+        public async Task<TType?> FindByKeysAsync(params object[] keyValues)
+        {
+            var entity = await dbSet.FindAsync(keyValues);
+            return entity;
+        }
+
+        public async Task DeleteByKeysAsync(params object[] keyValues)
+        {
+            var entity = await FindByKeysAsync(keyValues);
+            if (entity != null)
+                dbSet.Remove(entity);
+        }
+        public async Task<bool> ExistsByKeysAsync(params object[] keyValues)
+        {
+            var entity = await FindByKeysAsync(keyValues);
+            return entity != null;
+        }
     }
 }
