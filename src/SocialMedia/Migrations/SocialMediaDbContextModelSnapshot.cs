@@ -291,7 +291,7 @@ namespace SocialMedia.Migrations
 
                     b.HasIndex("OwnerId");
 
-                    b.ToTable("Group");
+                    b.ToTable("Groups");
                 });
 
             modelBuilder.Entity("SocialMedia.Database.Models.GroupMembership", b =>
@@ -318,7 +318,7 @@ namespace SocialMedia.Migrations
 
                     b.HasIndex("GroupId");
 
-                    b.ToTable("GroupMembership");
+                    b.ToTable("GroupMemberships");
                 });
 
             modelBuilder.Entity("SocialMedia.Database.Models.Post", b =>

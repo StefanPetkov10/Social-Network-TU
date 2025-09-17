@@ -1,5 +1,4 @@
 using AutoMapper;
-using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -8,11 +7,14 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using NLog.Web;
 using SocialMedia.AutoMapper;
+using SocialMedia.Data.Repository;
+using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database;
 using SocialMedia.Database.Models;
 using SocialMedia.Extensions;
 using SocialMedia.Services.Interfaces;
 using SocialMedia.Validators;
+using SocialMedia.Validators.GroupValidation;
 using SocialMedia.Validators.PostValidation;
 using SocialMedia.Validators.Profile_Validation;
 
@@ -100,6 +102,7 @@ namespace SocialMedia
 
 
             builder.Services.RegisterRepositories(typeof(ApplicationUser).Assembly);
+            builder.Services.AddScoped<IRepository<GroupMembership, Guid>, BaseRepository<GroupMembership, Guid>>();
             builder.Services.RegisterUserDefinedServices(typeof(IProfileService).Assembly);
 
             builder.Services.AddAutoMapper(config =>
@@ -109,18 +112,19 @@ namespace SocialMedia
                 config.AddProfile<PostMapping>();
                 config.AddProfile<FriendshipMapping>();
                 config.AddProfile<FollowMapping>();
+                config.AddProfile<GroupMapping>();
             });
 
             builder.Services.AddAuthorization();
             builder.Services.AddControllers();
 
-            builder.Services.AddValidatorsFromAssemblies(new[] {
-                typeof(RegistrationValidator).Assembly,
-                typeof(UpdateProfileValidator).Assembly,
-                typeof(ChangePasswordValidator).Assembly,
-                typeof(UpdatePostValidator).Assembly,
-                typeof(CreatePostValidator).Assembly,
-            }
+            builder.Services.RegisterValidatorsFromTypes(
+                typeof(RegistrationValidator),
+                typeof(UpdateProfileValidator),
+                typeof(ChangePasswordValidator),
+                typeof(CreatePostValidator),
+                typeof(UpdatePostValidator),
+                typeof(CreateGroupValidator)
            );
 
             builder.Services.AddFluentValidationAutoValidation();
