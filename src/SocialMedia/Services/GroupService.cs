@@ -250,7 +250,29 @@ namespace SocialMedia.Services
 
         public async Task<ApiResponse<object>> DeleteGroupAsync(ClaimsPrincipal userClaims, Guid groupId)
         {
-            throw new NotImplementedException();
+            var invalidUserResponse = GetUserIdOrUnauthorized<object>(userClaims, out var userId);
+            if (invalidUserResponse != null)
+                return invalidUserResponse;
+
+            var profile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (profile == null)
+                return NotFoundResponse<object>("Profile");
+
+            var group = await _groupRepository.GetByIdAsync(groupId);
+            if (group == null)
+                return NotFoundResponse<object>("Group");
+
+            var membership = await _membershipRepository
+                .FirstOrDefaultAsync(m => m.GroupId == group.Id && m.ProfileId == profile.Id
+                && m.Status == MembershipStatus.Approved);
+
+            if (membership == null || membership.Role != GroupRole.Owner)
+                return ApiResponse<object>.ErrorResponse("Forbidden.", new[] { "You do not have permission to delete this group." });
+
+            _groupRepository.Delete(group);
+            await _groupRepository.SaveChangesAsync();
+
+            return ApiResponse<object>.SuccessResponse(null, "Group deleted successfully.");
         }
 
     }

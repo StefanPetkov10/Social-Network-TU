@@ -69,5 +69,12 @@ namespace SocialMedia.Controllers
             var response = await _groupService.UpdateGroupAsync(User, groupId, dto);
             return Ok(response);
         }
+
+        [HttpDelete("{groupId}")]
+        public async Task<IActionResult> DeleteGroup(Guid groupId)
+        {
+            var response = await _groupService.DeleteGroupAsync(User, groupId);
+            return Ok(response);
+        }
     }
 }
