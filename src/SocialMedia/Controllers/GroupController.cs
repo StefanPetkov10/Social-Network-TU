@@ -54,5 +54,20 @@ namespace SocialMedia.Controllers
             var response = await _groupService.GetMyGroupsAsync(User);
             return Ok(response);
         }
+
+        [HttpPut("{groupId}")]
+        public async Task<IActionResult> UpdateGroup(Guid groupId, [FromBody] UpdateGroupDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToArray();
+                return BadRequest(ApiResponse<object>.ErrorResponse("Validation failed", errors));
+            }
+            var response = await _groupService.UpdateGroupAsync(User, groupId, dto);
+            return Ok(response);
+        }
     }
 }

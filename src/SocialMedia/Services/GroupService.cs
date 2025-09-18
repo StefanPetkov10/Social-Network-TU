@@ -220,7 +220,32 @@ namespace SocialMedia.Services
 
         public async Task<ApiResponse<object>> UpdateGroupAsync(ClaimsPrincipal userClaims, Guid groupId, UpdateGroupDto dto)
         {
-            throw new NotImplementedException();
+            var invlaidUserResponse = GetUserIdOrUnauthorized<object>(userClaims, out var userId);
+            if (invlaidUserResponse != null)
+                return invlaidUserResponse;
+
+            var profile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (profile == null)
+                return NotFoundResponse<object>("Profile");
+
+            var group = await _groupRepository.GetByIdAsync(groupId);
+            if (group == null)
+                return NotFoundResponse<object>("Group");
+
+            var membership = await _membershipRepository
+                .FirstOrDefaultAsync(m => m.GroupId == group.Id && m.ProfileId == profile.Id
+                && m.Status == MembershipStatus.Approved);
+
+            if (membership == null || (membership.Role != GroupRole.Admin
+                && membership.Role != GroupRole.Owner))
+                return ApiResponse<object>.ErrorResponse("Forbidden.", new[] { "You do not have permission to update this group." });
+
+            var updateGroup = _mapper.Map(dto, group);
+
+            _groupRepository.Update(updateGroup);
+            await _groupRepository.SaveChangesAsync();
+
+            return ApiResponse<object>.SuccessResponse(null, "Group updated successfully.");
         }
 
         public async Task<ApiResponse<object>> DeleteGroupAsync(ClaimsPrincipal userClaims, Guid groupId)

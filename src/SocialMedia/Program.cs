@@ -124,7 +124,8 @@ namespace SocialMedia
                 typeof(ChangePasswordValidator),
                 typeof(CreatePostValidator),
                 typeof(UpdatePostValidator),
-                typeof(CreateGroupValidator)
+                typeof(CreateGroupValidator),
+                typeof(UpdateGroupValidator)
            );
 
             builder.Services.AddFluentValidationAutoValidation();

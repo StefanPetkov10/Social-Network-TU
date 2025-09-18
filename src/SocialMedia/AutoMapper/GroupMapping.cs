@@ -10,6 +10,8 @@ namespace AutoMapper
             CreateMap<Group, GroupDto>();
 
             CreateMap<CreateGroupDto, Group>();
+
+            CreateMap<UpdateGroupDto, Group>();
         }
     }
 }
