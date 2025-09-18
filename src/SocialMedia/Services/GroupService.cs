@@ -177,17 +177,53 @@ namespace SocialMedia.Services
                 new { lastPostId = last });
         }
 
-        public Task<ApiResponse<IEnumerable<GroupDto>>> GetMyGroupsAsync(ClaimsPrincipal userClaims)
+        public async Task<ApiResponse<IEnumerable<GroupDto>>> GetMyGroupsAsync(ClaimsPrincipal userClaims)
+        {
+            var invlaidUserResponse = GetUserIdOrUnauthorized<IEnumerable<GroupDto>>(userClaims, out var userId);
+            if (invlaidUserResponse != null)
+                return invlaidUserResponse;
+
+            var profile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (profile == null)
+                return NotFoundResponse<IEnumerable<GroupDto>>("Profile");
+
+            var myMembership = await _membershipRepository.GetAllAttached()
+                .Where(m => m.ProfileId == profile.Id && m.Status == MembershipStatus.Approved)
+                .Select(m => m.GroupId)
+                .ToListAsync();
+
+            if (!myMembership.Any())
+                return ApiResponse<IEnumerable<GroupDto>>.SuccessResponse(Enumerable.Empty<GroupDto>(), "No groups found.");
+
+            var groups = await _groupRepository.GetAllAttached()
+                .Where(g => myMembership.Contains(g.Id))
+                .Include(g => g.Members)
+                .ToListAsync();
+
+            var dtos = groups.Select(g =>
+            {
+                var membership = g.Members.FirstOrDefault(m => m.ProfileId == profile.Id);
+                var dto = _mapper.Map<GroupDto>(g);
+                dto.MembersCount = g.Members.Count(m => m.Status == MembershipStatus.Approved);
+                dto.IsMember = membership != null && membership.Status == MembershipStatus.Approved;
+                dto.HasRequestedJoin = membership != null && membership.Status == MembershipStatus.Pending;
+                dto.IsOwner = membership?.Role == GroupRole.Owner;
+                dto.IsAdmin = membership?.Role == GroupRole.Admin || dto.IsOwner;
+                dto.CanViewPosts = true;
+                dto.CanCreatePost = dto.IsMember;
+                return dto;
+            }).ToList();
+
+            return ApiResponse<IEnumerable<GroupDto>>.SuccessResponse(dtos, "My groups retrieved.");
+
+        }
+
+        public async Task<ApiResponse<object>> UpdateGroupAsync(ClaimsPrincipal userClaims, Guid groupId, UpdateGroupDto dto)
         {
             throw new NotImplementedException();
         }
 
-        public Task<ApiResponse<object>> UpdateGroupAsync(ClaimsPrincipal userClaims, Guid groupId, UpdateGroupDto dto)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<ApiResponse<object>> DeleteGroupAsync(ClaimsPrincipal userClaims, Guid groupId)
+        public async Task<ApiResponse<object>> DeleteGroupAsync(ClaimsPrincipal userClaims, Guid groupId)
         {
             throw new NotImplementedException();
         }

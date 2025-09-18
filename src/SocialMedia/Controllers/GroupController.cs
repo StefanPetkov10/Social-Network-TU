@@ -32,7 +32,27 @@ namespace SocialMedia.Controllers
 
             var response = await _groupService.CreateGroupAsync(User, dto);
             return Ok(response);
+        }
 
+        [HttpGet("{groupId}")]
+        public async Task<IActionResult> GetGroupById(Guid groupId)
+        {
+            var response = await _groupService.GetGroupByIdAsync(User, groupId);
+            return Ok(response);
+        }
+
+        [HttpGet("feed")]
+        public async Task<IActionResult> GetMyGroupsFeed([FromQuery] Guid? lastPostId = null, [FromQuery] int take = 20)
+        {
+            var response = await _groupService.GetMyGroupsFeedAsync(User, lastPostId, take);
+            return Ok(response);
+        }
+
+        [HttpGet("my-groups")]
+        public async Task<IActionResult> GetMyGroups()
+        {
+            var response = await _groupService.GetMyGroupsAsync(User);
+            return Ok(response);
         }
     }
 }
