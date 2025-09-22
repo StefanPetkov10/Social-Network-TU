@@ -86,11 +86,11 @@ namespace SocialMedia.Services
             var invalidUserResponse = GetUserIdOrUnauthorized<GroupDto>(userClaims, out var userId);
             var dto = _mapper.Map<GroupDto>(group);
 
-            if (invalidUserResponse != null)
+            /*if (invalidUserResponse != null)
             {
                 dto.CanViewPosts = !group.IsPrivate;
                 return ApiResponse<GroupDto>.SuccessResponse(dto);
-            }
+            }*/
 
 
             var profile = await _profileRepository.GetByApplicationIdAsync(userId);
@@ -115,7 +115,7 @@ namespace SocialMedia.Services
                 dto.IsMember = false;
                 dto.IsAdmin = false;
                 dto.IsOwner = false;
-                dto.CanViewPosts = !group.IsPrivate;
+                //dto.CanViewPosts = !group.IsPrivate;
                 dto.CanCreatePost = false;
             }
 

@@ -1,9 +1,8 @@
 ﻿namespace SocialMedia.Database.Models.Enums
 {
-    public enum PostVisibility
+    public enum GroupPrivacy
     {
         Public = 0,
-        FriendsOnly = 1,
-        OnlyMe = 2,
+        Private = 1
     }
 }

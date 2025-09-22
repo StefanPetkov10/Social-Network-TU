@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
+using SocialMedia.Database.Models.Enums;
 
 namespace SocialMedia.Database.Models
 {
@@ -16,7 +17,7 @@ namespace SocialMedia.Database.Models
         public string? Description { get; set; }
 
         [Required]
-        public bool IsPrivate { get; set; }
+        public GroupPrivacy Privacy { get; set; }
 
         [ForeignKey(nameof(Owner))]
         public Guid OwnerId { get; set; }

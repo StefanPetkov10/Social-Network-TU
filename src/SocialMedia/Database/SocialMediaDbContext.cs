@@ -18,6 +18,7 @@ namespace SocialMedia.Database
         public DbSet<Follow> Follows { get; set; }
         public DbSet<Group> Groups { get; set; }
         public DbSet<GroupMembership> GroupMemberships { get; set; }
+        public DbSet<PostMedia> PostMedias { get; set; }
 
         public override int SaveChanges()
         {
