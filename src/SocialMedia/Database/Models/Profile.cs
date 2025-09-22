@@ -33,6 +33,8 @@ namespace SocialMedia.Database.Models
         public virtual string FullName { get { return $"{FirstName} {LastName}"; } }
 
         public ICollection<Post> Posts { get; set; } = new List<Post>();
+        public ICollection<Comment> Comments { get; set; } = new List<Comment>();
+        public ICollection<Reaction> Reactions { get; set; } = new List<Reaction>();
 
         public ICollection<Friendship> FriendshipsRequested { get; set; } = new List<Friendship>();
         public ICollection<Friendship> FriendshipsReceived { get; set; } = new List<Friendship>();
@@ -42,5 +44,6 @@ namespace SocialMedia.Database.Models
 
         public ICollection<Group> GroupsOwned { get; set; } = new List<Group>();
         public ICollection<GroupMembership> GroupMemberships { get; set; } = new List<GroupMembership>();
+
     }
 }

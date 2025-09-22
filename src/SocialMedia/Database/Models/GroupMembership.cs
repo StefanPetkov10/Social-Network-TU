@@ -10,7 +10,7 @@ namespace SocialMedia.Database.Models
     {
         [ForeignKey(nameof(Profile))]
         public Guid ProfileId { get; set; }
-        public Profile profile { get; set; } = null!;
+        public Profile Profile { get; set; } = null!;
 
         [ForeignKey(nameof(Group))]
         public Guid GroupId { get; set; }

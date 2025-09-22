@@ -28,5 +28,9 @@ namespace SocialMedia.Database.Models
         [ForeignKey(nameof(GroupId))]
         public Guid? GroupId { get; set; }
         public Group? Group { get; set; }
+
+        public ICollection<Comment> Comments { get; set; } = new List<Comment>();
+
+        public ICollection<Reaction> Reactions { get; set; } = new List<Reaction>();
     }
 }
