@@ -14,20 +14,25 @@ namespace SocialMedia.Services
     public class PostService : BaseService, IPostService
     {
         private readonly IRepository<Post, Guid> _postRepository;
+        private readonly IRepository<Group, Guid> _groupRepository;
         private readonly IRepository<Database.Models.Profile, Guid> _profileRepository;
         private readonly IRepository<Friendship, Guid> _friendshipRepository;
         private readonly IMapper _mapper;
+        private readonly IFileService _fileService;
 
         public PostService(UserManager<ApplicationUser> userManager,
             IRepository<Post, Guid> postRepository, IMapper mapper,
              IRepository<Database.Models.Profile, Guid> profileRepository,
-              IRepository<Friendship, Guid> friendshipRepository)
+              IRepository<Friendship, Guid> friendshipRepository,
+               IFileService fileService, IRepository<Group, Guid> groupRepository)
             : base(userManager)
         {
             _postRepository = postRepository;
             _mapper = mapper;
             _friendshipRepository = friendshipRepository;
             _profileRepository = profileRepository;
+            _fileService = fileService;
+            _groupRepository = groupRepository;
         }
 
         public async Task<ApiResponse<PostDto>> CreatePostAsPost(ClaimsPrincipal userClaims, CreatePostDto dto)
@@ -40,11 +45,41 @@ namespace SocialMedia.Services
             if (author == null)
                 return NotFoundResponse<PostDto>("Post");
 
-            var post = _mapper.Map<Post>(dto);
-            post.ProfileId = author.Id;
+            if (dto.GroupId.HasValue)
+            {
+                var group = await _groupRepository.GetByIdAsync(dto.GroupId.Value);
+                if (group == null)
+                    return NotFoundResponse<PostDto>("Group");
 
-            if (!Enum.IsDefined(typeof(PostVisibility), post.Visibility))
-                post.Visibility = PostVisibility.Public;
+                var isMember = await _groupRepository.IsMemberAsync(group.Id, author.Id);
+                if (!isMember)
+                    return ApiResponse<PostDto>.ErrorResponse("You are not a member of this group.");
+            }
+
+            var post = _mapper.Map<Post>(dto);
+            post.Id = Guid.NewGuid();
+            post.ProfileId = author.Id;
+            post.Visibility = dto.GroupId.HasValue ? PostVisibility.Public : dto.Visibility;
+            post.Media = new List<PostMedia>();
+
+            if (dto.Files != null && dto.Files.Any())
+            {
+                int order = 0;
+
+                foreach (var file in dto.Files)
+                {
+                    var (filePath, mediaType) = await _fileService.SaveFileAsync(file);
+
+                    post.Media.Add(new PostMedia
+                    {
+                        Id = Guid.NewGuid(),
+                        PostId = post.Id,
+                        FilePath = filePath,
+                        MediaType = mediaType,
+                        Order = order++
+                    });
+                }
+            }
 
             await _postRepository.AddAsync(post);
             await _postRepository.SaveChangesAsync();

@@ -7,7 +7,9 @@ namespace AutoMapper
     {
         public PostMapping()
         {
-            CreateMap<CreatePostDto, Post>();
+            CreateMap<CreatePostDto, Post>()
+                .ForMember(dest => dest.Visibility, opt => opt.Ignore())
+                .ForMember(dest => dest.Media, opt => opt.Ignore());
 
             CreateMap<UpdatePostDto, Post>();
 

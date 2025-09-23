@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using SocialMedia.Database.Models.Enums;
 
 namespace SocialMedia.Database.Models
 {
@@ -10,13 +11,16 @@ namespace SocialMedia.Database.Models
 
         [Required]
         public Guid PostId { get; set; }
+
         [ForeignKey(nameof(PostId))]
         public Post Post { get; set; } = null!;
 
         [Required]
-        public string Url { get; set; } = null!;
+        public string FilePath { get; set; } = null!;
 
-        public string? MediaType { get; set; } // image, video, etc.
-        public int SortOrder { get; set; }
+        [Required]
+        public MediaType MediaType { get; set; }
+
+        public int Order { get; set; }
     }
 }

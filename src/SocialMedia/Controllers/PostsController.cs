@@ -8,29 +8,23 @@ namespace SocialMedia.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class PostsController : ControllerBase
     {
         private readonly IPostService _postService;
+        public PostsController(IPostService postService) => _postService = postService;
 
-        public PostsController(IPostService postService)
-        {
-            _postService = postService;
-        }
-
-        [Authorize]
         [HttpPost]
-        public async Task<IActionResult> CreatePost([FromBody] CreatePostDto dto)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> CreatePost([FromForm] CreatePostDto dto)
         {
             if (!ModelState.IsValid)
-            {
-                var errors = ModelState.Values
-                    .SelectMany(v => v.Errors)
-                    .Select(e => e.ErrorMessage)
-                    .ToArray();
-                return BadRequest(ApiResponse<object>.ErrorResponse("Validation failed", errors));
-            }
-            var response = await _postService.CreatePostAsPost(User, dto);
-            return Ok(response);
+                return BadRequest(ModelState);
+
+            var result = await _postService.CreatePostAsPost(User, dto);
+            if (!result.Success) return BadRequest(result);
+
+            return Ok(result);
         }
 
         [HttpGet("{postId}")]
@@ -66,8 +60,6 @@ namespace SocialMedia.Controllers
             return NotFound(response);
         }
 
-
-        [Authorize]
         [HttpPut("{postId}")]
         public async Task<IActionResult> UpdatePost(Guid postId, [FromBody] UpdatePostDto dto)
         {
@@ -87,7 +79,6 @@ namespace SocialMedia.Controllers
             return NotFound(response);
         }
 
-        [Authorize]
         [HttpDelete("{postId}")]
         public async Task<IActionResult> DeletePost(Guid postId)
         {

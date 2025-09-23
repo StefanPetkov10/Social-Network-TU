@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database;
+using SocialMedia.Database.Models.Enums;
 
 namespace SocialMedia.Data.Repository
 {
@@ -56,10 +57,9 @@ namespace SocialMedia.Data.Repository
 
         public void Delete(TType entity) => this.dbSet.Remove(entity);
 
-        public Task DeleteAsync(TType entity)
+        public async Task DeleteAsync(TType entity)
         {
             this.dbSet.Remove(entity);
-            return Task.CompletedTask;
         }
 
         public void Update(TType entity)
@@ -68,11 +68,10 @@ namespace SocialMedia.Data.Repository
             this.dbContext.Entry(entity).State = EntityState.Modified;
         }
 
-        public Task UpdateAsync(TType entity)
+        public async Task UpdateAsync(TType entity)
         {
             this.dbSet.Attach(entity);
             this.dbContext.Entry(entity).State = EntityState.Modified;
-            return Task.CompletedTask;
         }
 
         public void SaveChanges() => dbContext.SaveChanges();
@@ -100,6 +99,19 @@ namespace SocialMedia.Data.Repository
         {
             var entity = await FindByKeysAsync(keyValues);
             return entity != null;
+        }
+
+        public async Task<bool> IsMemberAsync(TId groupId, TId profileId)
+        {
+            if (groupId is Guid groupGuid && profileId is Guid profileGuid)
+            {
+                return await dbContext.GroupMemberships
+                    .AnyAsync(m =>
+                        m.GroupId == groupGuid &&
+                        m.ProfileId == profileGuid &&
+                        m.Status == MembershipStatus.Approved);
+            }
+            throw new InvalidOperationException("TId must be of type Guid.");
         }
     }
 }

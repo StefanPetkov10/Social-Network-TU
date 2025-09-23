@@ -13,6 +13,7 @@ namespace SocialMedia.Database.Models
         public string Content { get; set; } = null!;
 
         public ICollection<PostMedia> Media { get; set; } = new List<PostMedia>();
+
         [Required]
         public Guid ProfileId { get; set; }
         [ForeignKey(nameof(ProfileId))]
