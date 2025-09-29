@@ -7,7 +7,7 @@ namespace SocialMedia.DTOs.Post
         public Guid Id { get; set; }
         public string Content { get; set; } = null!;
 
-        public List<IFormFile>? Files { get; set; }
+        public List<PostMediaDto> Media { get; set; } = new();
 
         public Guid ProfileId { get; set; }
         public string AuthorName { get; set; } = null!;

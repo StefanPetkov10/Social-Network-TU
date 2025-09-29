@@ -18,6 +18,8 @@ namespace SocialMedia.Data.Repository
             this.dbSet = this.dbContext.Set<TType>();
         }
 
+        public IQueryable<TType> Query() => dbContext.Set<TType>();
+
         public TType GetById(TId id) => this.dbSet.Find(id);
 
         public async Task<TType> GetByIdAsync(TId id) =>

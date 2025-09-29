@@ -27,7 +27,7 @@ namespace SocialMedia.Controllers
             return Ok(result);
         }
 
-        [HttpGet("{postId}")]
+        [HttpGet("{postId:guid}")]
         public async Task<IActionResult> GetPostById(Guid postId)
         {
             var response = await _postService.GetPostByIdAsync(User, postId);
@@ -49,7 +49,7 @@ namespace SocialMedia.Controllers
             return NotFound(response);
         }
 
-        [HttpGet("{profileId}")]
+        [HttpGet("user/{userId:guid}")]
         public async Task<IActionResult> GetUserPosts(Guid profileId, [FromQuery] Guid? lastPostId, [FromQuery] int take = 20)
         {
             var response = await _postService.GetUserPostsAsync(User, profileId, lastPostId, take);

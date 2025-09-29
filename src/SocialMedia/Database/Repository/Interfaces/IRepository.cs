@@ -4,6 +4,7 @@ namespace SocialMedia.Data.Repository.Interfaces
 {
     public interface IRepository<TType, TId>
     {
+        IQueryable<TType> Query();
         TType GetById(TId id);
         Task<TType> GetByIdAsync(TId id);
         Task<TType> GetByApplicationIdAsync(TId id);

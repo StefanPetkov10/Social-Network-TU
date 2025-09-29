@@ -17,14 +17,16 @@ namespace SocialMedia.Services
         private readonly IRepository<Group, Guid> _groupRepository;
         private readonly IRepository<Database.Models.Profile, Guid> _profileRepository;
         private readonly IRepository<Friendship, Guid> _friendshipRepository;
-        private readonly IMapper _mapper;
         private readonly IFileService _fileService;
+        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IMapper _mapper;
 
         public PostService(UserManager<ApplicationUser> userManager,
             IRepository<Post, Guid> postRepository, IMapper mapper,
              IRepository<Database.Models.Profile, Guid> profileRepository,
               IRepository<Friendship, Guid> friendshipRepository,
-               IFileService fileService, IRepository<Group, Guid> groupRepository)
+               IFileService fileService, IRepository<Group, Guid> groupRepository,
+                IHttpContextAccessor httpContextAccessor)
             : base(userManager)
         {
             _postRepository = postRepository;
@@ -33,6 +35,7 @@ namespace SocialMedia.Services
             _profileRepository = profileRepository;
             _fileService = fileService;
             _groupRepository = groupRepository;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task<ApiResponse<PostDto>> CreatePostAsPost(ClaimsPrincipal userClaims, CreatePostDto dto)
@@ -94,56 +97,60 @@ namespace SocialMedia.Services
 
         public async Task<ApiResponse<PostDto>> GetPostByIdAsync(ClaimsPrincipal userClaims, Guid postId)
         {
-            var post = await _postRepository.GetByIdAsync(postId);
+            var invalidUserResponse = GetUserIdOrUnauthorized<PostDto>(userClaims, out var userId);
+            if (invalidUserResponse != null)
+                return invalidUserResponse;
+
+            var viewerProfile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (viewerProfile == null)
+                return ApiResponse<PostDto>.ErrorResponse("Invalid user profile.");
+
+            var post = await _postRepository.Query()
+                .Include(p => p.Media)
+                .FirstOrDefaultAsync(p => p.Id == postId);
 
             if (post == null || post.IsDeleted)
                 return NotFoundResponse<PostDto>("Post");
 
-            var profile = await _profileRepository.GetByIdAsync(post.ProfileId);
+            var authorProfile = await _profileRepository.GetByIdAsync(post.ProfileId);
+
+            if (post.GroupId.HasValue)
+            {
+                var group = await _groupRepository.GetByIdAsync(post.GroupId.Value);
+                if (group == null)
+                    return NotFoundResponse<PostDto>("Group");
+
+                if (group.Privacy == GroupPrivacy.Public)
+                {
+                    return SuccessPostDto(post, authorProfile, "Post retrieved successfully.");
+                }
+
+                var isMember = await _groupRepository.IsMemberAsync(group.Id, viewerProfile.Id);
+                if (!isMember)
+                    return ApiResponse<PostDto>.ErrorResponse("You are not a member of this group.");
+
+                return SuccessPostDto(post, authorProfile, "Post retrieved successfully.");
+            }
+
+            if (viewerProfile.Id == post.ProfileId)
+                return SuccessPostDto(post, authorProfile, "Post retrieved successfully.");
 
             if (post.Visibility == PostVisibility.Public)
-            {
-                var dtoPublic = _mapper.Map<PostDto>(post);
-                dtoPublic.AuthorName = profile.FullName ?? "Unknown Author";
-                dtoPublic.AuthorAvatar = profile.Photo;
-                return ApiResponse<PostDto>.SuccessResponse(dtoPublic, "Post retrieved successfully.");
-            }
+                return SuccessPostDto(post, authorProfile, "Post retrieved successfully.");
 
-            var invalidUserResponse = GetUserIdOrUnauthorized<PostDto>(userClaims, out var userId);
-            var isGuest = invalidUserResponse != null;
+            var isFriend = await _friendshipRepository.AnyAsync(f =>
+               f.Status == FriendshipStatus.Accepted &&
+               ((f.RequesterId == viewerProfile.Id && f.AddresseeId == post.ProfileId) ||
+               (f.RequesterId == post.ProfileId && f.AddresseeId == viewerProfile.Id)));
+            if (isFriend)
+                return SuccessPostDto(post, authorProfile, "Post retrieved successfully.");
 
-            if (!isGuest)
-            {
-                var viewerProfile = await _profileRepository.GetByApplicationIdAsync(userId);
-                if (viewerProfile != null && viewerProfile.Id == post.ProfileId)
-                {
-                    var dtoOwner = _mapper.Map<PostDto>(post);
-                    dtoOwner.AuthorName = profile.FullName ?? "Unknown Author";
-                    dtoOwner.AuthorAvatar = profile.Photo;
-                    return ApiResponse<PostDto>.SuccessResponse(dtoOwner, "Post retrieved successfully.");
-                }
+            var isFollowing = await _profileRepository.AnyAsync(p =>
+                p.Id == post.ProfileId &&
+                p.Followers.Any(f => f.FollowerId == viewerProfile.Id));
+            if (isFollowing)
+                return SuccessPostDto(post, authorProfile, "Post retrieved successfully.");
 
-                var isFriend = await _friendshipRepository
-                    .AnyAsync(f =>
-                        f.Status == FriendshipStatus.Accepted &&
-                        ((f.RequesterId == viewerProfile.Id && f.AddresseeId == post.ProfileId) ||
-                         (f.RequesterId == post.ProfileId && f.AddresseeId == viewerProfile.Id)));
-
-                if (isFriend)
-                {
-                    var dtoFriend = _mapper.Map<PostDto>(post);
-                    dtoFriend.AuthorName = profile.FullName ?? "Unknown Author";
-                    dtoFriend.AuthorAvatar = profile.Photo;
-                    return ApiResponse<PostDto>.SuccessResponse(dtoFriend, "Post retrieved successfully.");
-                }
-            }
-
-
-            /*var postDto = _mapper.Map<PostDto>(post);
-            var profile = await _profileRepository.GetByIdAsync(post.ProfileId);
-            postDto.AuthorName = profile.FullName ?? "Unknown Author";*/
-            //postDto.AuthorName = _profileRepository.GetByIdAsync(post.ProfileId).Result.User.UserName;
-            //postDto.AuthorName = post.Profile?.User.UserName ?? "Unknown Author";
 
             return ApiResponse<PostDto>.ErrorResponse("You are not authorized to view this post.");
         }
@@ -332,5 +339,25 @@ namespace SocialMedia.Services
             throw new NotImplementedException();
         }
 
+        private ApiResponse<PostDto> SuccessPostDto(Post post, Database.Models.Profile profile, string message)
+        {
+            var dto = _mapper.Map<PostDto>(post);
+            dto.AuthorName = profile.FullName ?? "Unknown Author";
+            dto.AuthorAvatar = profile.Photo;
+
+            var baseUrl = $"{_httpContextAccessor.HttpContext!.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}";
+            foreach (var media in post.Media)
+            {
+                dto.Media = post.Media.Select(m => new PostMediaDto
+                {
+                    Id = m.Id,
+                    Url = $"{baseUrl}/{m.FilePath}",
+                    MediaType = m.MediaType,
+                    Order = m.Order
+                }).ToList();
+            }
+
+            return ApiResponse<PostDto>.SuccessResponse(dto, message);
+        }
     }
 }

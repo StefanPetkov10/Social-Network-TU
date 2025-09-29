@@ -14,7 +14,8 @@ namespace AutoMapper
             CreateMap<UpdatePostDto, Post>();
 
             CreateMap<Post, PostDto>();
-
+            CreateMap<PostMedia, PostMediaDto>()
+                .ForMember(dest => dest.Url, opt => opt.Ignore());
         }
     }
 }
