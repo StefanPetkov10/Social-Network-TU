@@ -210,17 +210,43 @@ namespace SocialMedia.Services
                 new { lastPostId = last }
             );
         }
-        public async Task<ApiResponse<IEnumerable<PostDto>>> GetUserPostsAsync(ClaimsPrincipal userClaims,
-            Guid profileId, Guid? lastPostId = null, int take = 20)
+        public async Task<ApiResponse<IEnumerable<PostDto>>> GetUserPostsAsync(
+                ClaimsPrincipal userClaims,
+                Guid profileId,
+                Guid? lastPostId = null,
+                int take = 20)
         {
             if (take <= 0 || take > 50) take = 20;
 
             var invalidUserResponse = GetUserIdOrUnauthorized<IEnumerable<PostDto>>(userClaims, out var userId);
-            var isGuest = invalidUserResponse != null;
+            if (invalidUserResponse != null)
+                return invalidUserResponse;
+
+            var viewerProfile = await _profileRepository.GetByApplicationIdAsync(userId);
+
+            bool isOwner = false, isFriend = false, isFollower = false;
+
+            isOwner = viewerProfile.Id == profileId;
+
+            isFriend = await _friendshipRepository.AnyAsync(f =>
+                f.Status == FriendshipStatus.Accepted &&
+                ((f.RequesterId == viewerProfile.Id && f.AddresseeId == profileId) ||
+                 (f.AddresseeId == viewerProfile.Id && f.RequesterId == profileId)));
+
+            isFollower = await _profileRepository.QueryNoTracking()
+                .Where(p => p.Id == profileId)
+                .AnyAsync(p => p.Followers.Any(f => f.FollowerId == viewerProfile.Id));
+
 
             var query = _postRepository.QueryNoTracking()
-                .Where(p => !p.IsDeleted && p.ProfileId == profileId)
+                .Include(p => p.Media)
                 .Include(p => p.Profile)
+                .Where(p => !p.IsDeleted && p.ProfileId == profileId)
+                .Where(p =>
+                    p.Visibility == PostVisibility.Public ||
+                    isOwner ||
+                    (p.Visibility == PostVisibility.FriendsOnly && isFriend) ||
+                    isFollower)
                 .OrderByDescending(p => p.CreatedDate)
                 .AsQueryable();
 
@@ -228,39 +254,12 @@ namespace SocialMedia.Services
             {
                 var lastPost = await _postRepository.GetByIdAsync(lastPostId.Value);
                 if (lastPost != null)
-                {
                     query = query.Where(p => p.CreatedDate < lastPost.CreatedDate);
-                }
-            }
-
-            if (isGuest)
-            {
-                query = query.Where(p => p.Visibility == PostVisibility.Public);
-            }
-            else
-            {
-                var viewerProfile = await _profileRepository.GetByApplicationIdAsync(userId);
-                if (viewerProfile == null)
-                    return ApiResponse<IEnumerable<PostDto>>.ErrorResponse("Profile not found.");
-
-                var isOwner = viewerProfile.Id == profileId;
-
-                var isFriend = await _friendshipRepository
-                    .AnyAsync(f =>
-                        (f.RequesterId == viewerProfile.Id && f.AddresseeId == profileId ||
-                         f.AddresseeId == viewerProfile.Id && f.RequesterId == profileId) &&
-                        f.Status == FriendshipStatus.Accepted);
-
-                query = query.Where(p =>
-                    p.Visibility == PostVisibility.Public ||
-                    (p.Visibility == PostVisibility.FriendsOnly && isFriend) ||
-                    isOwner);
             }
 
             var posts = await query.Take(take).ToListAsync();
 
             var dtos = posts.Select(p => SuccessPostDto(p, p.Profile, "").Data).ToList();
-
             var last = posts.LastOrDefault()?.Id;
 
             return ApiResponse<IEnumerable<PostDto>>.SuccessResponse(
@@ -269,6 +268,7 @@ namespace SocialMedia.Services
                 new { lastPostId = last }
             );
         }
+
 
         public async Task<ApiResponse<object>> UpdatePostAsync(ClaimsPrincipal userClaims, Guid postId, UpdatePostDto dto)
         {
