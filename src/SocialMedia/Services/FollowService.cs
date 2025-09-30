@@ -115,7 +115,7 @@ namespace SocialMedia.Services
             if (userProfile == null)
                 return ApiResponse<IEnumerable<FollowDto>>.ErrorResponse("Profile not found.", new[] { "User profile does not exist." });
 
-            var followers = await _followRepository.GetAllAttached()
+            var followers = await _followRepository.QueryNoTracking()
                 .Where(f => f.FollowingId == userProfile.Id)
                 .Include(f => f.Follower)
                     .ThenInclude(u => u.User)
@@ -151,7 +151,7 @@ namespace SocialMedia.Services
             if (userProfile == null)
                 return ApiResponse<IEnumerable<FollowDto>>.ErrorResponse("Profile not found.", new[] { "User profile does not exist." });
 
-            var followers = await _followRepository.GetAllAttached()
+            var followers = await _followRepository.QueryNoTracking()
                 .Where(f => f.FollowerId == userProfile.Id)
                 .Include(f => f.Following)
                     .ThenInclude(u => u.User)

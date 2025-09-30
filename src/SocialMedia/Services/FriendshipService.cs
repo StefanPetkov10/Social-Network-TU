@@ -117,7 +117,7 @@ namespace SocialMedia.Services
             if (userProfile == null)
                 return ApiResponse<IEnumerable<FriendDto>>.ErrorResponse("Profile not found.", new[] { "User profile does not exist." });
 
-            var pendingRequests = await _friendshipRepository.GetAllAttached()
+            var pendingRequests = await _friendshipRepository.QueryNoTracking()
                 .Where(f => f.AddresseeId == userProfile.Id
                     && f.Status == FriendshipStatus.Pending)
                 .Include(f => f.Requester)
@@ -141,7 +141,7 @@ namespace SocialMedia.Services
                 return ApiResponse<IEnumerable<FriendDto>>.ErrorResponse("Profile not found.", new[] { "User profile does not exist." });
 
             var friendships = await _friendshipRepository
-                .GetAllAttached()
+                .QueryNoTracking()
                 .Where(f => (f.RequesterId == userProfile.Id || f.AddresseeId == userProfile.Id)
                             && f.Status == FriendshipStatus.Accepted)
                 .Include(f => f.Requester)
@@ -201,9 +201,9 @@ namespace SocialMedia.Services
             if (userProfile.Id == friendProfileId)
                 return ApiResponse<bool>.ErrorResponse("You cannot remove yourself from friends.");
 
-            var friendship = await _friendshipRepository.GetAllAttached()
-                .FirstOrDefaultAsync(f => (f.RequesterId == userProfile.Id && f.AddresseeId == friendProfileId ||
-                                           f.RequesterId == friendProfileId && f.AddresseeId == userProfile.Id)
+            var friendship = await _friendshipRepository.FirstOrDefaultAsync(f =>
+                                (f.RequesterId == userProfile.Id && f.AddresseeId == friendProfileId ||
+                                       f.RequesterId == friendProfileId && f.AddresseeId == userProfile.Id)
                                            && f.Status == FriendshipStatus.Accepted);
 
             if (friendship == null)

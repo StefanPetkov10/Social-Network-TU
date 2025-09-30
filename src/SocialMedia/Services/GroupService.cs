@@ -76,7 +76,7 @@ namespace SocialMedia.Services
 
         public async Task<ApiResponse<GroupDto>> GetGroupByIdAsync(ClaimsPrincipal userClaims, Guid groupId)
         {
-            var group = _groupRepository.GetAllAttached()
+            var group = _groupRepository.QueryNoTracking()
                 .Include(g => g.Members)
                 .FirstOrDefault(g => g.Id == groupId);
 
@@ -134,7 +134,7 @@ namespace SocialMedia.Services
             if (profile == null)
                 return NotFoundResponse<IEnumerable<PostDto>>("Profile");
 
-            var myMembership = await _membershipRepository.GetAllAttached()
+            var myMembership = await _membershipRepository.QueryNoTracking()
                 .Where(m => m.ProfileId == profile.Id && m.Status == MembershipStatus.Approved)
                 .Select(m => m.GroupId)
                 .ToListAsync();
@@ -142,7 +142,7 @@ namespace SocialMedia.Services
             if (!myMembership.Any())
                 return ApiResponse<IEnumerable<PostDto>>.SuccessResponse(Enumerable.Empty<PostDto>(), "No groups found.");
 
-            var queryPosts = _postRepository.GetAllAttached()
+            var queryPosts = _postRepository.QueryNoTracking()
                 .Where(p => p.GroupId != null && !p.IsDeleted
                     && myMembership.Contains(p.GroupId.Value))
                 .Include(p => p.Profile)
@@ -187,7 +187,7 @@ namespace SocialMedia.Services
             if (profile == null)
                 return NotFoundResponse<IEnumerable<GroupDto>>("Profile");
 
-            var myMembership = await _membershipRepository.GetAllAttached()
+            var myMembership = await _membershipRepository.QueryNoTracking()
                 .Where(m => m.ProfileId == profile.Id && m.Status == MembershipStatus.Approved)
                 .Select(m => m.GroupId)
                 .ToListAsync();
@@ -195,7 +195,7 @@ namespace SocialMedia.Services
             if (!myMembership.Any())
                 return ApiResponse<IEnumerable<GroupDto>>.SuccessResponse(Enumerable.Empty<GroupDto>(), "No groups found.");
 
-            var groups = await _groupRepository.GetAllAttached()
+            var groups = await _groupRepository.QueryNoTracking()
                 .Where(g => myMembership.Contains(g.Id))
                 .Include(g => g.Members)
                 .ToListAsync();
@@ -242,7 +242,7 @@ namespace SocialMedia.Services
 
             var updateGroup = _mapper.Map(dto, group);
 
-            _groupRepository.Update(updateGroup);
+            _groupRepository.UpdateAsync(updateGroup);
             await _groupRepository.SaveChangesAsync();
 
             return ApiResponse<object>.SuccessResponse(null, "Group updated successfully.");
@@ -269,7 +269,7 @@ namespace SocialMedia.Services
             if (membership == null || membership.Role != GroupRole.Owner)
                 return ApiResponse<object>.ErrorResponse("Forbidden.", new[] { "You do not have permission to delete this group." });
 
-            _groupRepository.Delete(group);
+            _groupRepository.DeleteAsync(group);
             await _groupRepository.SaveChangesAsync();
 
             return ApiResponse<object>.SuccessResponse(null, "Group deleted successfully.");

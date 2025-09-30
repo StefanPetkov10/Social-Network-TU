@@ -87,12 +87,9 @@ namespace SocialMedia.Services
             await _postRepository.AddAsync(post);
             await _postRepository.SaveChangesAsync();
 
-            var postDto = _mapper.Map<PostDto>(post);
             var profile = await _profileRepository.GetByIdAsync(post.ProfileId);
-            postDto.AuthorName = profile.FullName ?? "Unknown Author";
-            postDto.AuthorAvatar = profile.Photo;
 
-            return ApiResponse<PostDto>.SuccessResponse(postDto, "Post created successfully.");
+            return SuccessPostDto(post, profile, "Post created successfully.");
         }
 
         public async Task<ApiResponse<PostDto>> GetPostByIdAsync(ClaimsPrincipal userClaims, Guid postId)
@@ -105,7 +102,7 @@ namespace SocialMedia.Services
             if (viewerProfile == null)
                 return ApiResponse<PostDto>.ErrorResponse("Invalid user profile.");
 
-            var post = await _postRepository.Query()
+            var post = await _postRepository.QueryNoTracking()
                 .Include(p => p.Media)
                 .FirstOrDefaultAsync(p => p.Id == postId);
 
@@ -156,16 +153,39 @@ namespace SocialMedia.Services
         }
 
         public async Task<ApiResponse<IEnumerable<PostDto>>> GetFeedAsync(ClaimsPrincipal userClaims,
-            Guid? lastPostId = null, int take = 20)
+           Guid? lastPostId = null, int take = 20)
         {
             if (take <= 0 || take > 50) take = 20;
 
             var invalidUserResponse = GetUserIdOrUnauthorized<IEnumerable<PostDto>>(userClaims, out var userId);
-            var isGuest = invalidUserResponse != null;
+            if (invalidUserResponse != null)
+                return invalidUserResponse;
 
-            var query = _postRepository.GetAllAttached()
-                .Where(p => !p.IsDeleted)
+            var viewerProfile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (viewerProfile == null)
+                return ApiResponse<IEnumerable<PostDto>>.ErrorResponse("Invalid user profile.");
+
+            var friendIds = await _friendshipRepository.QueryNoTracking()
+                .Where(f => f.Status == FriendshipStatus.Accepted &&
+                    f.RequesterId == viewerProfile.Id || f.AddresseeId == viewerProfile.Id)
+                .Select(f => viewerProfile.Id == f.RequesterId ? f.AddresseeId : f.RequesterId)
+                .ToListAsync();
+
+            var followingIds = await _profileRepository.QueryNoTracking()
+                .Where(p => p.Followers.Any(f => f.FollowerId == viewerProfile.Id))
+                .Select(p => p.Id)
+                .ToListAsync();
+
+            var query = _postRepository.QueryNoTracking()
+                .Include(p => p.Media)
                 .Include(p => p.Profile)
+                .Where(p => !p.IsDeleted &&
+                    (
+                        p.Visibility == PostVisibility.Public ||
+                        p.ProfileId == viewerProfile.Id ||
+                        (p.Visibility == PostVisibility.FriendsOnly && friendIds.Contains(p.ProfileId)) ||
+                        followingIds.Contains(p.ProfileId))
+                    )
                 .OrderByDescending(p => p.CreatedDate)
                 .AsQueryable();
 
@@ -178,41 +198,9 @@ namespace SocialMedia.Services
                 }
             }
 
-            if (isGuest)
-            {
-                query = query.Where(p => p.Visibility == PostVisibility.Public);
-            }
-            else
-            {
-                var viewerProfile = await _profileRepository.GetByApplicationIdAsync(userId);
-                if (viewerProfile == null)
-                    return ApiResponse<IEnumerable<PostDto>>.ErrorResponse("Profile not found.");
-
-                var friendIds = await _friendshipRepository.GetAllAttached()
-                    .Where(f =>
-                        (f.RequesterId == viewerProfile.Id || f.AddresseeId == viewerProfile.Id) &&
-                        f.Status == FriendshipStatus.Accepted)
-                    .Select(f => f.RequesterId == viewerProfile.Id ? f.AddresseeId : f.RequesterId)
-                    .ToListAsync();
-
-                query = query.Where(p =>
-                    p.Visibility == PostVisibility.Public ||
-                    (p.Visibility == PostVisibility.FriendsOnly && friendIds.Contains(p.ProfileId)) ||
-                    p.ProfileId == viewerProfile.Id);
-            }
-
             var posts = await query.Take(take).ToListAsync();
-            var dtos = _mapper.Map<IEnumerable<PostDto>>(posts);
 
-            foreach (var dto in dtos)
-            {
-                if (string.IsNullOrEmpty(dto.AuthorName))
-                {
-                    var profile = posts.FirstOrDefault(p => p.Id == dto.Id)?.Profile;
-                    dto.AuthorName = profile?.FullName ?? "Unknown";
-                    dto.AuthorAvatar = profile?.Photo;
-                }
-            }
+            var dtos = posts.Select(p => SuccessPostDto(p, p.Profile, "").Data).ToList();
 
             var last = posts.LastOrDefault()?.Id;
 
@@ -230,7 +218,7 @@ namespace SocialMedia.Services
             var invalidUserResponse = GetUserIdOrUnauthorized<IEnumerable<PostDto>>(userClaims, out var userId);
             var isGuest = invalidUserResponse != null;
 
-            var query = _postRepository.GetAllAttached()
+            var query = _postRepository.QueryNoTracking()
                 .Where(p => !p.IsDeleted && p.ProfileId == profileId)
                 .Include(p => p.Profile)
                 .OrderByDescending(p => p.CreatedDate)
@@ -270,14 +258,8 @@ namespace SocialMedia.Services
             }
 
             var posts = await query.Take(take).ToListAsync();
-            var dtos = _mapper.Map<IEnumerable<PostDto>>(posts);
 
-            var profile = await _profileRepository.GetByIdAsync(profileId);
-            foreach (var dto in dtos)
-            {
-                dto.AuthorName = profile?.FullName ?? "Unknown";
-                dto.AuthorAvatar = profile?.Photo;
-            }
+            var dtos = posts.Select(p => SuccessPostDto(p, p.Profile, "").Data).ToList();
 
             var last = posts.LastOrDefault()?.Id;
 
