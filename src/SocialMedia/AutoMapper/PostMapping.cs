@@ -11,7 +11,9 @@ namespace AutoMapper
                 .ForMember(dest => dest.Visibility, opt => opt.Ignore())
                 .ForMember(dest => dest.Media, opt => opt.Ignore());
 
-            CreateMap<UpdatePostDto, Post>();
+            CreateMap<UpdatePostDto, Post>()
+                .ForMember(dest => dest.Visibility, opt => opt.Ignore())
+                .ForMember(dest => dest.Media, opt => opt.Ignore()); ;
 
             CreateMap<Post, PostDto>();
             CreateMap<PostMedia, PostMediaDto>()

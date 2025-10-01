@@ -270,25 +270,63 @@ namespace SocialMedia.Services
         }
 
 
-        public async Task<ApiResponse<object>> UpdatePostAsync(ClaimsPrincipal userClaims, Guid postId, UpdatePostDto dto)
+        public async Task<ApiResponse<PostDto>> UpdatePostAsync(ClaimsPrincipal userClaims, Guid postId, UpdatePostDto dto)
         {
-            var invalidUserResponse = GetUserIdOrUnauthorized<object>(userClaims, out var userId);
+            var invalidUserResponse = GetUserIdOrUnauthorized<PostDto>(userClaims, out var userId);
             if (invalidUserResponse != null)
                 return invalidUserResponse;
 
-            var post = await _postRepository.GetByIdAsync(postId);
+            var viewerProfile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (viewerProfile == null)
+                return NotFoundResponse<PostDto>("Profile");
+
+            var post = _postRepository.Query()
+                .Include(p => p.Media)
+                .FirstOrDefault(p => p.Id == postId && !p.IsDeleted);
             if (post == null)
-                return NotFoundResponse<object>("Post");
+                return NotFoundResponse<PostDto>("Post");
 
-            var updatePost = _mapper.Map(dto, post);
+            if (viewerProfile.Id != post.ProfileId)
+                return ApiResponse<PostDto>.ErrorResponse("You are not authorized to update this post.");
 
-            await _postRepository.UpdateAsync(updatePost);
+            _mapper.Map(dto, post);
+            if (post.GroupId.HasValue)
+            {
+                post.Visibility = PostVisibility.Public;
+            }
+
+            if (dto.FilesToDelete != null && dto.FilesToDelete.Any())
+            {
+                var mediaToRemove = post.Media.Where(m => dto.FilesToDelete.Contains(m.Id)).ToList();
+                foreach (var media in mediaToRemove)
+                {
+                    post.Media.Remove(media);
+                }
+            }
+
+            if (dto.NewFiles != null && dto.NewFiles.Any())
+            {
+                int order = 0;
+
+                foreach (var file in dto.NewFiles)
+                {
+                    var (filePath, mediaType) = await _fileService.SaveFileAsync(file);
+
+                    post.Media.Add(new PostMedia
+                    {
+                        Id = Guid.NewGuid(),
+                        PostId = post.Id,
+                        FilePath = filePath,
+                        MediaType = mediaType,
+                        Order = order++
+                    });
+                }
+            }
+
             await _postRepository.SaveChangesAsync();
 
-            var postDto = _mapper.Map<PostDto>(updatePost);
-            postDto.AuthorName = userClaims.Identity?.Name ?? "Unknown Author";
-
-            return ApiResponse<object>.SuccessResponse(postDto, "Post updated successfully.");
+            var profile = await _profileRepository.GetByIdAsync(post.ProfileId);
+            return SuccessPostDto(post, profile, "Post updated successfully.");
         }
 
         public async Task<ApiResponse<object>> DeletePostAsync(ClaimsPrincipal userId, Guid postId)

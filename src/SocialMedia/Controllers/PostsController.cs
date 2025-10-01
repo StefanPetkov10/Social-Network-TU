@@ -61,7 +61,7 @@ namespace SocialMedia.Controllers
         }
 
         [HttpPut("{postId}")]
-        public async Task<IActionResult> UpdatePost(Guid postId, [FromBody] UpdatePostDto dto)
+        public async Task<IActionResult> UpdatePost(Guid postId, [FromForm] UpdatePostDto dto)
         {
             if (!ModelState.IsValid)
             {

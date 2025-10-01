@@ -4,8 +4,9 @@ namespace SocialMedia.DTOs.Post
 {
     public class UpdatePostDto
     {
-        public PostVisibility Visibility { get; set; }
-        public string Content { get; set; } = null!;
-        public string? MediaUrl { get; set; }
+        public string? Content { get; set; }
+        public PostVisibility? Visibility { get; set; }
+        public List<Guid>? FilesToDelete { get; set; }
+        public List<IFormFile>? NewFiles { get; set; }
     }
 }
