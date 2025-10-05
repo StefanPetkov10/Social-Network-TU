@@ -19,8 +19,6 @@ namespace SocialMedia.Database.Models
 
         [Required]
         public MediaType MediaType { get; set; }
-
-        public int Order { get; set; } = 0;
     }
 
 }
