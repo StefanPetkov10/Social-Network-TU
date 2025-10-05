@@ -1,4 +1,6 @@
 ﻿using System.Linq.Expressions;
+using Microsoft.EntityFrameworkCore;
+using SocialMedia.Database.Models;
 
 namespace SocialMedia.Data.Repository.Interfaces
 {
@@ -19,6 +21,7 @@ namespace SocialMedia.Data.Repository.Interfaces
 
         Task DeleteAsync(TType entity);
 
+        bool Update(TType entity);
         Task UpdateAsync(TType entity);
 
         Task SaveChangesAsync();
@@ -28,5 +31,7 @@ namespace SocialMedia.Data.Repository.Interfaces
         Task<bool> ExistsByKeysAsync(params object[] keyValues);
 
         Task<bool> IsMemberAsync(TId groupId, TId profileId);
+        void RemoveMedia(PostMedia media);
+        EntityState GetEntityState(TType entity);
     }
 }

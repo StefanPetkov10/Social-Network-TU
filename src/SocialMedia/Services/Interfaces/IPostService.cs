@@ -12,7 +12,5 @@ namespace SocialMedia.Services.Interfaces
         Task<ApiResponse<IEnumerable<PostDto>>> GetUserPostsAsync(ClaimsPrincipal userClaims, Guid profileId, Guid? lastPostId = null, int take = 20);
         Task<ApiResponse<PostDto>> UpdatePostAsync(ClaimsPrincipal userClaims, Guid postId, UpdatePostDto dto);
         Task<ApiResponse<object>> DeletePostAsync(ClaimsPrincipal userId, Guid postId);
-        Task<ApiResponse<object>> LikePostAsync(ClaimsPrincipal userClaims, Guid postId);
-        Task<ApiResponse<object>> UnlikePostAsync(ClaimsPrincipal userClaims, Guid postId);
     }
 }

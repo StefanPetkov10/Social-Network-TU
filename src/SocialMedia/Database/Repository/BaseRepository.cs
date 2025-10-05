@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database;
+using SocialMedia.Database.Models;
 using SocialMedia.Database.Models.Enums;
 
 namespace SocialMedia.Data.Repository
@@ -58,12 +59,26 @@ namespace SocialMedia.Data.Repository
             this.dbSet.Remove(entity);
         }
 
+        public bool Update(TType entity)
+        {
+            try
+            {
+                this.dbSet.Attach(entity);
+                this.dbContext.Entry(entity).State = EntityState.Modified;
+                this.dbContext.SaveChanges();
+
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
         public async Task UpdateAsync(TType entity)
         {
             this.dbSet.Attach(entity);
             this.dbContext.Entry(entity).State = EntityState.Modified;
         }
-
 
         public async Task SaveChangesAsync() => await dbContext.SaveChangesAsync();
 
@@ -101,6 +116,16 @@ namespace SocialMedia.Data.Repository
                         m.Status == MembershipStatus.Approved);
             }
             throw new InvalidOperationException("TId must be of type Guid.");
+        }
+
+        public void RemoveMedia(PostMedia media)
+        {
+            dbContext.Set<PostMedia>().Remove(media);
+        }
+
+        public EntityState GetEntityState(TType entity)
+        {
+            return dbContext.Entry(entity).State;
         }
     }
 }

@@ -30,9 +30,11 @@ namespace SocialMedia.Database.Models
 
         public ICollection<Comment> Replies { get; set; } = new List<Comment>();
 
-        public bool IsDeleted { get; set; } = false;
+        public bool IsDeleted { get; set; }
 
         public int Depth { get; set; }
+
+        public ICollection<CommentMedia> Media { get; set; } = new List<CommentMedia>();
     }
 
 }

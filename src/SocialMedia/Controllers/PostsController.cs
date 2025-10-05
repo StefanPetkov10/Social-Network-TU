@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SocialMedia.Common;
 using SocialMedia.DTOs.Post;
 using SocialMedia.Services.Interfaces;
@@ -59,7 +60,6 @@ namespace SocialMedia.Controllers
             }
             return NotFound(response);
         }
-
         [HttpPut("{postId}")]
         public async Task<IActionResult> UpdatePost(Guid postId, [FromForm] UpdatePostDto dto)
         {
@@ -69,14 +69,36 @@ namespace SocialMedia.Controllers
                     .SelectMany(v => v.Errors)
                     .Select(e => e.ErrorMessage)
                     .ToArray();
+
                 return BadRequest(ApiResponse<object>.ErrorResponse("Validation failed", errors));
             }
-            var response = await _postService.UpdatePostAsync(User, postId, dto);
-            if (response.Success)
+
+            // Слагаме try/catch за да хванем DbUpdateConcurrencyException и други
+            try
             {
-                return Ok(response);
+                var response = await _postService.UpdatePostAsync(User, postId, dto);
+
+                if (response.Success)
+                    return Ok(response);
+
+                // ако не е Success, може да е NotFound или Unauthorized
+                if (response.Message?.Contains("not authorized", StringComparison.OrdinalIgnoreCase) == true)
+                    return Forbid();
+
+                if (response.Message?.Contains("not found", StringComparison.OrdinalIgnoreCase) == true)
+                    return NotFound(response);
+
+                return BadRequest(response);
             }
-            return NotFound(response);
+            catch (DbUpdateConcurrencyException ex)
+            {
+                // Тук ще видиш точната причина (0 rows affected и т.н.)
+                return Conflict(ApiResponse<object>.ErrorResponse("Concurrency error", new[] { ex.Message }));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResponse("Unexpected error", new[] { ex.Message }));
+            }
         }
 
         [HttpDelete("{postId}")]

@@ -22,10 +22,10 @@ namespace SocialMedia.Services
         private readonly IMapper _mapper;
 
         public PostService(UserManager<ApplicationUser> userManager,
-            IRepository<Post, Guid> postRepository, IMapper mapper,
-             IRepository<Database.Models.Profile, Guid> profileRepository,
-              IRepository<Friendship, Guid> friendshipRepository,
-               IFileService fileService, IRepository<Group, Guid> groupRepository,
+            IRepository<Post, Guid> postRepository,
+            IMapper mapper, IRepository<Database.Models.Profile, Guid> profileRepository,
+              IRepository<Friendship, Guid> friendshipRepository, IFileService fileService,
+               IRepository<Group, Guid> groupRepository,
                 IHttpContextAccessor httpContextAccessor)
             : base(userManager)
         {
@@ -300,30 +300,35 @@ namespace SocialMedia.Services
                 var mediaToRemove = post.Media.Where(m => dto.FilesToDelete.Contains(m.Id)).ToList();
                 foreach (var media in mediaToRemove)
                 {
-                    post.Media.Remove(media);
+                    _postRepository.RemoveMedia(media);
                 }
             }
 
+            var state = _postRepository.GetEntityState(post);
+            Console.WriteLine($"Post state: {state}"); // трябва да е Unchanged
+
             if (dto.NewFiles != null && dto.NewFiles.Any())
             {
-                int order = 0;
+                int order = post.Media.Count;
 
                 foreach (var file in dto.NewFiles)
                 {
                     var (filePath, mediaType) = await _fileService.SaveFileAsync(file);
 
-                    post.Media.Add(new PostMedia
+                    var media = new PostMedia
                     {
                         Id = Guid.NewGuid(),
-                        PostId = post.Id,
+                        Post = post,
                         FilePath = filePath,
                         MediaType = mediaType,
                         Order = order++
-                    });
+                    };
+                    post.Media.Add(media);
                 }
+
             }
 
-            await _postRepository.SaveChangesAsync();
+            await _postRepository.SaveChangesAsync(); //fix
 
             var profile = await _profileRepository.GetByIdAsync(post.ProfileId);
             return SuccessPostDto(post, profile, "Post updated successfully.");
@@ -349,15 +354,6 @@ namespace SocialMedia.Services
             return ApiResponse<object>.SuccessResponse(null, "Post deleted successfully.");
         }
 
-        public async Task<ApiResponse<object>> LikePostAsync(ClaimsPrincipal userClaims, Guid postId)
-        {
-            throw new NotImplementedException();
-        }
-
-        public async Task<ApiResponse<object>> UnlikePostAsync(ClaimsPrincipal userClaims, Guid postId)
-        {
-            throw new NotImplementedException();
-        }
 
         private ApiResponse<PostDto> SuccessPostDto(Post post, Database.Models.Profile profile, string message)
         {
