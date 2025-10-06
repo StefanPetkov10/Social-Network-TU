@@ -20,12 +20,16 @@ namespace SocialMedia.Controllers
         public async Task<IActionResult> CreatePost([FromForm] CreatePostDto dto)
         {
             if (!ModelState.IsValid)
+            {
                 return BadRequest(ModelState);
+            }
+            var response = await _postService.CreatePostAsPost(User, dto);
+            if (!response.Success)
+            {
+                return BadRequest(response);
+            }
 
-            var result = await _postService.CreatePostAsPost(User, dto);
-            if (!result.Success) return BadRequest(result);
-
-            return Ok(result);
+            return Ok(response);
         }
 
         [HttpGet("{postId:guid}")]

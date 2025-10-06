@@ -15,6 +15,7 @@ using SocialMedia.Database.Models;
 using SocialMedia.Extensions;
 using SocialMedia.Services.Interfaces;
 using SocialMedia.Validators;
+using SocialMedia.Validators.CommentValidation;
 using SocialMedia.Validators.GroupValidation;
 using SocialMedia.Validators.PostValidation;
 using SocialMedia.Validators.Profile_Validation;
@@ -114,6 +115,7 @@ namespace SocialMedia
                 config.AddProfile<FriendshipMapping>();
                 config.AddProfile<FollowMapping>();
                 config.AddProfile<GroupMapping>();
+                config.AddProfile<CommentMapping>();
             });
 
             builder.Services.AddAuthorization();
@@ -126,7 +128,8 @@ namespace SocialMedia
                 typeof(CreatePostValidator),
                 typeof(UpdatePostValidator),
                 typeof(CreateGroupValidator),
-                typeof(UpdateGroupValidator)
+                typeof(UpdateGroupValidator),
+                typeof(CreateCommentValidator)
            );
 
             builder.Services.AddFluentValidationAutoValidation();

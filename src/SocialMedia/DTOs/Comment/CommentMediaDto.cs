@@ -5,7 +5,7 @@ namespace SocialMedia.DTOs.Comment
     public class CommentMediaDto
     {
         public Guid Id { get; set; }
-        public string FilePath { get; set; } = null!;
+        public string Url { get; set; } = null!;
         public MediaType MediaType { get; set; }
     }
 }

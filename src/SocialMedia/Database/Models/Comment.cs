@@ -34,7 +34,7 @@ namespace SocialMedia.Database.Models
 
         public int Depth { get; set; }
 
-        public ICollection<CommentMedia> Media { get; set; } = new List<CommentMedia>();
+        public CommentMedia? Media { get; set; }
     }
 
 }
