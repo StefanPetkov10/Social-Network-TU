@@ -32,5 +32,15 @@ namespace SocialMedia.Controllers
             return Ok(response.Data);
         }
 
+        [HttpGet("{postId}")]
+        public async Task<IActionResult> GetCommentsByPostId(Guid postId, [FromQuery] Guid? lastCommentId = null, [FromQuery] int take = 20)
+        {
+            var response = await _commentService.GetCommentsByPostIdAsync(User, postId, lastCommentId, take);
+            if (!response.Success)
+            {
+                return BadRequest(response.Errors);
+            }
+            return Ok(response.Data);
+        }
     }
 }

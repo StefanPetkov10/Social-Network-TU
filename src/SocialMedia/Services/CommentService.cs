@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using SocialMedia.Common;
 using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database.Models;
@@ -82,22 +83,59 @@ namespace SocialMedia.Services
             await _commentRepository.AddAsync(comment);
             await _commentRepository.SaveChangesAsync();
 
+            post.CommentsCount += 1;
+            _postRepository.Update(post);
+            await _postRepository.SaveChangesAsync();
+
             return SuccessCommentDto(comment, profile, "Comment created successfully.");
         }
-
-        public async Task<ApiResponse<CommentDto?>> EditCommentAsync(Guid commentId, Guid requesterProfileId, string newContent, IFormFileCollection? newFiles = null, IEnumerable<Guid>? removeMediaIds = null)
-        {
-            throw new NotImplementedException();
-        }
-
-        public async Task<ApiResponse<int>> GetCommentCountForPostAsync(Guid postId)
-        {
-            throw new NotImplementedException();
-        }
-
         public async Task<ApiResponse<IEnumerable<CommentDto>>> GetCommentsByPostIdAsync(ClaimsPrincipal userClaims, Guid postId, Guid? lastCommentId = null, int take = 20)
         {
-            throw new NotImplementedException();
+            //In this method can add option about sorting like: newest, oldest, most liked
+
+            if (take <= 0 || take > 50)
+                take = 20;
+            var invalidUserResponse = GetUserIdOrUnauthorized<IEnumerable<CommentDto>>(userClaims, out var userIdValue);
+            if (invalidUserResponse != null)
+                return invalidUserResponse;
+
+            var profile = await _profileRepository.GetByApplicationIdAsync(userIdValue);
+            if (profile == null)
+                return NotFoundResponse<IEnumerable<CommentDto>>("Profile");
+
+            var post = await _postRepository.GetByIdAsync(postId);
+            if (post == null)
+                return NotFoundResponse<IEnumerable<CommentDto>>("Post");
+
+            var commentsQuery = _commentRepository
+                .Query()
+                .Include(c => c.Profile)
+                    .ThenInclude(p => p.User)
+                .Include(c => c.Media)
+                .Include(c => c.Replies)
+                .Where(c => c.PostId == postId && c.Depth == 0)
+                .OrderByDescending(c => c.CreatedDate)
+                .AsQueryable();
+
+            if (lastCommentId.HasValue)
+            {
+                var lastComment = await _commentRepository.GetByIdAsync(lastCommentId.Value);
+                if (lastComment != null)
+                {
+                    commentsQuery = commentsQuery.Where(c => c.CreatedDate < lastComment.CreatedDate);
+                }
+            }
+
+            var comments = await commentsQuery.Take(take).ToListAsync();
+
+            var dtos = comments.Select(c => SuccessCommentDto(c, c.Profile, "").Data).ToList();
+
+            var last = comments.LastOrDefault();
+
+            return ApiResponse<IEnumerable<CommentDto>>.SuccessResponse(
+                dtos,
+                "Comments retrieved successfully.",
+                new { lastCommentId = last });
         }
 
         public async Task<(IEnumerable<CommentDto> Replies, int TotalCount)> GetRepliesAsync(Guid commentId, Guid? lastCommentId, int take = 20)
@@ -105,7 +143,16 @@ namespace SocialMedia.Services
             throw new NotImplementedException();
         }
 
+        public async Task<ApiResponse<CommentDto?>> EditCommentAsync(Guid commentId, Guid requesterProfileId, string newContent, IFormFileCollection? newFiles = null, IEnumerable<Guid>? removeMediaIds = null)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task<ApiResponse<bool>> SoftDeleteCommentAsync(Guid commentId, Guid requesterProfileId)
+        {
+            throw new NotImplementedException();
+        }
+        public async Task<ApiResponse<int>> GetCommentCountForPostAsync(Guid postId)
         {
             throw new NotImplementedException();
         }
