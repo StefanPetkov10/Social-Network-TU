@@ -89,7 +89,8 @@ namespace SocialMedia.Services
 
             return SuccessCommentDto(comment, profile, "Comment created successfully.");
         }
-        public async Task<ApiResponse<IEnumerable<CommentDto>>> GetCommentsByPostIdAsync(ClaimsPrincipal userClaims, Guid postId, Guid? lastCommentId = null, int take = 20)
+        public async Task<ApiResponse<IEnumerable<CommentDto>>> GetCommentsByPostIdAsync(ClaimsPrincipal userClaims,
+            Guid postId, Guid? lastCommentId = null, int take = 20)
         {
             //In this method can add option about sorting like: newest, oldest, most liked
 
@@ -112,7 +113,8 @@ namespace SocialMedia.Services
                 .Include(c => c.Profile)
                 .Include(c => c.Media)
                 .Include(c => c.Replies)
-                .Where(c => c.PostId == postId && c.Depth == 0)
+                .Include(c => c.Post)
+                .Where(c => c.PostId == postId && c.Depth == 0 && !c.IsDeleted)
                 .OrderByDescending(c => c.CreatedDate)
                 .AsQueryable();
 
@@ -137,10 +139,62 @@ namespace SocialMedia.Services
                 new { lastCommentId = last });
         }
 
-        public async Task<(IEnumerable<CommentDto> Replies, int TotalCount)> GetRepliesAsync(Guid commentId, Guid? lastCommentId, int take = 20)
+        public async Task<ApiResponse<IEnumerable<CommentDto>>> GetRepliesAsync(ClaimsPrincipal userClaims,
+             Guid commentId, Guid? lastCommentId = null, int take = 10)
         {
-            throw new NotImplementedException();
+            if (take <= 0 || take > 50)
+                take = 20;
+            var invalidUserResponse = GetUserIdOrUnauthorized<IEnumerable<CommentDto>>(userClaims, out var userIdValue);
+            if (invalidUserResponse != null)
+                return invalidUserResponse;
+
+            var profile = await _profileRepository.GetByApplicationIdAsync(userIdValue);
+            if (profile == null)
+                return NotFoundResponse<IEnumerable<CommentDto>>("Profile");
+
+            var parent = await _commentRepository.Query()
+                .Include(c => c.Profile)
+                .FirstOrDefaultAsync(c => c.Id == commentId);
+
+            if (parent == null)
+                return NotFoundResponse<IEnumerable<CommentDto>>("Parent Comment");
+
+            var query = _commentRepository.Query()
+                .Include(c => c.Profile)
+                .Include(c => c.Replies)
+                .Where(c => c.ParentCommentId == commentId && !c.IsDeleted)
+                .OrderByDescending(c => c.CreatedDate)
+                .AsQueryable();
+
+            if (lastCommentId.HasValue)
+            {
+                var lastComment = await _commentRepository.GetByIdAsync(lastCommentId.Value);
+                if (lastComment != null)
+                {
+                    query = query.Where(c => c.CreatedDate < lastComment.CreatedDate);
+                }
+            }
+
+            var comments = await query.Take(take).ToListAsync();
+
+            var dtoReplies = comments.Select(r => new CommentDto
+            {
+                Id = r.Id,
+                Content = r.Content,
+                AuthorName = r.Profile.FullName ?? "Unknown",
+                AuthorAvatar = r.Profile.Photo,
+                PostedDate = r.CreatedDate,
+                RepliesCount = r.Replies.Count,
+                RepliesPreview = new List<CommentDto>()
+            }).ToList();
+
+            var last = comments.LastOrDefault();
+            return ApiResponse<IEnumerable<CommentDto>>.SuccessResponse(
+                dtoReplies,
+                "Replies retrieved successfully.",
+                new { lastCommentId = last?.Id });
         }
+
 
         public async Task<ApiResponse<CommentDto?>> EditCommentAsync(ClaimsPrincipal userClaims, Guid commentId, UpdateCommentDto dto)
         {
@@ -181,15 +235,6 @@ namespace SocialMedia.Services
             return SuccessCommentDto(comment, profile, "Comment updated successfully.");
         }
 
-        public async Task<ApiResponse<bool>> SoftDeleteCommentAsync(Guid commentId, Guid requesterProfileId)
-        {
-            throw new NotImplementedException();
-        }
-        public async Task<ApiResponse<int>> GetCommentCountForPostAsync(Guid postId)
-        {
-            throw new NotImplementedException();
-        }
-
         private ApiResponse<CommentDto> SuccessCommentDto(Comment comment, Database.Models.Profile profile, string message)
         {
             var dto = _mapper.Map<CommentDto>(comment);
@@ -209,6 +254,12 @@ namespace SocialMedia.Services
             }
 
             return ApiResponse<CommentDto>.SuccessResponse(dto, message);
+        }
+
+
+        public Task<ApiResponse<bool>> SoftDeleteCommentAsync(ClaimsPrincipal userClaims, Guid commentId)
+        {
+            throw new NotImplementedException();
         }
     }
 }

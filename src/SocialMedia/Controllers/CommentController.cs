@@ -43,6 +43,17 @@ namespace SocialMedia.Controllers
             return Ok(response.Data);
         }
 
+        [HttpGet("{commentId}/replies")]
+        public async Task<IActionResult> GetReplies(Guid commentId, [FromQuery] Guid? lastCommentId = null, [FromQuery] int take = 10)
+        {
+            var response = await _commentService.GetRepliesAsync(User, commentId, lastCommentId, take);
+            if (!response.Success)
+            {
+                return BadRequest(response.Errors);
+            }
+            return Ok(response.Data);
+        }
+
         [HttpPut("{commentId}")]
         public async Task<IActionResult> EditComment(Guid commentId, [FromBody] UpdateCommentDto dto)
         {
