@@ -129,7 +129,8 @@ namespace SocialMedia
                 typeof(UpdatePostValidator),
                 typeof(CreateGroupValidator),
                 typeof(UpdateGroupValidator),
-                typeof(CreateCommentValidator)
+                typeof(CreateCommentValidator),
+                typeof(UpdateCommentValidator)
            );
 
             builder.Services.AddFluentValidationAutoValidation();

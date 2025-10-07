@@ -110,7 +110,6 @@ namespace SocialMedia.Services
             var commentsQuery = _commentRepository
                 .Query()
                 .Include(c => c.Profile)
-                    .ThenInclude(p => p.User)
                 .Include(c => c.Media)
                 .Include(c => c.Replies)
                 .Where(c => c.PostId == postId && c.Depth == 0)
@@ -143,9 +142,43 @@ namespace SocialMedia.Services
             throw new NotImplementedException();
         }
 
-        public async Task<ApiResponse<CommentDto?>> EditCommentAsync(Guid commentId, Guid requesterProfileId, string newContent, IFormFileCollection? newFiles = null, IEnumerable<Guid>? removeMediaIds = null)
+        public async Task<ApiResponse<CommentDto?>> EditCommentAsync(ClaimsPrincipal userClaims, Guid commentId, UpdateCommentDto dto)
         {
-            throw new NotImplementedException();
+            var invalidUserResponse = GetUserIdOrUnauthorized<CommentDto>(userClaims, out var userIdValue);
+            if (invalidUserResponse != null)
+                return invalidUserResponse;
+
+            var profile = await _profileRepository.GetByApplicationIdAsync(userIdValue);
+            if (profile == null)
+                return NotFoundResponse<CommentDto>("Profile");
+
+            var comment = await _commentRepository.Query()
+                .Include(c => c.Media)
+                .FirstOrDefaultAsync(c => c.Id == commentId);
+
+            if (comment == null)
+                return NotFoundResponse<CommentDto>("Comment");
+
+            if (comment.ProfileId != profile.Id)
+                return ApiResponse<CommentDto>.ErrorResponse("Forbidden.", new[] { "You can only edit your own comments." });
+
+            if (!string.IsNullOrWhiteSpace(dto.Content) && comment.Content != dto.Content)
+            {
+                comment.Content = dto.Content;
+                comment.UpdatedDate = DateTime.UtcNow;
+            }
+
+            if (dto.FileToDelete != null && comment.Media != null)
+            {
+                var mediaToDelete = comment.Media;
+                if (mediaToDelete != null)
+                {
+                    _commentRepository.RemoveMedia(mediaToDelete);
+                }
+            }
+
+            await _commentRepository.SaveChangesAsync();
+            return SuccessCommentDto(comment, profile, "Comment updated successfully.");
         }
 
         public async Task<ApiResponse<bool>> SoftDeleteCommentAsync(Guid commentId, Guid requesterProfileId)

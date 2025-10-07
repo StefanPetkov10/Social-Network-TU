@@ -42,5 +42,21 @@ namespace SocialMedia.Controllers
             }
             return Ok(response.Data);
         }
+
+        [HttpPut("{commentId}")]
+        public async Task<IActionResult> EditComment(Guid commentId, [FromBody] UpdateCommentDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var response = await _commentService.EditCommentAsync(User, commentId, dto);
+            if (!response.Success)
+            {
+                return BadRequest(response.Errors);
+            }
+            return Ok(response.Data);
+        }
     }
 }

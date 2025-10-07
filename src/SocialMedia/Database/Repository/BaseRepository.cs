@@ -2,7 +2,6 @@
 using Microsoft.EntityFrameworkCore;
 using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database;
-using SocialMedia.Database.Models;
 using SocialMedia.Database.Models.Enums;
 
 namespace SocialMedia.Data.Repository
@@ -118,9 +117,9 @@ namespace SocialMedia.Data.Repository
             throw new InvalidOperationException("TId must be of type Guid.");
         }
 
-        public void RemoveMedia(PostMedia media)
+        public void RemoveMedia<TMedia>(TMedia media) where TMedia : class
         {
-            dbContext.Set<PostMedia>().Remove(media);
+            dbContext.Set<TMedia>().Remove(media);
         }
 
         public EntityState GetEntityState(TType entity)
