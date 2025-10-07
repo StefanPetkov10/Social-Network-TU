@@ -180,6 +180,8 @@ namespace SocialMedia.Services
             var dtoReplies = comments.Select(r => new CommentDto
             {
                 Id = r.Id,
+                PostId = r.PostId,
+                ProfileId = r.ProfileId,
                 Content = r.Content,
                 AuthorName = r.Profile.FullName ?? "Unknown",
                 AuthorAvatar = r.Profile.Photo,
@@ -235,6 +237,37 @@ namespace SocialMedia.Services
             return SuccessCommentDto(comment, profile, "Comment updated successfully.");
         }
 
+        public async Task<ApiResponse<bool>> SoftDeleteCommentAsync(ClaimsPrincipal userClaims, Guid commentId)
+        {
+            var invalidUserResponse = GetUserIdOrUnauthorized<bool>(userClaims, out var userIdValue);
+            if (invalidUserResponse != null)
+                return invalidUserResponse;
+
+            var profile = await _profileRepository.GetByApplicationIdAsync(userIdValue);
+            if (profile == null)
+                return NotFoundResponse<bool>("Profile");
+
+            var comment = await _commentRepository.Query()
+                .Include(c => c.Post)
+                .FirstOrDefaultAsync(c => c.Id == commentId);
+            if (comment == null)
+                return NotFoundResponse<bool>("Comment");
+
+            if (comment.ProfileId != profile.Id)
+                return ApiResponse<bool>.ErrorResponse("Forbidden.", new[] { "You can only delete your own comments." });
+
+            if (comment.IsDeleted)
+                return ApiResponse<bool>.ErrorResponse("Comment is already deleted.");
+
+            comment.IsDeleted = true;
+            comment.UpdatedDate = DateTime.UtcNow;
+
+            _commentRepository.Update(comment);
+            await _commentRepository.SaveChangesAsync();
+
+            return ApiResponse<bool>.SuccessResponse(true, "Comment deleted successfully.");
+        }
+
         private ApiResponse<CommentDto> SuccessCommentDto(Comment comment, Database.Models.Profile profile, string message)
         {
             var dto = _mapper.Map<CommentDto>(comment);
@@ -257,9 +290,5 @@ namespace SocialMedia.Services
         }
 
 
-        public Task<ApiResponse<bool>> SoftDeleteCommentAsync(ClaimsPrincipal userClaims, Guid commentId)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

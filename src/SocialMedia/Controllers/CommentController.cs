@@ -69,5 +69,16 @@ namespace SocialMedia.Controllers
             }
             return Ok(response.Data);
         }
+
+        [HttpDelete("{commentId}")]
+        public async Task<IActionResult> SoftDeleteComment(Guid commentId)
+        {
+            var response = await _commentService.SoftDeleteCommentAsync(User, commentId);
+            if (!response.Success)
+            {
+                return BadRequest(response.Errors);
+            }
+            return Ok(response.Data);
+        }
     }
 }

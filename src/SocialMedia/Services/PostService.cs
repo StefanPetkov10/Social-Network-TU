@@ -351,7 +351,7 @@ namespace SocialMedia.Services
             await _postRepository.UpdateAsync(post);
             await _postRepository.SaveChangesAsync();
 
-            return ApiResponse<object>.SuccessResponse(null, "Post deleted successfully.");
+            return ApiResponse<object>.SuccessResponse(true, "Post deleted successfully.");
         }
 
 
