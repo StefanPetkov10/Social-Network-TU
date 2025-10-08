@@ -49,5 +49,16 @@ namespace SocialMedia.Controllers
             }
             return Ok(response);
         }
+
+        [HttpGet("commentReactions/{commentId}")]
+        public async Task<IActionResult> GetCommentReactionsCount(Guid commentId)
+        {
+            var response = await _reactionService.GetCommentReactionsCountAsync(commentId);
+            if (!response.Success)
+            {
+                return BadRequest(response.Errors);
+            }
+            return Ok(response);
+        }
     }
 }

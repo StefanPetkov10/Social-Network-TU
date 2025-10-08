@@ -1,6 +1,5 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using SocialMedia.Common;
 using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database.Models;
@@ -101,11 +100,6 @@ namespace SocialMedia.Services
             if (profile == null)
                 return NotFoundResponse<string>("Profile");
 
-            var post = await _postRepository.Query()
-                .FirstOrDefaultAsync(p => p.Comments.Any(c => c.Id == commentId));
-            if (post == null)
-                return NotFoundResponse<string>("Comment");
-
             var existingReaction = await _reactionRepository
                 .FirstOrDefaultAsync(r => r.CommentId == commentId && r.ProfileId == profile.Id);
             if (existingReaction == null)
@@ -118,11 +112,6 @@ namespace SocialMedia.Services
                     CommentId = commentId,
                     CreatedAt = DateTime.UtcNow
                 };
-
-                post.CommentsCount++;
-                await _postRepository.UpdateAsync(post);
-                await _postRepository.SaveChangesAsync();
-
                 await _reactionRepository.AddAsync(newReaction);
                 await _reactionRepository.SaveChangesAsync();
                 return ApiResponse<string>.SuccessResponse("Reaction added successfully.");
@@ -131,10 +120,6 @@ namespace SocialMedia.Services
             {
                 if (existingReaction.Type == type)
                 {
-                    post.CommentsCount--;
-                    await _postRepository.UpdateAsync(post);
-                    await _postRepository.SaveChangesAsync();
-
                     await _reactionRepository.DeleteAsync(existingReaction);
                     await _reactionRepository.SaveChangesAsync();
 
@@ -168,7 +153,16 @@ namespace SocialMedia.Services
 
         public async Task<ApiResponse<Dictionary<ReactionType, int>>> GetCommentReactionsCountAsync(Guid commentId)
         {
-            throw new NotImplementedException();
+            var comment = await _commentRepository.GetByIdAsync(commentId);
+            if (comment == null)
+                return NotFoundResponse<Dictionary<ReactionType, int>>("Comment");
+
+            var reactions = _reactionRepository.Query().Where(r => r.CommentId == comment.Id);
+            var groupedReactions = reactions
+                .GroupBy(r => r.Type)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            return ApiResponse<Dictionary<ReactionType, int>>.SuccessResponse(groupedReactions);
         }
 
 
