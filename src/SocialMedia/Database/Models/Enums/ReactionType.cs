@@ -2,11 +2,10 @@
 {
     public enum ReactionType
     {
-        Like = 0,
-        Love = 1,
-        Haha = 2,
-        Wow = 3,
-        Sad = 4,
-        Angry = 5
+        Like = 1,
+        Love = 2,
+        Funny = 3,
+        Congrats = 4,
+        Support = 5
     }
 }

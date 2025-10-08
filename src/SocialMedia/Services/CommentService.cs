@@ -261,6 +261,7 @@ namespace SocialMedia.Services
 
             comment.IsDeleted = true;
             comment.UpdatedDate = DateTime.UtcNow;
+            comment.Post.CommentsCount--;
 
             _commentRepository.Update(comment);
             await _commentRepository.SaveChangesAsync();
