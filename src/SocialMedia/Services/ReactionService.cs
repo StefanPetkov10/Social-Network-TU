@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using SocialMedia.Common;
 using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database.Models;
@@ -12,13 +13,19 @@ namespace SocialMedia.Services
     {
         private readonly IRepository<Reaction, Guid> _reactionRepository;
         private readonly IRepository<Profile, Guid> _profileRepository;
+        private readonly IRepository<Post, Guid> _postRepository;
+        private readonly IRepository<Comment, Guid> _commentRepository;
 
         public ReactionService(IRepository<Reaction, Guid> reactionRepository,
             IRepository<Profile, Guid> profileRepository,
+            IRepository<Post, Guid> postRepository,
+            IRepository<Comment, Guid> commentRepository,
             UserManager<ApplicationUser> userManager) : base(userManager)
         {
             _reactionRepository = reactionRepository;
             _profileRepository = profileRepository;
+            _postRepository = postRepository;
+            _commentRepository = commentRepository;
         }
 
         public async Task<ApiResponse<string>> ReactToPostAsync(ClaimsPrincipal userClaim, Guid postId, ReactionType type)
@@ -30,6 +37,10 @@ namespace SocialMedia.Services
             var profile = await _profileRepository.GetByApplicationIdAsync(userId);
             if (profile == null)
                 return NotFoundResponse<string>("Profile");
+
+            var post = await _postRepository.GetByIdAsync(postId);
+            if (post == null)
+                return NotFoundResponse<string>("Post");
 
             var existingReaction = await _reactionRepository
                 .FirstOrDefaultAsync(r => r.PostId == postId && r.ProfileId == profile.Id);
@@ -45,8 +56,13 @@ namespace SocialMedia.Services
                     CreatedAt = DateTime.UtcNow
                 };
 
+                post.LikesCount++;
+
                 await _reactionRepository.AddAsync(newReaction);
                 await _reactionRepository.SaveChangesAsync();
+
+                await _postRepository.UpdateAsync(post);
+                await _postRepository.SaveChangesAsync();
 
                 return ApiResponse<string>.SuccessResponse("Reaction added successfully.");
             }
@@ -54,6 +70,10 @@ namespace SocialMedia.Services
             {
                 if (existingReaction.Type == type)
                 {
+                    post.LikesCount--;
+                    await _postRepository.UpdateAsync(post);
+                    await _postRepository.SaveChangesAsync();
+
                     await _reactionRepository.DeleteAsync(existingReaction);
                     await _reactionRepository.SaveChangesAsync();
 
@@ -62,6 +82,7 @@ namespace SocialMedia.Services
                 else
                 {
                     existingReaction.Type = type;
+
                     await _reactionRepository.UpdateAsync(existingReaction);
                     await _reactionRepository.SaveChangesAsync();
 
@@ -80,6 +101,11 @@ namespace SocialMedia.Services
             if (profile == null)
                 return NotFoundResponse<string>("Profile");
 
+            var post = await _postRepository.Query()
+                .FirstOrDefaultAsync(p => p.Comments.Any(c => c.Id == commentId));
+            if (post == null)
+                return NotFoundResponse<string>("Comment");
+
             var existingReaction = await _reactionRepository
                 .FirstOrDefaultAsync(r => r.CommentId == commentId && r.ProfileId == profile.Id);
             if (existingReaction == null)
@@ -92,6 +118,11 @@ namespace SocialMedia.Services
                     CommentId = commentId,
                     CreatedAt = DateTime.UtcNow
                 };
+
+                post.CommentsCount++;
+                await _postRepository.UpdateAsync(post);
+                await _postRepository.SaveChangesAsync();
+
                 await _reactionRepository.AddAsync(newReaction);
                 await _reactionRepository.SaveChangesAsync();
                 return ApiResponse<string>.SuccessResponse("Reaction added successfully.");
@@ -100,8 +131,13 @@ namespace SocialMedia.Services
             {
                 if (existingReaction.Type == type)
                 {
+                    post.CommentsCount--;
+                    await _postRepository.UpdateAsync(post);
+                    await _postRepository.SaveChangesAsync();
+
                     await _reactionRepository.DeleteAsync(existingReaction);
                     await _reactionRepository.SaveChangesAsync();
+
                     return ApiResponse<string>.SuccessResponse("Reaction removed successfully.");
                 }
                 else
@@ -109,13 +145,25 @@ namespace SocialMedia.Services
                     existingReaction.Type = type;
                     await _reactionRepository.UpdateAsync(existingReaction);
                     await _reactionRepository.SaveChangesAsync();
+
                     return ApiResponse<string>.SuccessResponse("Reaction updated successfully.");
                 }
             }
         }
+
         public async Task<ApiResponse<Dictionary<ReactionType, int>>> GetPostReactionsCountAsync(Guid postId)
         {
-            throw new NotImplementedException();
+            var post = await _postRepository.GetByIdAsync(postId);
+            if (post == null)
+                return NotFoundResponse<Dictionary<ReactionType, int>>("Post");
+
+            var reactions = _reactionRepository.Query().Where(r => r.PostId == post.Id);
+
+            var groupedReactions = reactions
+                .GroupBy(r => r.Type)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            return ApiResponse<Dictionary<ReactionType, int>>.SuccessResponse(groupedReactions);
         }
 
         public async Task<ApiResponse<Dictionary<ReactionType, int>>> GetCommentReactionsCountAsync(Guid commentId)
