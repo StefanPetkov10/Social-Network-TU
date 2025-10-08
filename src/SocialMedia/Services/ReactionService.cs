@@ -70,9 +70,48 @@ namespace SocialMedia.Services
             }
         }
 
-        public async Task<ApiResponse<object>> ReactToCommentAsync(ClaimsPrincipal userClaim, Guid commentId, ReactionType type)
+        public async Task<ApiResponse<string>> ReactToCommentAsync(ClaimsPrincipal userClaim, Guid commentId, ReactionType type)
         {
-            throw new NotImplementedException();
+            var invalidUserResponse = GetUserIdOrUnauthorized<string>(userClaim, out var userId);
+            if (invalidUserResponse != null)
+                return invalidUserResponse;
+
+            var profile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (profile == null)
+                return NotFoundResponse<string>("Profile");
+
+            var existingReaction = await _reactionRepository
+                .FirstOrDefaultAsync(r => r.CommentId == commentId && r.ProfileId == profile.Id);
+            if (existingReaction == null)
+            {
+                var newReaction = new Reaction
+                {
+                    Id = Guid.NewGuid(),
+                    Type = type,
+                    ProfileId = profile.Id,
+                    CommentId = commentId,
+                    CreatedAt = DateTime.UtcNow
+                };
+                await _reactionRepository.AddAsync(newReaction);
+                await _reactionRepository.SaveChangesAsync();
+                return ApiResponse<string>.SuccessResponse("Reaction added successfully.");
+            }
+            else
+            {
+                if (existingReaction.Type == type)
+                {
+                    await _reactionRepository.DeleteAsync(existingReaction);
+                    await _reactionRepository.SaveChangesAsync();
+                    return ApiResponse<string>.SuccessResponse("Reaction removed successfully.");
+                }
+                else
+                {
+                    existingReaction.Type = type;
+                    await _reactionRepository.UpdateAsync(existingReaction);
+                    await _reactionRepository.SaveChangesAsync();
+                    return ApiResponse<string>.SuccessResponse("Reaction updated successfully.");
+                }
+            }
         }
         public async Task<ApiResponse<Dictionary<ReactionType, int>>> GetPostReactionsCountAsync(Guid postId)
         {

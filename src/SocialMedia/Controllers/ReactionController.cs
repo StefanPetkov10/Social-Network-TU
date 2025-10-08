@@ -17,7 +17,7 @@ namespace SocialMedia.Controllers
             _reactionService = reactionService;
         }
 
-        [HttpPost("react")]
+        [HttpPost("reactPost")]
         public async Task<IActionResult> ReactToPost(Guid postId, [FromQuery] ReactionType type)
         {
             var response = await _reactionService.ReactToPostAsync(User, postId, type);
@@ -25,7 +25,18 @@ namespace SocialMedia.Controllers
             {
                 return BadRequest(response.Errors);
             }
-            return Ok(response.Data);
+            return Ok(response);
+        }
+
+        [HttpPost("reactComment")]
+        public async Task<IActionResult> ReactToComment(Guid commentId, [FromQuery] ReactionType type)
+        {
+            var response = await _reactionService.ReactToCommentAsync(User, commentId, type);
+            if (!response.Success)
+            {
+                return BadRequest(response.Errors);
+            }
+            return Ok(response);
         }
     }
 }
