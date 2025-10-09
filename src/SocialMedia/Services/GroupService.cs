@@ -64,6 +64,7 @@ namespace SocialMedia.Services
             await _groupRepository.SaveChangesAsync();
 
             var resultDto = _mapper.Map<GroupDto>(group);
+            resultDto.IsPrivate = group.Privacy == GroupPrivacy.Private;
             resultDto.IsOwner = true;
             resultDto.IsAdmin = true;
             resultDto.IsMember = true;
@@ -220,9 +221,9 @@ namespace SocialMedia.Services
 
         public async Task<ApiResponse<object>> UpdateGroupAsync(ClaimsPrincipal userClaims, Guid groupId, UpdateGroupDto dto)
         {
-            var invlaidUserResponse = GetUserIdOrUnauthorized<object>(userClaims, out var userId);
-            if (invlaidUserResponse != null)
-                return invlaidUserResponse;
+            var invalidUserResponse = GetUserIdOrUnauthorized<object>(userClaims, out var userId);
+            if (invalidUserResponse != null)
+                return invalidUserResponse;
 
             var profile = await _profileRepository.GetByApplicationIdAsync(userId);
             if (profile == null)

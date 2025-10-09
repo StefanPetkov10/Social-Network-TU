@@ -6,6 +6,6 @@ namespace SocialMedia.DTOs.Group
     {
         public string Name { get; set; } = null!;
         public string? Description { get; set; }
-        public GroupPrivacy GroupPrivacy { get; set; } //TODO Fix
+        public GroupPrivacy GroupPrivacy { get; set; }
     }
 }
