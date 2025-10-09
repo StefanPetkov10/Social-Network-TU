@@ -12,7 +12,7 @@ namespace SocialMedia.Database.Models
         [Required]
         public string Content { get; set; } = null!;
 
-        public ICollection<PostMedia> Media { get; set; } = new List<PostMedia>();
+        public ICollection<PostMedia>? Media { get; set; } = new List<PostMedia>();
 
         [Required]
         public Guid ProfileId { get; set; }

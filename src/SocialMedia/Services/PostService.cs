@@ -14,6 +14,7 @@ namespace SocialMedia.Services
     public class PostService : BaseService, IPostService
     {
         private readonly IRepository<Post, Guid> _postRepository;
+        private readonly IRepository<PostMedia, Guid> _postMediaRepository;
         private readonly IRepository<Group, Guid> _groupRepository;
         private readonly IRepository<Database.Models.Profile, Guid> _profileRepository;
         private readonly IRepository<Friendship, Guid> _friendshipRepository;
@@ -25,7 +26,7 @@ namespace SocialMedia.Services
             IRepository<Post, Guid> postRepository,
             IMapper mapper, IRepository<Database.Models.Profile, Guid> profileRepository,
               IRepository<Friendship, Guid> friendshipRepository, IFileService fileService,
-               IRepository<Group, Guid> groupRepository,
+               IRepository<Group, Guid> groupRepository, IRepository<PostMedia, Guid> postMediaRepository,
                 IHttpContextAccessor httpContextAccessor)
             : base(userManager)
         {
@@ -35,6 +36,7 @@ namespace SocialMedia.Services
             _profileRepository = profileRepository;
             _fileService = fileService;
             _groupRepository = groupRepository;
+            _postMediaRepository = postMediaRepository;
             _httpContextAccessor = httpContextAccessor;
         }
 
@@ -295,6 +297,7 @@ namespace SocialMedia.Services
                 post.Visibility = PostVisibility.Public;
             }
 
+
             if (dto.FilesToDelete != null && dto.FilesToDelete.Any())
             {
                 var mediaToRemove = post.Media.Where(m => dto.FilesToDelete.Contains(m.Id)).ToList();
@@ -304,12 +307,15 @@ namespace SocialMedia.Services
                 }
             }
 
+            await _postRepository.SaveChangesAsync();
+
             var state = _postRepository.GetEntityState(post);
             Console.WriteLine($"Post state: {state}"); // трябва да е Unchanged
 
+            var postToAddMedia = await _postRepository.GetByIdAsync(post.Id);
             if (dto.NewFiles != null && dto.NewFiles.Any())
             {
-                int order = post.Media.Count;
+                int order = postToAddMedia.Media.Count;
 
                 foreach (var file in dto.NewFiles)
                 {
@@ -318,14 +324,14 @@ namespace SocialMedia.Services
                     var media = new PostMedia
                     {
                         Id = Guid.NewGuid(),
-                        Post = post,
                         FilePath = filePath,
+                        PostId = post.Id,
                         MediaType = mediaType,
-                        Order = order++
+                        Order = ++order
                     };
-                    post.Media.Add(media);
+                    postToAddMedia.UpdatedDate = DateTime.UtcNow;
+                    await _postMediaRepository.AddAsync(media);
                 }
-
             }
 
             await _postRepository.SaveChangesAsync(); //fix

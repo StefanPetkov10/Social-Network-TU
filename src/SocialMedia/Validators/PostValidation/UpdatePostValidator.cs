@@ -7,13 +7,14 @@ namespace SocialMedia.Validators.PostValidation
     {
         public UpdatePostValidator()
         {
-            RuleFor(x => x.Visibility).IsInEnum();
+            RuleFor(x => x.PostVisibility).IsInEnum();
 
             RuleFor(x => x.Content)
                 .NotEmpty()
                 .WithMessage("Content cannot be empty.")
                 .MaximumLength(500)
                 .WithMessage("Content cannot exceed 500 characters.");
+            //add rule for equal content
 
             RuleFor(x => x.NewFiles)
                 .Must(files => files == null || files.Count <= 5)

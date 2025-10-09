@@ -8,7 +8,7 @@ namespace SocialMedia.DTOs.Post
         [AllowNull]
         public string? Content { get; set; }
         [AllowNull]
-        public PostVisibility? Visibility { get; set; }
+        public PostVisibility? PostVisibility { get; set; }
         [AllowNull]
         public List<Guid>? FilesToDelete { get; set; }
         [AllowNull]
