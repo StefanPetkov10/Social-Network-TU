@@ -15,8 +15,12 @@ namespace SocialMedia.Validators
             RuleFor(x => x.LastName)
                 .NotEmpty().WithMessage("Last name is required.");
 
-            RuleFor(x => x.Age)
-                .InclusiveBetween(10, 80).WithMessage("Age must be between 10 and 80.");
+            RuleFor(x => x.BirthDay)
+                .InclusiveBetween(1, 31).WithMessage("Birth day must be between 1 and 31");
+            RuleFor(x => x.BirthMonth)
+                .InclusiveBetween(1, 12).WithMessage("Month month must be between 1 and 12");
+            RuleFor(x => x.BirthYear)
+                .InclusiveBetween(1930, DateTime.UtcNow.Year - 14).WithMessage("Your birth year must be later than 1930 and you must be 14 years old or older");
 
             RuleFor(x => x.Email)
                 .NotEmpty().WithMessage("Email is required.")

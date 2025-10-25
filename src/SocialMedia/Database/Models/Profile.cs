@@ -20,7 +20,11 @@ namespace SocialMedia.Database.Models
         public string? Photo { get; set; }
 
         [Required]
-        public int Age { get; set; }
+        public int BirthDay { get; set; }
+        [Required]
+        public int BirthMonth { get; set; }
+        [Required]
+        public int BirthYear { get; set; }
 
         [Required]
         public Gender Sex { get; set; }

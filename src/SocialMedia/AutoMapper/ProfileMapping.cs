@@ -9,7 +9,7 @@ namespace AutoMapper
             CreateMap<SocialMedia.Database.Models.Profile, ProfileDto>()
                 .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.UserName))
                 .ForMember(does => does.Sex, opt => opt.MapFrom(src => src.Sex.ToString()))
-                .ForMember(dest => dest.PhotoBase64, opt => opt.MapFrom(src => src.Photo));
+                .ForMember(dest => dest.AuthorAvatar, opt => opt.MapFrom(src => src.Photo));
 
             CreateMap<UpdateProfileDto, SocialMedia.Database.Models.Profile>()
                 .ForMember(dest => dest.Photo, opt => opt.MapFrom(src => src.PhotoBase64))
