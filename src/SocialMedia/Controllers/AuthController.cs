@@ -1,7 +1,6 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using System.Text.Encodings.Web;
 using AutoMapper;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
@@ -13,6 +12,7 @@ using SocialMedia.Common;
 using SocialMedia.Database;
 using SocialMedia.Database.Models;
 using SocialMedia.DTOs.Authentication;
+using SocialMedia.Extensions;
 using SocialMedia.Service.Interfaces;
 
 namespace SocialMedia.Controllers
@@ -48,54 +48,50 @@ namespace SocialMedia.Controllers
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register(RegisterDto model)
+        public async Task<IActionResult> Register([FromBody] RegisterDto model)
         {
             var validationResult = await _registerValidator.ValidateAsync(model);
             if (!validationResult.IsValid)
-                return BadRequest(validationResult);
+                return BadRequest(ApiResponse<object>.ErrorResponse("Validation failed.", validationResult.Errors.Select(e => e.ErrorMessage).ToArray()));
+
+            model.Email = model.Email.Trim().ToLowerInvariant();
+            model.UserName = model.UserName.Trim();
+
+            if (await _userManager.FindByNameAsync(model.UserName) != null)
+                return BadRequest(ApiResponse<object>.ErrorResponse("Username taken.", new[] { "Username is already in use." }));
+
+            if (await _userManager.FindByEmailAsync(model.Email) != null)
+                return BadRequest(ApiResponse<object>.ErrorResponse("Email taken.", new[] { "Email is already in use." }));
 
             var user = _mapper.Map<ApplicationUser>(model);
+
+            try
+            {
+                var dob = new DateTime(model.BirthYear, model.BirthMonth, model.BirthDay);
+                user.Profile.DateOfBirth = DateTime.SpecifyKind(dob, DateTimeKind.Utc);
+            }
+            catch
+            {
+                return BadRequest(ApiResponse<object>.ErrorResponse("Date of birth invalid.", new[] { "Provide a valid date." }));
+            }
 
             var createResult = await _userManager.CreateAsync(user, model.Password);
             if (!createResult.Succeeded)
             {
-                var errors = createResult.Errors
-                    .Select(e => e.Description)
-                    .ToArray();
+                var errors = createResult.Errors.Select(e => e.Description).ToArray();
                 _logger.LogWarning("Registration failed: {Errors}", string.Join(", ", errors));
                 return BadRequest(ApiResponse<object>.ErrorResponse("Registration failed.", errors));
             }
 
             var roleResult = await _userManager.AddToRoleAsync(user, "User");
             if (!roleResult.Succeeded)
-            {
-                _logger.LogWarning("Failed to assign default role: {Errors}",
-                    string.Join(", ", roleResult.Errors.Select(e => e.Description)));
-            }
+                _logger.LogWarning("Failed to add default role: {Errors}", string.Join(", ", roleResult.Errors.Select(e => e.Description)));
 
-            user = await _userManager.FindByEmailAsync(user.Email);
-            var rawToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-            var encodedToken = UrlEncoder.Default.Encode(rawToken);
+            await SendConfirmationEmail(user);
 
-            var confirmationLink = Url.Action(nameof(ConfirmEmail), "Auth", new
-            {
-                userId = user.Id,
-                token = encodedToken
-            }, Request.Scheme);
-
-            _logger.LogInformation("Confirmation link generated: {Link}", confirmationLink);
-
-            await _emailSender.SendEmailAsync(
-                user.Email,
-                "Confirm your registration",
-                $@"<h3>Welcome!</h3>
-                   <p>Click to confirm your email:</p>
-                   <a href='{confirmationLink}' style='padding: 10px 20px; background-color: #4CAF50; 
-                        color: white; text-decoration: none;'>Confirm email</a>
-                ");
-
-            return Ok(ApiResponse<object>.SuccessResponse(null, "Registration successful. Please check your email for confirmation."));
+            return Ok(ApiResponse<object>.SuccessResponse(null, "Registration successful. Please check your email to confirm your address."));
         }
+
 
         [HttpGet("confirmemail")]
         public async Task<IActionResult> ConfirmEmail(Guid userId, string token)
@@ -107,13 +103,31 @@ namespace SocialMedia.Controllers
             if (user.EmailConfirmed)
                 return Ok(ApiResponse<object>.SuccessResponse(null, "Email is already confirmed."));
 
-            var decodedToken = Uri.UnescapeDataString(token);
+            var decodedToken = TokenHelper.DecodeToken(token);
             var result = await _userManager.ConfirmEmailAsync(user, decodedToken);
 
             if (!result.Succeeded)
                 return BadRequest(ApiResponse<object>.ErrorResponse("Email confirmation failed.", result.Errors.Select(e => e.Description).ToArray()));
 
             return Ok(ApiResponse<object>.SuccessResponse(null, "Email successfully confirmed."));
+        }
+
+        [HttpPost("resend-confirmation")]
+        public async Task<IActionResult> ResendConfirmation([FromBody] string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return BadRequest(ApiResponse<object>.ErrorResponse("Email is required."));
+
+            var user = await _userManager.FindByEmailAsync(email.ToLowerInvariant());
+            if (user == null)
+                return BadRequest(ApiResponse<object>.ErrorResponse("User not found."));
+
+            if (user.EmailConfirmed)
+                return BadRequest(ApiResponse<object>.ErrorResponse("Email already confirmed."));
+
+            await SendConfirmationEmail(user);
+
+            return Ok(ApiResponse<object>.SuccessResponse(null, "Confirmation email resent."));
         }
 
         [HttpPost("login")]
@@ -167,7 +181,6 @@ namespace SocialMedia.Controllers
             return Ok(ApiResponse<string>.SuccessResponse(new JwtSecurityTokenHandler().WriteToken(token), "Login successful."));
         }
 
-        // Handy endpoint to see your claims/roles (for debugging)
         [Authorize]
         [HttpGet("me")]
         public IActionResult Me()
@@ -177,5 +190,23 @@ namespace SocialMedia.Controllers
             var roles = User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
             return Ok(new { userId, userName, roles });
         }
+        private async Task SendConfirmationEmail(ApplicationUser user)
+        {
+            var rawToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var encoded = TokenHelper.EncodeToken(rawToken);
+
+            var frontendUrl = _config["FrontendUrl"]?.TrimEnd('/') ?? $"{Request.Scheme}://{Request.Host}";
+            var confirmationLink = $"{frontendUrl}/auth/confirm?userId={Uri.EscapeDataString(user.Id.ToString())}&token={Uri.EscapeDataString(encoded)}";
+
+            _logger.LogInformation("Confirmation link generated for user {User}: {Link}", user.Email, confirmationLink);
+
+            var html = $@"<p>Hello {user.Profile.FirstName},</p>
+                      <p>Confirm your email by clicking the button below:</p>
+                      <a href='{confirmationLink}' style='display:inline-block;padding:10px 18px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;'>Confirm email</a>
+                      <p>If you didn't request this, ignore this email.</p>";
+
+            await _emailSender.SendEmailAsync(user.Email, "Confirm your account", html);
+        }
+
     }
 }

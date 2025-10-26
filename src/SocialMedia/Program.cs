@@ -102,6 +102,7 @@ namespace SocialMedia
     });
             });
 
+            builder.Services.AddMemoryCache();
 
             builder.Services.RegisterRepositories(typeof(ApplicationUser).Assembly);
             builder.Services.AddScoped<IRepository<GroupMembership, Guid>, BaseRepository<GroupMembership, Guid>>();
@@ -116,6 +117,16 @@ namespace SocialMedia
                 config.AddProfile<FollowMapping>();
                 config.AddProfile<GroupMapping>();
                 config.AddProfile<CommentMapping>();
+            });
+
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("LocalDev", p => p
+                    .WithOrigins("http://localhost:3000")
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials()
+                );
             });
 
             builder.Services.AddAuthorization();
@@ -139,6 +150,8 @@ namespace SocialMedia
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
+
+
             var app = builder.Build();
 
             using (var scope = app.Services.CreateScope())
@@ -153,6 +166,8 @@ namespace SocialMedia
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
+
+            app.UseCors("LocalDev");
 
             app.UseHttpsRedirection();
 

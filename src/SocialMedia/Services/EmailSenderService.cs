@@ -2,7 +2,6 @@
 using System.Net.Mail;
 using SocialMedia.Service.Interfaces;
 
-
 namespace SocialMedia.Service
 {
     public class EmailSenderService : IEmailSenderService
@@ -32,9 +31,7 @@ namespace SocialMedia.Service
             };
 
             mailMessage.To.Add(toEmail);
-
             await client.SendMailAsync(mailMessage);
         }
     }
 }
-

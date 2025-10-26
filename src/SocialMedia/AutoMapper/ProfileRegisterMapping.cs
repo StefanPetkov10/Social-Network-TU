@@ -8,7 +8,8 @@ namespace AutoMapper
     {
         public ProfileRegisterMapping()
         {
-            CreateMap<RegisterDto, DbProfile>();
+            CreateMap<RegisterDto, DbProfile>()
+                .ForMember(dest => dest.DateOfBirth, opt => opt.Ignore());
 
             CreateMap<RegisterDto, ApplicationUser>()
                 .ForMember(dest => dest.Profile, opt => opt.MapFrom(src => src));
