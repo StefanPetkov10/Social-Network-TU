@@ -106,28 +106,64 @@ namespace SocialMedia.Controllers
             var decodedToken = TokenHelper.DecodeToken(token);
             var result = await _userManager.ConfirmEmailAsync(user, decodedToken);
 
-            if (!result.Succeeded)
-                return BadRequest(ApiResponse<object>.ErrorResponse("Email confirmation failed.", result.Errors.Select(e => e.Description).ToArray()));
+            var frontendUrl = _config["FrontendUrl"]?.TrimEnd('/') ?? $"{Request.Scheme}://{Request.Host}";
 
-            return Ok(ApiResponse<object>.SuccessResponse(null, "Email successfully confirmed."));
+            return Redirect($"{frontendUrl}/auth/email-confirmed");
         }
 
         [HttpPost("resend-confirmation")]
-        public async Task<IActionResult> ResendConfirmation([FromBody] string email)
+        public async Task<IActionResult> ResendConfirmation([FromBody] ResendConfirmationDto model)
         {
-            if (string.IsNullOrWhiteSpace(email))
+            if (string.IsNullOrWhiteSpace(model?.Email))
                 return BadRequest(ApiResponse<object>.ErrorResponse("Email is required."));
 
-            var user = await _userManager.FindByEmailAsync(email.ToLowerInvariant());
+            // Нормализиране на имейла
+            var normalizedEmail = model.Email.Trim().ToLowerInvariant();
+
+            // Търсене на потребителя с включен профил
+            var user = await _userManager.Users
+                .Include(u => u.Profile)
+                .FirstOrDefaultAsync(u => u.Email == normalizedEmail);
+
+            // Връщаме едно и също съобщение, за да не разкриваме информация за съществуващи потребители
             if (user == null)
-                return BadRequest(ApiResponse<object>.ErrorResponse("User not found."));
+                return BadRequest(ApiResponse<object>.ErrorResponse("If this email is registered and not confirmed, you will receive a confirmation link."));
 
             if (user.EmailConfirmed)
-                return BadRequest(ApiResponse<object>.ErrorResponse("Email already confirmed."));
+                return BadRequest(ApiResponse<object>.ErrorResponse("If this email is registered and not confirmed, you will receive a confirmation link."));
 
-            await SendConfirmationEmail(user);
+            // Допълнителна сигурност: проверка дали регистрацията е в последните 24 часа
+            var timeSinceRegistration = DateTime.UtcNow - user.Profile.CreatedDate;
+            if (timeSinceRegistration.TotalHours > 24)
+            {
+                _logger.LogWarning("Resend confirmation attempted for old registration: {Email}, registered at {CreatedAt}",
+                    user.Email, user.Profile.CreatedDate);
+                return BadRequest(ApiResponse<object>.ErrorResponse("Confirmation link expired. Please register again."));
+            }
 
-            return Ok(ApiResponse<object>.SuccessResponse(null, "Confirmation email resent."));
+            // Rate limiting: проверка дали не сме изпращали твърде много имейли
+            var resendCount = await _userManager.GetAccessFailedCountAsync(user);
+            if (resendCount > 5) // Максимум 5 опита за 24 часа
+            {
+                _logger.LogWarning("Too many resend attempts for email: {Email}", user.Email);
+                return BadRequest(ApiResponse<object>.ErrorResponse("Too many resend attempts. Please try again later."));
+            }
+
+            try
+            {
+                await SendConfirmationEmail(user);
+
+                // Увеличаваме брояча за rate limiting
+                await _userManager.AccessFailedAsync(user);
+
+                _logger.LogInformation("Confirmation email resent for user: {Email}", user.Email);
+                return Ok(ApiResponse<object>.SuccessResponse(null, "Confirmation email resent."));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to resend confirmation email for user: {Email}", user.Email);
+                return BadRequest(ApiResponse<object>.ErrorResponse("Failed to resend confirmation email. Please try again."));
+            }
         }
 
         [HttpPost("login")]
@@ -190,20 +226,39 @@ namespace SocialMedia.Controllers
             var roles = User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
             return Ok(new { userId, userName, roles });
         }
+
         private async Task SendConfirmationEmail(ApplicationUser user)
         {
+            if (user == null)
+                throw new ArgumentNullException(nameof(user));
+
+            if (user.Profile == null)
+            {
+                _logger.LogError("User profile is null for user {UserId}", user.Id);
+                throw new InvalidOperationException("User profile is not available.");
+            }
+
             var rawToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
             var encoded = TokenHelper.EncodeToken(rawToken);
 
-            var frontendUrl = _config["FrontendUrl"]?.TrimEnd('/') ?? $"{Request.Scheme}://{Request.Host}";
-            var confirmationLink = $"{frontendUrl}/auth/confirm?userId={Uri.EscapeDataString(user.Id.ToString())}&token={Uri.EscapeDataString(encoded)}";
+            var frontendUrl = _config["FrontendUrl"]?.TrimEnd('/');
+            if (string.IsNullOrEmpty(frontendUrl))
+            {
+                _logger.LogError("FrontendUrl configuration is missing");
+                throw new InvalidOperationException("FrontendUrl is not configured.");
+            }
+
+            var confirmationLink = $"{frontendUrl}/auth/email-confirmed?userId={Uri.EscapeDataString(user.Id.ToString())}&token={Uri.EscapeDataString(encoded)}";
 
             _logger.LogInformation("Confirmation link generated for user {User}: {Link}", user.Email, confirmationLink);
 
-            var html = $@"<p>Hello {user.Profile.FirstName},</p>
-                      <p>Confirm your email by clicking the button below:</p>
-                      <a href='{confirmationLink}' style='display:inline-block;padding:10px 18px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;'>Confirm email</a>
-                      <p>If you didn't request this, ignore this email.</p>";
+            var firstName = user.Profile.FirstName ?? "User";
+
+            var html = $@"<p>Hello {firstName},</p>
+              <p>Confirm your email by clicking the button below:</p>
+              <a href='{confirmationLink}' style='display:inline-block;padding:10px 18px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;'>Confirm email</a>
+              <p>If you didn't request this, please ignore this email.</p>
+              <p><small>This link will expire in 24 hours.</small></p>";
 
             await _emailSender.SendEmailAsync(user.Email, "Confirm your account", html);
         }

@@ -88,9 +88,11 @@ export default function SignupForm({ className, ...props }: React.ComponentProps
      Password: password,
      };
 
-     console.log(payload);
+    
     register.mutate(payload, {
       onSuccess: (data: any) => {
+        // Save email for resend functionality
+        localStorage.setItem("pendingConfirmationEmail", email);
         // Backend sends generic success msg — go to page explaining "check your email"
         // For Next app router use router.push
         router.push("/auth/confirmation-sent"); // create this page to tell user to check email
@@ -193,7 +195,7 @@ export default function SignupForm({ className, ...props }: React.ComponentProps
 
               <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">Or continue with</FieldSeparator>
 
-              <FieldDescription className="text-center">Already have an account? <a href="/auth/login">Sign in</a></FieldDescription>
+              <FieldDescription className="text-center">Already have an account? <a href="/auth/login">Login</a></FieldDescription>
             </FieldGroup>
           </form>
 

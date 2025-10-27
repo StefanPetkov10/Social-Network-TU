@@ -1,3 +1,4 @@
+// hooks/use-auth.ts
 import { useMutation } from "@tanstack/react-query";
 import api from "../lib/axios";
 
@@ -23,10 +24,9 @@ export function useConfirmEmail() {
 
 export function useResendConfirmation() {
   return useMutation<ApiResponse, Error, { email: string }>({
-    mutationFn: async (payload) => {
-      const { data } = await api.post("/api/auth/resend-confirmation", payload);
+    mutationFn: async (payload: { email: string }) => {
+      const { data } = await api.post("/api/Auth/resend-confirmation", payload);
       return data;
     },
   });
 }
-
