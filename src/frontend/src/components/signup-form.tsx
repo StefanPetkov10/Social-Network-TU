@@ -1,6 +1,8 @@
 // src/app/signup/SignupForm.tsx
 "use client";
 
+import Image from "next/image";
+
 import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@frontend/lib/utils"; // ако имаш; иначе използвай simple join
@@ -189,25 +191,41 @@ export default function SignupForm({ className, ...props }: React.ComponentProps
 
               {localError && <div className="text-sm text-red-600">{localError}</div>}
 
-              <Button type="submit" disabled={register.isPending}>
-                 {register.isPending ? "Creating..." : "Create Account"}
-              </Button>
+            <Button
+              type="submit"
+              disabled={register.isPending}
+              className="bg-primary hover:white text-primary-foreground"
+            >
+              {register.isPending ? "Creating..." : "Create Account"}
+            </Button>
+
 
               <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">Or continue with</FieldSeparator>
 
-              <FieldDescription className="text-center">Already have an account? <a href="/auth/login">Login</a></FieldDescription>
+              <FieldDescription className="text-center">
+                Already have an account? <a href="/auth/login" className="text-primary hover:underline">Login</a>
+              </FieldDescription>
+
             </FieldGroup>
           </form>
 
-          <div className="bg-muted relative hidden md:block">
-            <img src="/placeholder.svg" alt="Image" className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale" />
-          </div>
+          <div className="bg-muted relative hidden md:block w-100% h-full">
+            <Image
+              src="/TU-images/tu-icon.png"
+              alt="Image"
+              fill
+             className="object-contain object-center bg-white"
+              priority
+            />
+       </div>
+
         </CardContent>
       </Card>
 
-      <FieldDescription className="px-6 text-center">
-        By clicking continue, you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
-      </FieldDescription>
+     <FieldDescription className="px-6 text-center">
+       By clicking continue, you agree to our <a href="#" className="text-primary hover:text-primary-hover">Terms of Service</a> and <a href="#" className="text-primary hover:text-primary-hover">Privacy Policy</a>.
+    </FieldDescription>
+
     </div>
   );
 }
