@@ -1,11 +1,10 @@
-// src/app/signup/SignupForm.tsx
 "use client";
 
 import Image from "next/image";
 
 import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { cn } from "@frontend/lib/utils"; // ако имаш; иначе използвай simple join
+import { cn } from "@frontend/lib/utils"; 
 import { Button } from "@frontend/components/ui/button";
 import { Card, CardContent } from "@frontend/components/ui/card";
 import {
@@ -57,7 +56,6 @@ export default function SignupForm({ className, ...props }: React.ComponentProps
       setLocalError("Passwords do not match.");
       return false;
     }
-    // Optional: validate minimal age (14)
     try {
       const dob = new Date(Number(birthYear), Number(birthMonth) - 1, Number(birthDay));
       const age = new Date().getFullYear() - dob.getFullYear() - (new Date() < new Date(dob.getFullYear() + (new Date().getFullYear() - dob.getFullYear()), dob.getMonth(), dob.getDate()) ? 1 : 0);
@@ -93,11 +91,8 @@ export default function SignupForm({ className, ...props }: React.ComponentProps
     
     register.mutate(payload, {
       onSuccess: (data: any) => {
-        // Save email for resend functionality
         localStorage.setItem("pendingConfirmationEmail", email);
-        // Backend sends generic success msg — go to page explaining "check your email"
-        // For Next app router use router.push
-        router.push("/auth/confirmation-sent"); // create this page to tell user to check email
+        router.push("/auth/confirmation-sent"); 
       },
       onError: (err: any) => {
         const msg = getAxiosErrorMessage(err);
@@ -194,7 +189,7 @@ export default function SignupForm({ className, ...props }: React.ComponentProps
             <Button
               type="submit"
               disabled={register.isPending}
-              className="bg-primary hover:white text-primary-foreground"
+              className="bg-primary hover:underline text-primary-foreground"
             >
               {register.isPending ? "Creating..." : "Create Account"}
             </Button>

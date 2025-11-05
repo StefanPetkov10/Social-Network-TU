@@ -1,4 +1,3 @@
-// hooks/use-auth.ts
 import { useMutation } from "@tanstack/react-query";
 import api from "../lib/axios";
 
@@ -8,6 +7,15 @@ export function useRegister() {
   return useMutation<ApiResponse, Error, any>({
     mutationFn: async (payload: any) => {
       const { data } = await api.post("/api/Auth/register", payload);
+      return data;
+    },
+  });
+}
+
+export function useLogin() {
+  return useMutation<ApiResponse, Error, { Identifier: string; Password: string }>({
+    mutationFn: async (payload) => {
+      const { data } = await api.post("/api/Auth/login", payload);
       return data;
     },
   });

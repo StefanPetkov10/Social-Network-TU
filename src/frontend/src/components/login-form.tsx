@@ -1,55 +1,109 @@
-import { cn } from "@frontend/lib/utils"
-import { Button } from "@frontend/components/ui/button"
-import { Card, CardContent } from "@frontend/components/ui/card"
+"use client";
+
+import Image from "next/image";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { cn, getAxiosErrorMessage } from "@frontend/lib/utils";
+import { Button } from "@frontend/components/ui/button";
+import { Card, CardContent } from "@frontend/components/ui/card";
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
   FieldSeparator,
-} from "@frontend/components/ui/field"
-import { Input } from "@frontend/components/ui/input"
+} from "@frontend/components/ui/field";
+import { Input } from "@frontend/components/ui/input";
+import { useLogin } from "@frontend/hooks/use-auth";
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const router = useRouter();
+  const login = useLogin();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!identifier || !password) {
+      setErrorMessage("Please fill in both fields.");
+      return;
+    }
+
+    const payload = { Identifier: identifier, Password: password };
+
+    login.mutate(payload, {
+      onSuccess: () => {
+        setErrorMessage(null);
+        router.push("/dashboard"); 
+      },
+      onError: (err) => {
+        const msg = getAxiosErrorMessage(err);
+        setErrorMessage(msg);
+      },
+    });
+  };
+
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card className="overflow-hidden p-0">
         <CardContent className="grid p-0 md:grid-cols-2">
-          <form className="p-6 md:p-8">
+          <form onSubmit={handleSubmit} className="p-6 md:p-8">
             <FieldGroup>
               <div className="flex flex-col items-center gap-2 text-center">
                 <h1 className="text-2xl font-bold">Welcome back</h1>
                 <p className="text-muted-foreground text-balance">
-                  Login to your Acme Inc account
+                  Login to your account
                 </p>
               </div>
+
               <Field>
-                <FieldLabel htmlFor="email">Email</FieldLabel>
+                <FieldLabel htmlFor="identifier">Username or Email</FieldLabel>
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="m@example.com"
+                  id="identifier"
+                  type="text"
+                  placeholder="Enter your username or email"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
                   required
                 />
               </Field>
+
               <Field>
                 <div className="flex items-center">
                   <FieldLabel htmlFor="password">Password</FieldLabel>
                   <a
                     href="#"
-                    className="ml-auto text-sm underline-offset-2 hover:underline"
+                    className="ml-auto text-sm underline-offset-2 text-primary hover:underline"
                   >
                     Forgot your password?
                   </a>
                 </div>
-                <Input id="password" type="password" required />
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
               </Field>
+
+              {errorMessage && (
+                <p className="text-red-600 text-sm text-center">{errorMessage}</p>
+              )}
+
               <Field>
-                <Button type="submit">Login</Button>
+                <Button type="submit" disabled={login.isPending}>
+                  {login.isPending ? "Logging in..." : "Login"}
+                </Button>
               </Field>
+
               <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
                 Or continue with
               </FieldSeparator>
@@ -82,24 +136,39 @@ export function LoginForm({
                   <span className="sr-only">Login with Meta</span>
                 </Button>
               </Field>
+
               <FieldDescription className="text-center">
-                Don&apos;t have an account? <a href="/auth/signup">Sign up</a>
+                Don&apos;t have an account?{" "}
+                <a href="/auth/signup" className="text-primary">
+                  Sign up
+                </a>
               </FieldDescription>
             </FieldGroup>
           </form>
-          <div className="bg-muted relative hidden md:block">
-            <img
-              src="/placeholder.svg"
+
+          <div className="bg-muted relative hidden md:block w-100% h-full">
+            <Image
+              src="/TU-images/tu-icon.png"
               alt="Image"
-              className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+              fill
+              className="object-contain object-center bg-white"
+              priority
             />
           </div>
         </CardContent>
       </Card>
+
       <FieldDescription className="px-6 text-center">
-        By clicking continue, you agree to our <a href="#">Terms of Service</a>{" "}
-        and <a href="#">Privacy Policy</a>.
+        By clicking continue, you agree to our{" "}
+        <a href="#terms" className="text-primary">
+          Terms of Service
+        </a>{" "}
+        and{" "}
+        <a href="#privacy" className="text-primary">
+          Privacy Policy
+        </a>
+        .
       </FieldDescription>
     </div>
-  )
+  );
 }

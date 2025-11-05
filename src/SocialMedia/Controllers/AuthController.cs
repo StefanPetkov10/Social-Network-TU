@@ -117,22 +117,18 @@ namespace SocialMedia.Controllers
             if (string.IsNullOrWhiteSpace(model?.Email))
                 return BadRequest(ApiResponse<object>.ErrorResponse("Email is required."));
 
-            // Нормализиране на имейла
             var normalizedEmail = model.Email.Trim().ToLowerInvariant();
 
-            // Търсене на потребителя с включен профил
             var user = await _userManager.Users
                 .Include(u => u.Profile)
                 .FirstOrDefaultAsync(u => u.Email == normalizedEmail);
 
-            // Връщаме едно и също съобщение, за да не разкриваме информация за съществуващи потребители
             if (user == null)
                 return BadRequest(ApiResponse<object>.ErrorResponse("If this email is registered and not confirmed, you will receive a confirmation link."));
 
             if (user.EmailConfirmed)
                 return BadRequest(ApiResponse<object>.ErrorResponse("If this email is registered and not confirmed, you will receive a confirmation link."));
 
-            // Допълнителна сигурност: проверка дали регистрацията е в последните 24 часа
             var timeSinceRegistration = DateTime.UtcNow - user.Profile.CreatedDate;
             if (timeSinceRegistration.TotalHours > 24)
             {
@@ -141,9 +137,9 @@ namespace SocialMedia.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResponse("Confirmation link expired. Please register again."));
             }
 
-            // Rate limiting: проверка дали не сме изпращали твърде много имейли
+            // Rate limiting: todo
             var resendCount = await _userManager.GetAccessFailedCountAsync(user);
-            if (resendCount > 5) // Максимум 5 опита за 24 часа
+            if (resendCount > 5)
             {
                 _logger.LogWarning("Too many resend attempts for email: {Email}", user.Email);
                 return BadRequest(ApiResponse<object>.ErrorResponse("Too many resend attempts. Please try again later."));
@@ -153,7 +149,6 @@ namespace SocialMedia.Controllers
             {
                 await SendConfirmationEmail(user);
 
-                // Увеличаваме брояча за rate limiting
                 await _userManager.AccessFailedAsync(user);
 
                 _logger.LogInformation("Confirmation email resent for user: {Email}", user.Email);
@@ -187,20 +182,19 @@ namespace SocialMedia.Controllers
             }
 
             var claims = new List<Claim>
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
-                new Claim(ClaimTypes.Name, user.UserName ?? string.Empty),
-                new Claim(ClaimTypes.GivenName, user.Profile?.FullName ?? string.Empty),
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            };
+    {
+        new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+        new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
+        new Claim(ClaimTypes.Name, user.UserName ?? string.Empty),
+        new Claim(ClaimTypes.GivenName, user.Profile?.FullName ?? string.Empty),
+        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+    };
 
             var roles = await _userManager.GetRolesAsync(user);
             foreach (var role in roles)
                 claims.Add(new Claim(ClaimTypes.Role, role));
 
-            // (Optional) include profile id claim to read later in services
             if (user.Profile != null)
                 claims.Add(new Claim("profile_id", user.Profile.Id.ToString()));
 
@@ -214,7 +208,34 @@ namespace SocialMedia.Controllers
                 expires: DateTime.UtcNow.AddDays(7),
                 signingCredentials: creds);
 
-            return Ok(ApiResponse<string>.SuccessResponse(new JwtSecurityTokenHandler().WriteToken(token), "Login successful."));
+            var jwt = new JwtSecurityTokenHandler().WriteToken(token);
+
+            Response.Cookies.Append("auth_token", jwt, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTime.UtcNow.AddDays(7),
+                IsEssential = true,
+                Path = "/"
+            });
+
+            _logger.LogInformation("User {UserName} logged in successfully.", user.UserName);
+
+            return Ok(ApiResponse<object>.SuccessResponse(null, "Login successful."));
+        }
+
+        [HttpPost("logout")]
+        public IActionResult Logout()
+        {
+            Response.Cookies.Delete("auth_token", new CookieOptions
+            {
+                Path = "/",
+                SameSite = SameSiteMode.Strict,
+                Secure = true
+            });
+
+            return Ok(ApiResponse<object>.SuccessResponse(null, "Logged out successfully."));
         }
 
         [Authorize]
