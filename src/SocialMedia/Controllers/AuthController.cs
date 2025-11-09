@@ -182,14 +182,14 @@ namespace SocialMedia.Controllers
             }
 
             var claims = new List<Claim>
-    {
-        new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-        new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
-        new Claim(ClaimTypes.Name, user.UserName ?? string.Empty),
-        new Claim(ClaimTypes.GivenName, user.Profile?.FullName ?? string.Empty),
-        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-    };
+                 {
+                     new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+                     new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
+                     new Claim(ClaimTypes.Name, user.UserName ?? string.Empty),
+                     new Claim(ClaimTypes.GivenName, user.Profile?.FullName ?? string.Empty),
+                     new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                 };
 
             var roles = await _userManager.GetRolesAsync(user);
             foreach (var role in roles)
@@ -210,7 +210,7 @@ namespace SocialMedia.Controllers
 
             var jwt = new JwtSecurityTokenHandler().WriteToken(token);
 
-            Response.Cookies.Append("auth_token", jwt, new CookieOptions
+            /*Response.Cookies.Append("auth_token", jwt, new CookieOptions
             {
                 HttpOnly = true,
                 Secure = true,
@@ -218,11 +218,11 @@ namespace SocialMedia.Controllers
                 Expires = DateTime.UtcNow.AddDays(7),
                 IsEssential = true,
                 Path = "/"
-            });
+            });*/
 
             _logger.LogInformation("User {UserName} logged in successfully.", user.UserName);
 
-            return Ok(ApiResponse<object>.SuccessResponse(null, "Login successful."));
+            return Ok(ApiResponse<string>.SuccessResponse(jwt, "Login successful."));
         }
 
         [HttpPost("logout")]

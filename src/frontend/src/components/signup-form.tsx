@@ -23,7 +23,7 @@ export default function SignupForm({ className, ...props }: React.ComponentProps
   const router = useRouter();
   const register = useRegister();
 
-  const [firstName, setFirstName] = useState("");
+  const [firstName, setFirstName] = useState("");//todo: use zustand store
   const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");

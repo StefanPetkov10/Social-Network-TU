@@ -66,18 +66,6 @@ namespace SocialMedia
                     ),
                     ValidateLifetime = true
                 };
-
-                options.Events = new JwtBearerEvents
-                {
-                    OnMessageReceived = context =>
-                    {
-                        if (context.Request.Cookies.ContainsKey("auth_token"))
-                        {
-                            context.Token = context.Request.Cookies["auth_token"];
-                        }
-                        return Task.CompletedTask;
-                    }
-                };
             });
 
             builder.Services.AddAuthorization(options =>
@@ -99,19 +87,19 @@ namespace SocialMedia
                 });
 
                 options.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            new string[] {}
-        }
-    });
+                 {
+                     {
+                         new OpenApiSecurityScheme
+                         {
+                             Reference = new OpenApiReference
+                             {
+                                 Type = ReferenceType.SecurityScheme,
+                                 Id = "Bearer"
+                             }
+                         },
+                         new string[] {}
+                     }
+                 });
             });
 
             builder.Services.AddMemoryCache();

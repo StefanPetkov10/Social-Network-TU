@@ -16,7 +16,19 @@ export function useLogin() {
   return useMutation<ApiResponse, Error, { Identifier: string; Password: string }>({
     mutationFn: async (payload) => {
       const { data } = await api.post("/api/Auth/login", payload);
+
+      if (data.data) {
+        sessionStorage.setItem("token", data.data);
+      }
       return data;
+    },
+  });
+}
+
+export function useLogout() {
+  return useMutation({
+    mutationFn: async () => {
+      await api.post("/api/Auth/logout");
     },
   });
 }
