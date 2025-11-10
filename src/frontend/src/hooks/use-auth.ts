@@ -1,7 +1,13 @@
 import { useMutation } from "@tanstack/react-query";
 import api from "../lib/axios";
+import { useAuthStore } from "../store/authStore";
 
 type ApiResponse<T = any> = T;
+
+interface LoginPayload {
+  Identifier: string;
+  Password: string;
+}
 
 export function useRegister() {
   return useMutation<ApiResponse, Error, any>({
@@ -13,25 +19,30 @@ export function useRegister() {
 }
 
 export function useLogin() {
-  return useMutation<ApiResponse, Error, { Identifier: string; Password: string }>({
+  const setToken = useAuthStore((s) => s.setToken);
+
+  return useMutation<ApiResponse, Error, LoginPayload>({
     mutationFn: async (payload) => {
       const { data } = await api.post("/api/Auth/login", payload);
 
-      if (data.data) {
-        sessionStorage.setItem("token", data.data);
+      if (data?.data) {
+        setToken(data.data);
       }
+
       return data;
     },
   });
 }
 
-export function useLogout() {
+/*export function useLogout() {
+  const logout = useAuthStore((s) => s.logout);
   return useMutation({
     mutationFn: async () => {
       await api.post("/api/Auth/logout");
+      logout();
     },
   });
-}
+}*/
 
 export function useConfirmEmail() {
   return useMutation<ApiResponse, Error, { userId: string; token: string }>({

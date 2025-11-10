@@ -1,29 +1,19 @@
 "use client";
-import { useUser } from "@frontend/hooks/use-user";
-import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "../store/authStore";
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { data, isLoading, isError } = useUser();
+  const token = useAuthStore((s) => s.token);
   const router = useRouter();
 
   useEffect(() => {
-    if (isError) {
+    if (!token) {
       router.push("/auth/login");
     }
-  }, [isError, router]);
+  }, [token, router]);
 
-  if (isLoading) {
-    return <div className="flex items-center justify-center h-screen">
-      <p>Loading...</p>
-    </div>;
-  }
-
-  if (isError) {
-    console.log("User not authenticated, redirecting to login.");
-    console.log("isError:", isError);
-    return null;
-  }
-
+  if (!token) return null; 
+  
   return <>{children}</>;
 }

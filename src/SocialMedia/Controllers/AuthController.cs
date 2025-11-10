@@ -225,7 +225,7 @@ namespace SocialMedia.Controllers
             return Ok(ApiResponse<string>.SuccessResponse(jwt, "Login successful."));
         }
 
-        [HttpPost("logout")]
+        /*[HttpPost("logout")]
         public IActionResult Logout()
         {
             Response.Cookies.Delete("auth_token", new CookieOptions
@@ -236,7 +236,7 @@ namespace SocialMedia.Controllers
             });
 
             return Ok(ApiResponse<object>.SuccessResponse(null, "Logged out successfully."));
-        }
+        }*/
 
         [Authorize]
         [HttpGet("me")]

@@ -16,7 +16,8 @@ import {
   SidebarTrigger,
 } from "@frontend/components/ui/sidebar";
 import { Button } from "@frontend/components/ui/button";
-import { useLogout } from "@frontend/hooks/use-auth";
+//import { useLogout } from "@frontend/hooks/use-auth";
+import { useAuthStore } from "@frontend/store/authStore";
 import { useMyPost } from "@frontend/hooks/use-post";
 import  ProtectedRoute  from "@frontend/components/protected-route"
 import { useEffect } from "react";
@@ -25,25 +26,25 @@ import { useEffect } from "react";
 //try to fetch my user data
 //if token is expire - login again
 export default function Page() {
-  const logout = useLogout();
+
+  const logout = useAuthStore((s) => s.logout);
+
   const { data: post } = useMyPost();
 
-  const handleLogout = () => {
+  /*const handleLogout = () => {
     logout.mutate(undefined, {
       onSuccess: () => {
         window.location.href = "/auth/login"; 
       },
     });
-  };
+  };*/
   
   useEffect(() => {
     console.log(post);
   }, [post]);
 
   return (
-    /*<><ProtectedRoute>
-      <div>Welcome to dashboard!</div>
-    </ProtectedRoute>*/
+  <ProtectedRoute>
     <SidebarProvider>
         <AppSidebar />
         <SidebarInset>
@@ -69,7 +70,7 @@ export default function Page() {
             </div>
 
             <Button
-              onClick={handleLogout}
+              onClick={logout}
               variant="destructive"
               className="bg-primary rounded-xl px-4 py-2 font-medium shadow-sm transition-all hover:shadow-md"
             >
@@ -87,5 +88,6 @@ export default function Page() {
           </div>
         </SidebarInset>
       </SidebarProvider>
+  </ProtectedRoute>
   );
 }

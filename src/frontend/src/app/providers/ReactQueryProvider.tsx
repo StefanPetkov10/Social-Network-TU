@@ -13,10 +13,10 @@ export function ReactQueryProvider({ children }: { children: React.ReactNode }) 
     },
   }));
 
-  const token = typeof window !== "undefined" ? sessionStorage?.getItem("token") : null;
+  /*const token = typeof window !== "undefined" ? sessionStorage?.getItem("token") : null;
   if (token) {
     api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-  }
+  }*/  //todo: delete
   
   return (
     <QueryClientProvider client={queryClient}>
