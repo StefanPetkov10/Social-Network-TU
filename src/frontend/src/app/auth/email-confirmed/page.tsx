@@ -1,13 +1,13 @@
-// src/app/auth/email-confirmed/page.tsx
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent } from "@frontend/components/ui/card";
 import { Button } from "@frontend/components/ui/button";
 import { CheckCircle2, XCircle, RefreshCw } from "lucide-react";
 import { useConfirmEmail } from "@frontend/hooks/use-auth";
 import { getAxiosErrorMessage } from "@frontend/lib/utils";
+import { useRegistrationStore } from "@frontend/store/useRegistrationStore";
 
 export default function EmailConfirmedPage() {
   const router = useRouter();
@@ -16,73 +16,66 @@ export default function EmailConfirmedPage() {
 
   const userId = searchParams.get("userId");
   const token = searchParams.get("token");
-  const [confirmed, setConfirmed] = React.useState(false);
-  const [error, setError] = React.useState("");
-  const [processing, setProcessing] = React.useState(true);
 
-  // Process email confirmation on page load if token is present
+  const [confirmed, setConfirmed] = useState(false);
+  const [error, setError] = useState("");
+  const [processing, setProcessing] = useState(true);
+  const [accessChecked, setAccessChecked] = useState(false);
+
+  const setRegistrationInProgress = useRegistrationStore((state) => state.setRegistrationInProgress);
+  const registrationInProgress = useRegistrationStore((state) => state.registrationInProgress);
+
   useEffect(() => {
-    const processConfirmation = async () => {
-      if (!userId || !token) {
-        setError("Invalid confirmation link. Missing parameters.");
-        setProcessing(false);
-        return;
-      }
+    if (!registrationInProgress) {
+      router.replace("/auth/login");
+    } else {
+      setAccessChecked(true);
+    }
+  }, [registrationInProgress, router]);
 
-      try {
-        confirmEmail.mutate(
-          { userId, token },
-          {
-            onSuccess: (data) => {
-              setConfirmed(true);
-              setProcessing(false);
-              // Clear pending email from localStorage upon successful confirmation
-              localStorage.removeItem("pendingConfirmationEmail");
-            },
-            onError: (error: any) => {
-              console.error("Confirmation error:", error);
-              const errorMsg = getAxiosErrorMessage(error);
-              
-              // Проверка за мрежови грешки
-              if (errorMsg.includes("Network Error") || errorMsg.includes("Failed to fetch")) {
-                setError("Cannot connect to server. Please check your internet connection and try again.");
-              } else if (errorMsg.includes("CORS") || errorMsg.includes("Origin")) {
-                setError("Connection issue. Please try again or contact support.");
-              } else {
-                setError(errorMsg);
-              }
-              setProcessing(false);
-            },
-          }
-        );
-      } catch (err) {
-        console.error("Unexpected error:", err);
-        setError("An unexpected error occurred. Please try again.");
-        setProcessing(false);
-      }
-    };
+  useEffect(() => {
+    if (!accessChecked) return;
 
-    processConfirmation();
-  }, [userId, token, confirmEmail]);
+    if (!userId || !token) {
+      setError("Invalid confirmation link. Missing parameters.");
+      setProcessing(false);
+      return;
+    }
+
+    confirmEmail.mutate({ userId, token }, {
+      onSuccess: () => {
+        setConfirmed(true);
+        setProcessing(false);
+        localStorage.removeItem("pendingConfirmationEmail");
+        setRegistrationInProgress(false);
+      },
+      onError: (error: any) => {
+        const errorMsg = getAxiosErrorMessage(error);
+        if (errorMsg.includes("Network Error") || errorMsg.includes("Failed to fetch")) {
+          setError("Cannot connect to server. Please check your internet connection and try again.");
+        } else if (errorMsg.includes("CORS") || errorMsg.includes("Origin")) {
+          setError("Connection issue. Please try again or contact support.");
+        } else {
+          setError(errorMsg);
+        }
+        setProcessing(false);
+      },
+    });
+  }, [accessChecked, userId, token, confirmEmail, setRegistrationInProgress]);
 
   const handleRetry = () => {
     setProcessing(true);
     setError("");
-    // Презареждаме страницата за нов опит
     window.location.reload();
   };
 
-  const handleLogin = () => {
-    router.push("/auth/login");
-  };
+  const handleLogin = () => router.push("/auth/login");
+  const handleGoToResend = () => router.push("/auth/confirmation-sent");
+  const handleGoToHome = () => router.push("/");
 
-  const handleGoToResend = () => {
-    router.push("/auth/confirmation-sent");
-  };
-
-  const handleGoToHome = () => {
-    router.push("/");
-  };
+  if (!accessChecked) {
+    return <div className="p-8 max-w-xl mx-auto text-center">Loading...</div>;
+  }
 
   if (processing) {
     return (
@@ -116,15 +109,9 @@ export default function EmailConfirmedPage() {
             </div>
 
             <div className="flex flex-col gap-3">
-              <Button onClick={handleRetry} variant="outline">
-                Try Again
-              </Button>
-              <Button onClick={handleGoToResend} variant="outline">
-                Get New Confirmation Link
-              </Button>
-              <Button onClick={handleGoToHome} variant="ghost">
-                Go to Homepage
-              </Button>
+              <Button onClick={handleRetry} variant="outline">Try Again</Button>
+              <Button onClick={handleGoToResend} variant="outline">Get New Confirmation Link</Button>
+              <Button onClick={handleGoToHome} variant="ghost">Go to Homepage</Button>
             </div>
           </CardContent>
         </Card>
@@ -151,16 +138,8 @@ export default function EmailConfirmedPage() {
           </p>
 
           <div className="flex flex-col gap-3">
-            <Button onClick={handleLogin} className="w-full" size="lg">
-              Continue to Login
-            </Button>
-            
-            <Button 
-              onClick={handleGoToHome}
-              variant="outline"
-            >
-              Go to Homepage
-            </Button>
+            <Button onClick={handleLogin} className="w-full" size="lg">Continue to Login</Button>
+            <Button onClick={handleGoToHome} variant="outline">Go to Homepage</Button>
           </div>
         </CardContent>
       </Card>

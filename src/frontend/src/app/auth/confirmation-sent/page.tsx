@@ -7,17 +7,27 @@ import { Button } from "@frontend/components/ui/button";
 import { Input } from "@frontend/components/ui/input";
 import { useResendConfirmation } from "@frontend/hooks/use-auth";
 import { getAxiosErrorMessage } from "@frontend/lib/utils";
+import { useRegistrationStore } from "@frontend/store/useRegistrationStore";
 
 export default function ConfirmationSentPage() {
   const router = useRouter();
   const resendConfirmation = useResendConfirmation();
+  const registrationInProgress = useRegistrationStore((state) => state.registrationInProgress)
   
   const [savedEmail, setSavedEmail] = useState("");
   const [manualEmail, setManualEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [accessChecked, setAccessChecked] = useState(false);
 
   useEffect(() => {
-    // Get email from localStorage
+  if (!registrationInProgress) {
+    router.replace("/auth/login"); 
+  } else {
+    setAccessChecked(true);
+  }
+}, [registrationInProgress, router]);
+
+  useEffect(() => {
     const emailFromStorage = localStorage.getItem("pendingConfirmationEmail") || "";
     setSavedEmail(emailFromStorage);
     setManualEmail(emailFromStorage);
@@ -32,7 +42,6 @@ export default function ConfirmationSentPage() {
     resendConfirmation.mutate({ email: emailToUse }, {
       onSuccess: () => {
         setMessage("Confirmation email resent successfully!");
-        // Ако се използва ръчно въвеждане, запазваме имейла
         if (!savedEmail) {
           localStorage.setItem("pendingConfirmationEmail", emailToUse);
           setSavedEmail(emailToUse);
@@ -52,6 +61,9 @@ export default function ConfirmationSentPage() {
     handleResend(manualEmail);
   };
 
+  if (!accessChecked) {
+    return <div className="p-8 max-w-xl mx-auto text-center">Loading...</div>;
+  }
   return (
     <div className="p-8 max-w-xl mx-auto">
       <Card>

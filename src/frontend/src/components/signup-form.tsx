@@ -19,6 +19,8 @@ import { useRegister } from "@frontend/hooks/use-auth";
 import { getAxiosErrorMessage } from "@frontend/lib/utils";
 import { Gender } from "@frontend/lib/types/auth";
 
+import { useRegistrationStore } from "@frontend/store/useRegistrationStore";
+
 export default function SignupForm({ className, ...props }: React.ComponentProps<"div">) {
   const router = useRouter();
   const register = useRegister();
@@ -92,6 +94,7 @@ export default function SignupForm({ className, ...props }: React.ComponentProps
     register.mutate(payload, {
       onSuccess: (data: any) => {
         localStorage.setItem("pendingConfirmationEmail", email);
+        useRegistrationStore.getState().setRegistrationInProgress(true);
         router.push("/auth/confirmation-sent"); 
       },
       onError: (err: any) => {
