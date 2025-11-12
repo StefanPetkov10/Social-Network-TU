@@ -8,11 +8,4 @@ const api = axios.create({
   },
 });
 
-if (typeof window !== "undefined") {
-  const token = sessionStorage.getItem("token");
-  if (token) {
-    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-  }
-}
-
 export default api;

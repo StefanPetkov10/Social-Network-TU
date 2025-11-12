@@ -24,12 +24,12 @@ export function useLogin() {
   return useMutation<ApiResponse, Error, LoginPayload>({
     mutationFn: async (payload) => {
       const { data } = await api.post("/api/Auth/login", payload);
-
+      return data;
+    },
+    onSuccess: (data) => {
       if (data?.data) {
         setToken(data.data);
       }
-
-      return data;
     },
   });
 }

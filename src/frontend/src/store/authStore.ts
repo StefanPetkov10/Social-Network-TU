@@ -16,19 +16,25 @@ export const useAuthStore = create<AuthState>()(
         setToken: (token) => {
         set({ token });
         
-        if (token) {
+         if (token) {
           api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-          sessionStorage.setItem("token", token);
+          try {
+            sessionStorage.setItem("token", token);
+          } catch {}
         } else {
           delete api.defaults.headers.common["Authorization"];
-          sessionStorage.removeItem("token");
+          try {
+            sessionStorage.removeItem("token");
+          } catch {}
         }
       },
 
       logout: () => {
         set({ token: null });
         delete api.defaults.headers.common["Authorization"];
-        sessionStorage.removeItem("token");
+        try {
+          sessionStorage.removeItem("token");
+        } catch {}
       }
     }),
     {
