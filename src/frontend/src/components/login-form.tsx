@@ -15,7 +15,7 @@ import {
 } from "@frontend/components/ui/field";
 import { Input } from "@frontend/components/ui/input";
 import { useLogin } from "@frontend/hooks/use-auth";
-import { useAuthStore } from "@frontend/store/authStore";
+import { useAuthStore } from "@frontend/stores/useAuthStore";
 
 export function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
   const [identifier, setIdentifier] = useState("");

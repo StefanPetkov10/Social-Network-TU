@@ -5,13 +5,13 @@ export enum Gender {
 }
 
 export interface RegisterDto {
-  firstName: string;
-  lastName: string;
-  birthDay: number;
-  birthMonth: number;
-  birthYear: number;
-  sex: Gender | number;
-  userName: string;
-  email: string;
-  password: string;
+  FirstName: string;
+  LastName: string;
+  BirthDay: number;
+  BirthMonth: number;
+  BirthYear: number;
+  Sex: Gender | number;
+  UserName: string;
+  Email: string;
+  Password: string;
 }

@@ -7,7 +7,7 @@ import { Button } from "@frontend/components/ui/button";
 import { CheckCircle2, XCircle, RefreshCw } from "lucide-react";
 import { useConfirmEmail } from "@frontend/hooks/use-auth";
 import { getAxiosErrorMessage } from "@frontend/lib/utils";
-import { useRegistrationStore } from "@frontend/store/useRegistrationStore";
+import { useRegistrationStore } from "@frontend/stores/useRegistrationStore";
 
 export default function EmailConfirmedPage() {
   const router = useRouter();

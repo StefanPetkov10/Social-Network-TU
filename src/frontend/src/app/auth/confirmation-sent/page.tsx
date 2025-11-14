@@ -7,7 +7,7 @@ import { Button } from "@frontend/components/ui/button";
 import { Input } from "@frontend/components/ui/input";
 import { useResendConfirmation } from "@frontend/hooks/use-auth";
 import { getAxiosErrorMessage } from "@frontend/lib/utils";
-import { useRegistrationStore } from "@frontend/store/useRegistrationStore";
+import { useRegistrationStore } from "@frontend/stores/useRegistrationStore";
 
 export default function ConfirmationSentPage() {
   const router = useRouter();

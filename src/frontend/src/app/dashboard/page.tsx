@@ -17,7 +17,7 @@ import {
 } from "@frontend/components/ui/sidebar";
 import { Button } from "@frontend/components/ui/button";
 //import { useLogout } from "@frontend/hooks/use-auth";
-import { useAuthStore } from "@frontend/store/authStore";
+import { useAuthStore } from "@frontend/stores/useAuthStore";
 import { useMyPost } from "@frontend/hooks/use-post";
 import  ProtectedRoute  from "@frontend/components/protected-route"
 import { useEffect } from "react";

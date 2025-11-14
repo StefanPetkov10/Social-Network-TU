@@ -15,26 +15,16 @@ export const useAuthStore = create<AuthState>()(
 
         setToken: (token) => {
         set({ token });
-        
          if (token) {
           api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-          try {
-            sessionStorage.setItem("token", token);
-          } catch {}
         } else {
           delete api.defaults.headers.common["Authorization"];
-          try {
-            sessionStorage.removeItem("token");
-          } catch {}
         }
       },
 
       logout: () => {
         set({ token: null });
         delete api.defaults.headers.common["Authorization"];
-        try {
-          sessionStorage.removeItem("token");
-        } catch {}
       }
     }),
     {
@@ -52,12 +42,9 @@ export const initAuthInterceptor = () => {
 
   const unsubscribe = useAuthStore.subscribe((state) => {
     const token = state.token;
-    if (token) {
-      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    } else {
-      delete api.defaults.headers.common["Authorization"];
-    }
+    if (token) api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    else delete api.defaults.headers.common["Authorization"];
   });
-
+  
   return unsubscribe;
 };

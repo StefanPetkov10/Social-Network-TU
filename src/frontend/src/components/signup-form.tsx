@@ -1,10 +1,10 @@
 "use client";
 
 import Image from "next/image";
-
 import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { cn } from "@frontend/lib/utils"; 
+
+import { cn } from "@frontend/lib/utils";
 import { Button } from "@frontend/components/ui/button";
 import { Card, CardContent } from "@frontend/components/ui/card";
 import {
@@ -15,26 +15,33 @@ import {
   FieldSeparator,
 } from "@frontend/components/ui/field";
 import { Input } from "@frontend/components/ui/input";
+
 import { useRegister } from "@frontend/hooks/use-auth";
 import { getAxiosErrorMessage } from "@frontend/lib/utils";
 import { Gender } from "@frontend/lib/types/auth";
 
-import { useRegistrationStore } from "@frontend/store/useRegistrationStore";
+import { useRegistrationStore } from "@frontend/stores/useRegistrationStore";
 
-export default function SignupForm({ className, ...props }: React.ComponentProps<"div">) {
+export default function SignupForm({...props }) {
   const router = useRouter();
   const register = useRegister();
 
-  const [firstName, setFirstName] = useState("");//todo: use zustand store
-  const [lastName, setLastName] = useState("");
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [gender, setGender] = useState<Gender | number>();
-  const [birthDay, setBirthDay] = useState<number>(1);
-  const [birthMonth, setBirthMonth] = useState<number>(1);
-  const [birthYear, setBirthYear] = useState<number>(1995);
+  const {
+    FirstName,
+    LastName,
+    Email,
+    UserName,
+    Password,
+    confirmPassword,
+    Sex,
+    BirthDay,
+    BirthMonth,
+    BirthYear,
+    registrationInProgress,
+    setField,
+    setRegistrationInProgress,
+  } = useRegistrationStore();
+
   const [localError, setLocalError] = useState<string | null>(null);
 
   const days = useMemo(() => Array.from({ length: 31 }, (_, i) => i + 1), []);
@@ -42,25 +49,44 @@ export default function SignupForm({ className, ...props }: React.ComponentProps
   const years = useMemo(() => {
     const currentYear = new Date().getFullYear();
     const start = 1900;
-    return Array.from({ length: currentYear - start + 1 }, (_, i) => currentYear - i);
+    return Array.from(
+      { length: currentYear - start + 1 },
+      (_, i) => currentYear - i
+    );
   }, []);
 
+
   function validateForm() {
-    if (!firstName || !lastName || !username || !email || !password) {
+    if (!FirstName || !LastName || !UserName || !Email || !Password) {
       setLocalError("Please fill all required fields.");
       return false;
     }
-    if (password.length < 8) {
+
+    if (Password.length < 8) {
       setLocalError("Password must be at least 8 characters long.");
       return false;
     }
-    if (password !== confirmPassword) {
+
+    if (Password !== confirmPassword) {
       setLocalError("Passwords do not match.");
       return false;
     }
+
     try {
-      const dob = new Date(Number(birthYear), Number(birthMonth) - 1, Number(birthDay));
-      const age = new Date().getFullYear() - dob.getFullYear() - (new Date() < new Date(dob.getFullYear() + (new Date().getFullYear() - dob.getFullYear()), dob.getMonth(), dob.getDate()) ? 1 : 0);
+      const dob = new Date(Number(BirthYear), Number(BirthMonth) - 1, Number(BirthDay));
+
+      const age =
+        new Date().getFullYear() -
+        dob.getFullYear() -
+        (new Date() <
+        new Date(
+          dob.getFullYear() + (new Date().getFullYear() - dob.getFullYear()),
+          dob.getMonth(),
+          dob.getDate()
+        )
+          ? 1
+          : 0);
+
       if (age < 14) {
         setLocalError("You must be at least 14 years old.");
         return false;
@@ -69,6 +95,7 @@ export default function SignupForm({ className, ...props }: React.ComponentProps
       setLocalError("Invalid date of birth.");
       return false;
     }
+
     setLocalError(null);
     return true;
   }
@@ -79,33 +106,31 @@ export default function SignupForm({ className, ...props }: React.ComponentProps
     if (!validateForm()) return;
 
     const payload = {
-     FirstName: firstName,
-     LastName: lastName,
-     BirthDay: birthDay,
-     BirthMonth: birthMonth,
-     BirthYear: birthYear,
-     Sex: gender,       
-     UserName: username,
-     Email: email,
-     Password: password,
-     };
+      FirstName,
+      LastName,
+      BirthDay,
+      BirthMonth,
+      BirthYear,
+      Sex,
+      UserName,
+      Email,
+      Password,
+    };
 
-    
     register.mutate(payload, {
-      onSuccess: (data: any) => {
-        localStorage.setItem("pendingConfirmationEmail", email);
-        useRegistrationStore.getState().setRegistrationInProgress(true);
-        router.push("/auth/confirmation-sent"); 
+      onSuccess: () => {
+        localStorage.setItem("pendingConfirmationEmail", Email);
+        setRegistrationInProgress(true);
+        router.push("/auth/confirmation-sent");
       },
-      onError: (err: any) => {
-        const msg = getAxiosErrorMessage(err);
-        setLocalError(msg);
+      onError: (err) => {
+        setLocalError(getAxiosErrorMessage(err));
       },
     });
   }
 
-  return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
+ return (
+    <div className={cn("flex flex-col gap-6", props.className)} {...props}>
       <Card className="overflow-hidden p-0">
         <CardContent className="grid p-0 md:grid-cols-2">
           <form className="p-6 md:p-8" onSubmit={onSubmit}>
@@ -120,35 +145,35 @@ export default function SignupForm({ className, ...props }: React.ComponentProps
               <div className="grid grid-cols-2 gap-4">
                 <Field>
                   <FieldLabel htmlFor="firstName">First name</FieldLabel>
-                  <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+                  <Input id="firstName" value={FirstName} onChange={(e) => setField("FirstName", e.target.value)} required />
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="lastName">Last name</FieldLabel>
-                  <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
+                  <Input id="lastName" value={LastName} onChange={(e) => setField("LastName", e.target.value)} required />
                 </Field>
               </div>
 
               <Field>
                 <FieldLabel>Username</FieldLabel>
-                <Input value={username} onChange={(e) => setUsername(e.target.value)} required />
+                <Input value={UserName} onChange={(e) => setField("UserName", e.target.value)} required />
               </Field>
 
               <Field>
                 <FieldLabel htmlFor="email">Email</FieldLabel>
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <Input id="email" type="email" value={Email} onChange={(e) => setField("Email", e.target.value)} required />
                 <FieldDescription>We'll use this to contact you.</FieldDescription>
               </Field>
 
               <Field>
                 <FieldLabel>Date of birth</FieldLabel>
                 <div className="flex gap-2">
-                  <select value={birthDay} onChange={(e) => setBirthDay(Number(e.target.value))} className="border rounded p-2">
+                  <select value={BirthDay} onChange={(e) => setField("BirthDay", Number(e.target.value))} className="border rounded p-2">
                     {days.map((d) => <option key={d} value={d}>{d}</option>)}
                   </select>
-                  <select value={birthMonth} onChange={(e) => setBirthMonth(Number(e.target.value))} className="border rounded p-2">
+                  <select value={BirthMonth} onChange={(e) => setField("BirthMonth", Number(e.target.value))} className="border rounded p-2">
                     {months.map((m) => <option key={m} value={m}>{m}</option>)}
                   </select>
-                  <select value={birthYear} onChange={(e) => setBirthYear(Number(e.target.value))} className="border rounded p-2">
+                  <select value={BirthYear} onChange={(e) => setField("BirthYear", Number(e.target.value))} className="border rounded p-2">
                     {years.map((y) => <option key={y} value={y}>{y}</option>)}
                   </select>
                 </div>
@@ -159,15 +184,15 @@ export default function SignupForm({ className, ...props }: React.ComponentProps
                 <FieldLabel>Gender</FieldLabel>
                 <div className="flex gap-3">
                   <label className="inline-flex items-center gap-2">
-                    <input type="radio" name="gender" checked={gender === Gender.Female} onChange={() => setGender(Gender.Female)} />
+                    <input type="radio" name="gender" checked={Sex === Gender.Female} onChange={() => setField("Sex", Gender.Female)} />
                     <span>Female</span>
                   </label>
                   <label className="inline-flex items-center gap-2">
-                    <input type="radio" name="gender" checked={gender === Gender.Male} onChange={() => setGender(Gender.Male)} />
+                    <input type="radio" name="gender" checked={Sex === Gender.Male} onChange={() => setField("Sex", Gender.Male)} />
                     <span>Male</span>
                   </label>
                   <label className="inline-flex items-center gap-2">
-                    <input type="radio" name="gender" checked={gender === Gender.Other} onChange={() => setGender(Gender.Other)} />
+                    <input type="radio" name="gender" checked={Sex === Gender.Other} onChange={() => setField("Sex", Gender.Other)} />
                     <span>Other</span>
                   </label>
                 </div>
@@ -177,11 +202,11 @@ export default function SignupForm({ className, ...props }: React.ComponentProps
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <FieldLabel htmlFor="password">Password</FieldLabel>
-                    <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                    <Input id="password" type="password" value={Password} onChange={(e) => setField("Password", e.target.value)} required />
                   </div>
                   <div>
                     <FieldLabel htmlFor="confirmPassword">Confirm Password</FieldLabel>
-                    <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                    <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setField("confirmPassword", e.target.value)} required />
                   </div>
                 </div>
                 <FieldDescription>Must be at least 8 characters long.</FieldDescription>
@@ -227,3 +252,4 @@ export default function SignupForm({ className, ...props }: React.ComponentProps
     </div>
   );
 }
+  

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { initAuthInterceptor } from "../../store/authStore";
+import { initAuthInterceptor } from "../../stores/useAuthStore";
 
 export function AuthInitializer() {
   useEffect(() => {
