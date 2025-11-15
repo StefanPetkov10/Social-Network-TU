@@ -16,7 +16,6 @@ import {
   SidebarTrigger,
 } from "@frontend/components/ui/sidebar";
 import { Button } from "@frontend/components/ui/button";
-//import { useLogout } from "@frontend/hooks/use-auth";
 import { useAuthStore } from "@frontend/stores/useAuthStore";
 import { useMyPost } from "@frontend/hooks/use-post";
 import  ProtectedRoute  from "@frontend/components/protected-route"
@@ -39,9 +38,9 @@ export default function Page() {
     });
   };*/
   
-  useEffect(() => {
+ /* useEffect(() => {
     console.log(post);
-  }, [post]);
+  }, [post]);*/
 
   return (
   <ProtectedRoute>

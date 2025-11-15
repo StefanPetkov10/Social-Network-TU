@@ -4,14 +4,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "../stores/useAuthStore";
 
-export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
+export default function PublicRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token);
   const router = useRouter();
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    if (!token) {
-      router.replace("/auth/login");
+    if (token) {
+      router.replace("/dashboard");
       return;
     }
 

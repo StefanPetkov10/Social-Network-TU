@@ -26,12 +26,15 @@ export default function EmailConfirmedPage() {
   const registrationInProgress = useRegistrationStore((state) => state.registrationInProgress);
 
   useEffect(() => {
-    if (!registrationInProgress) {
+    const storedProgress = localStorage.getItem("registrationInProgress") === "true";
+    const emailLinkAccess = !!userId && !!token;
+
+    if (!storedProgress && !emailLinkAccess) {
       router.replace("/auth/login");
     } else {
       setAccessChecked(true);
     }
-  }, [registrationInProgress, router]);
+  }, [registrationInProgress, router, userId, token]);
 
   useEffect(() => {
     if (!accessChecked) return;
@@ -46,6 +49,7 @@ export default function EmailConfirmedPage() {
       onSuccess: () => {
         setConfirmed(true);
         setProcessing(false);
+
         localStorage.removeItem("pendingConfirmationEmail");
         setRegistrationInProgress(false);
       },
@@ -68,7 +72,6 @@ export default function EmailConfirmedPage() {
     setError("");
     window.location.reload();
   };
-
   const handleLogin = () => router.push("/auth/login");
   const handleGoToResend = () => router.push("/auth/confirmation-sent");
   const handleGoToHome = () => router.push("/");
