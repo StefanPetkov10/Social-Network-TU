@@ -61,7 +61,7 @@
       };
 
       if (!accessChecked) {
-      return <div className="p-8 max-w-xl mx-auto text-center">Loading...</div>;
+        return <div className="p-8 max-w-xl mx-auto text-center">Loading...</div>;
       }
 
       return (

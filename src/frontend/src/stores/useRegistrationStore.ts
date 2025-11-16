@@ -50,6 +50,14 @@ export const useRegistrationStore = create<SignupState>((set) => ({
     set({ registrationInProgress: value });
     localStorage.setItem("registrationInProgress", value ? "true" : "false");
   },
+  /*  setRegistrationInProgress: (value: boolean) => {
+  set({ registrationInProgress: value });
+  if (value) {
+    localStorage.setItem("registrationInProgress", "true");
+  } else {
+    localStorage.removeItem("registrationInProgress");
+  }
+},*/
   
   reset: () => {
     set({ ...initialState });
