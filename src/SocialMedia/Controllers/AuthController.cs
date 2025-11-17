@@ -275,6 +275,71 @@ namespace SocialMedia.Controllers
             return Ok(ApiResponse<object>.SuccessResponse(null, "If this email is registered, you will receive a code."));
         }
 
+        [HttpPost("verify-otp")]
+        public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpDto model)
+        {
+            if (string.IsNullOrWhiteSpace(model?.Email) || string.IsNullOrWhiteSpace(model?.Code))
+                return BadRequest(ApiResponse<object>.ErrorResponse("Invalid request."));
+
+            var email = model.Email.Trim().ToLowerInvariant();
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+                return Unauthorized(ApiResponse<object>.ErrorResponse("Invalid code."));
+
+            var otp = await _context.EmailOtpCodes
+                .Where(x => x.UserId == user.Id && !x.IsUsed)
+                .OrderByDescending(x => x.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (otp == null)
+                return Unauthorized(ApiResponse<object>.ErrorResponse("No active code."));
+
+            if (otp.FailedAttempts >= 5)
+                return Unauthorized(ApiResponse<object>.ErrorResponse("Code blocked due to too many attempts."));
+
+            if (DateTime.UtcNow > otp.ExpiresAt)
+                return Unauthorized(ApiResponse<object>.ErrorResponse("Code expired."));
+
+            var secret = _config["Otp:Secret"]!;
+            var incomingHash = OtpHelper.HmacHash(model.Code, secret);
+
+            if (incomingHash != otp.CodeHash)
+            {
+                otp.FailedAttempts++;
+                await _context.SaveChangesAsync();
+                return Unauthorized(ApiResponse<object>.ErrorResponse("Incorrect code."));
+            }
+
+            otp.IsUsed = true;
+            await _context.SaveChangesAsync();
+
+            var session = await _context.PasswordResetSessions
+                .Where(s => s.UserId == user.Id && !s.IsUsed)
+                .OrderByDescending(s => s.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (session == null)
+                return Unauthorized(ApiResponse<object>.ErrorResponse("No reset session available."));
+
+            var sessionRaw = OtpHelper.GenerateSessionToken();
+            var sessionHash = OtpHelper.HmacHash(sessionRaw, secret);
+
+            var newSession = new PasswordResetSession
+            {
+                UserId = session.UserId,
+                SessionTokenHash = sessionHash,
+                EncodedIdentityToken = session.EncodedIdentityToken,
+                IsVerified = true,
+                IsUsed = false,
+                CreatedAt = DateTime.UtcNow,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(15)
+            };
+            await _context.PasswordResetSessions.AddAsync(newSession);
+            await _context.SaveChangesAsync();
+
+            return Ok(ApiResponse<string>.SuccessResponse(sessionRaw, "Code verified. Proceed to reset password."));
+        }
+
 
         [Authorize]
         [HttpGet("me")]
