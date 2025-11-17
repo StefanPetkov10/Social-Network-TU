@@ -11,7 +11,6 @@ namespace SocialMedia.Database
         public SocialMediaDbContext(DbContextOptions<SocialMediaDbContext> options)
             : base(options) { }
 
-
         public DbSet<Post> Posts { get; set; }
         public DbSet<Profile> Profiles { get; set; }
         public DbSet<Friendship> Friendships { get; set; }
@@ -22,7 +21,8 @@ namespace SocialMedia.Database
         public DbSet<Comment> Comments { get; set; }
         public DbSet<CommentMedia> CommentMedias { get; set; }
         public DbSet<Reaction> Reactions { get; set; }
-
+        public DbSet<EmailOtpCode> EmailOtpCodes { get; set; }
+        public DbSet<PasswordResetSession> PasswordResetSessions { get; set; }
 
         public override int SaveChanges()
         {

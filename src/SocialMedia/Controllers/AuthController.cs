@@ -112,7 +112,7 @@ namespace SocialMedia.Controllers
         }
 
         [HttpPost("resend-confirmation")]
-        public async Task<IActionResult> ResendConfirmation([FromBody] ResendConfirmationDto model)
+        public async Task<IActionResult> ResendConfirmation([FromBody] RequestOtpDto model)
         {
             if (string.IsNullOrWhiteSpace(model?.Email))
                 return BadRequest(ApiResponse<object>.ErrorResponse("Email is required."));
@@ -210,33 +210,12 @@ namespace SocialMedia.Controllers
 
             var jwt = new JwtSecurityTokenHandler().WriteToken(token);
 
-            /*Response.Cookies.Append("auth_token", jwt, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
-                Expires = DateTime.UtcNow.AddDays(7),
-                IsEssential = true,
-                Path = "/"
-            });*/
-
             _logger.LogInformation("User {UserName} logged in successfully.", user.UserName);
 
             return Ok(ApiResponse<string>.SuccessResponse(jwt, "Login successful."));
         }
 
-        /*[HttpPost("logout")]
-        public IActionResult Logout()
-        {
-            Response.Cookies.Delete("auth_token", new CookieOptions
-            {
-                Path = "/",
-                SameSite = SameSiteMode.Strict,
-                Secure = true
-            });
 
-            return Ok(ApiResponse<object>.SuccessResponse(null, "Logged out successfully."));
-        }*/
 
         [Authorize]
         [HttpGet("me")]
