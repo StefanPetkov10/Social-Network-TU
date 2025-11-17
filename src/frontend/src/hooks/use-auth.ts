@@ -36,17 +36,6 @@ export function useLogin() {
   });
 }
 
-/*export function useLogout() {
-  const logout = useAuthStore((s) => s.logout);
-  return useMutation<ApiResponse<null>, Error, void>({
-    mutationFn: async () => {
-      const { data } = await api.post<ApiResponse<null>>("/api/Auth/logout");
-      logout();
-      return data;
-    },
-  });
-}*/
-
 export function useConfirmEmail() {
   return useMutation<ApiResponse<null>, Error, { userId: string; token: string }>({
     mutationFn: async (params) => {
@@ -62,5 +51,14 @@ export function useResendConfirmation() {
       const { data } = await api.post<ApiResponse<null>>("/api/Auth/resend-confirmation", payload);
       return data;
     },
+  });
+}
+
+export function useForgotPassword() {
+  return useMutation<ApiResponse<null>, Error, { email: string }>({
+    mutationFn: async (payload) => {
+      const { data } = await api.post<ApiResponse<null>>("/api/Auth/request-otp", payload);
+      return data;
+    }
   });
 }

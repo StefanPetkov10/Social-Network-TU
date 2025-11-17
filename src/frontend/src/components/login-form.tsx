@@ -14,7 +14,7 @@ import {
   FieldSeparator,
 } from "@frontend/components/ui/field";
 import { Input } from "@frontend/components/ui/input";
-import { useLogin } from "@frontend/hooks/use-auth";
+import { useForgotPassword, useLogin } from "@frontend/hooks/use-auth";
 import { useAuthStore } from "@frontend/stores/useAuthStore";
 
 export function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
@@ -24,6 +24,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
 
   const router = useRouter();
   const login = useLogin();
+  const forgotPassword = useForgotPassword();
 
   const token = useAuthStore((s) => s.token);
   useEffect(() => {
@@ -47,6 +48,23 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
         setErrorMessage(getAxiosErrorMessage(err));
       },
       onSuccess: () => {
+        setErrorMessage(null);
+      },
+    });
+  };
+
+  const handleForgotPassword = () => {
+    if (!identifier) {
+      setErrorMessage("Please enter your email to reset your password.");
+      return;
+    }
+
+    forgotPassword.mutate({ email: identifier }, {
+      onError: (err) => {
+        setErrorMessage(getAxiosErrorMessage(err));
+      },
+      onSuccess: () => {
+         router.push("/auth/forgot-password");
         setErrorMessage(null);
       },
     });
@@ -80,12 +98,10 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
               <Field>
                 <div className="flex items-center">
                   <FieldLabel htmlFor="password">Password</FieldLabel>
-                  <a
-                    href="#"
-                    className="ml-auto text-sm underline-offset-2 text-primary hover:underline"
-                  >
+                  <Button type="button" onClick={handleForgotPassword} variant="link"
+                    className="ml-auto text-sm underline-offset-2 text-primary hover:underline">
                     Forgot your password?
-                  </a>
+                  </Button>
                 </div>
                 <Input
                   id="password"
