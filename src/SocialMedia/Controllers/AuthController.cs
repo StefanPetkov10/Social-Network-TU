@@ -340,6 +340,48 @@ namespace SocialMedia.Controllers
             return Ok(ApiResponse<string>.SuccessResponse(sessionRaw, "Code verified. Proceed to reset password."));
         }
 
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordWithSessionDto dto)
+        {
+            if (dto == null)
+                return BadRequest(ApiResponse<object>.ErrorResponse("Invalid request."));
+            if (string.IsNullOrWhiteSpace(dto.SessionToken) ||
+                string.IsNullOrWhiteSpace(dto.NewPassword) ||
+                dto.NewPassword != dto.ConfirmNewPassword)
+                return BadRequest(ApiResponse<object>.ErrorResponse("Validation failed.", new[] { "Invalid data or passwords do not match." }));
+
+            var secret = _config["Otp:Secret"]!;
+            var sessionHash = OtpHelper.HmacHash(dto.SessionToken, secret);
+
+            var session = await _context.PasswordResetSessions
+                .Where(s => s.SessionTokenHash == sessionHash)
+                .FirstOrDefaultAsync();
+
+            if (session == null || !session.IsVerified || session.IsUsed || DateTime.UtcNow > session.ExpiresAt)
+                return BadRequest(ApiResponse<object>.ErrorResponse("Invalid or expired session."));
+
+            var user = await _userManager.FindByIdAsync(session.UserId.ToString());
+            if (user == null)
+                return BadRequest(ApiResponse<object>.ErrorResponse("User not found."));
+
+            var decodedIdentityToken = TokenHelper.DecodeToken(session.EncodedIdentityToken);
+            var result = await _userManager.ResetPasswordAsync(user, decodedIdentityToken, dto.NewPassword);
+
+            if (!result.Succeeded)
+                return BadRequest(ApiResponse<object>.ErrorResponse("Password reset failed."));
+
+            session.IsUsed = true;
+            await _context.SaveChangesAsync();
+
+            var otherOtps = _context.EmailOtpCodes.Where(x => x.UserId == session.UserId);
+            _context.EmailOtpCodes.RemoveRange(otherOtps);
+            var otherSessions = _context.PasswordResetSessions.Where(s => s.UserId == session.UserId && !s.IsUsed);
+            _context.PasswordResetSessions.RemoveRange(otherSessions);
+            await _context.SaveChangesAsync();
+
+            return Ok(ApiResponse<object>.SuccessResponse(null, "Password reset successfully."));
+        }
+
 
         [Authorize]
         [HttpGet("me")]
