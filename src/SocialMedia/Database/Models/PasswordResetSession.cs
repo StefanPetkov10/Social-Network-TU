@@ -14,22 +14,20 @@ namespace SocialMedia.Database.Models
         public ApplicationUser User { get; set; } = null!;
 
         [Required]
-        [MaxLength(200)]
-        public string OtpHash { get; set; } = string.Empty;
+        [MaxLength(128)]
+        public string? SessionTokenHash { get; set; }
 
         [Required]
-        public int FailedAttempts { get; set; } = 0;
-
-        public DateTime? LockedUntil { get; set; }
+        public string? EncodedIdentityToken { get; set; }
 
         [Required]
+        public bool IsVerified { get; set; } = false;
+        public bool IsUsed { get; set; } = false;
+
         public DateTime ExpiresAt { get; set; }
 
-        public DateTime LastSentAt { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        public bool IsVerified { get; set; } = false;
-
-        public bool IsUsed { get; set; } = false;
     }
 }
 

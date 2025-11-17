@@ -215,6 +215,65 @@ namespace SocialMedia.Controllers
             return Ok(ApiResponse<string>.SuccessResponse(jwt, "Login successful."));
         }
 
+        [HttpPost("request-otp")]
+        public async Task<IActionResult> RequestOtp([FromBody] RequestOtpDto model)
+        {
+            if (string.IsNullOrWhiteSpace(model?.Email))
+                return Ok(ApiResponse<object>.SuccessResponse(null, "If this email is registered, you will receive a code."));
+
+            var email = model.Email.Trim().ToLowerInvariant();
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+                return Ok(ApiResponse<object>.SuccessResponse(null, "If this email is registered, you will receive a code."));
+
+            var oneHourAgo = DateTime.UtcNow.AddHours(-1);
+            var recent = await _context.EmailOtpCodes
+                .Where(x => x.UserId == user.Id && x.CreatedAt >= oneHourAgo)
+                .CountAsync();
+            if (recent >= 5)
+                return BadRequest(ApiResponse<object>.ErrorResponse("Too many requests. Try later."));
+
+            var old = _context.EmailOtpCodes.Where(x => x.UserId == user.Id && x.CreatedAt < DateTime.UtcNow.AddMinutes(-30));
+            _context.EmailOtpCodes.RemoveRange(old);
+
+            var code = OtpHelper.GenerateOtp();
+            var secret = _config["Otp:Secret"] ?? throw new InvalidOperationException("Otp secret missing");
+            var hash = OtpHelper.HmacHash(code, secret);
+
+            var otp = new EmailOtpCode
+            {
+                UserId = user.Id,
+                CodeHash = hash,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(10),
+                CreatedAt = DateTime.UtcNow
+            };
+            await _context.EmailOtpCodes.AddAsync(otp);
+
+            var rawIdentityToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var encodedIdentity = TokenHelper.EncodeToken(rawIdentityToken);
+
+            var sessionRaw = OtpHelper.GenerateSessionToken();
+            var sessionHash = OtpHelper.HmacHash(sessionRaw, secret);
+            var session = new PasswordResetSession
+            {
+                UserId = user.Id,
+                SessionTokenHash = sessionHash,
+                EncodedIdentityToken = encodedIdentity,
+                IsVerified = false,
+                IsUsed = false,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(30),
+                CreatedAt = DateTime.UtcNow
+            };
+            await _context.PasswordResetSessions.AddAsync(session);
+
+            await _context.SaveChangesAsync();
+
+            var html = $@"<p>Your password reset code: <strong>{code}</strong></p>
+                  <p>Valid for 10 minutes.</p>";
+            await _emailSender.SendEmailAsync(user.Email, "Your password reset code", html);
+
+            return Ok(ApiResponse<object>.SuccessResponse(null, "If this email is registered, you will receive a code."));
+        }
 
 
         [Authorize]
