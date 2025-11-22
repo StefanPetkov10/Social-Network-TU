@@ -76,12 +76,29 @@ export function useVerifyForgotPasswordOTP() {
   });
 }
 
-
 export function useResendOTP() {
   return useMutation<ApiResponse<null>, Error, { sessionToken: string }>({
     mutationFn: async (payload) => {
       const { data } = await api.post<ApiResponse<null>>(
         "/api/Auth/resend-otp",
+        payload
+      );
+      return data;
+    },
+  });
+}
+
+interface ResetPasswordPayload {
+  sessionToken: string;
+  newPassword: string;
+  confirmNewPassword: string;
+}
+
+export function useResetPassword() {
+  return useMutation<ApiResponse<null>, Error, ResetPasswordPayload>({
+    mutationFn: async (payload) => {
+      const { data } = await api.post<ApiResponse<null>>(
+        "/api/Auth/reset-password",
         payload
       );
       return data;
