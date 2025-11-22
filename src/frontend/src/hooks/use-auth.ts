@@ -54,11 +54,37 @@ export function useResendConfirmation() {
   });
 }
 
-export function useForgotPassword() {
-  return useMutation<ApiResponse<null>, Error, { email: string }>({
+interface RequestOtpResponse {
+  sessionToken: string;
+}
+
+export function useForgotPasswordOtp() {
+  return useMutation<ApiResponse<RequestOtpResponse>, Error, { email: string }>({
     mutationFn: async (payload) => {
-      const { data } = await api.post<ApiResponse<null>>("/api/Auth/request-otp", payload);
+      const { data } = await api.post<ApiResponse<RequestOtpResponse>>("/api/Auth/request-otp", payload);
       return data;
     }
+  });
+}
+
+export function useVerifyForgotPasswordOTP() {
+  return useMutation<ApiResponse<null>, Error, { sessionToken: string; code: string }>({
+    mutationFn: async (payload) => {
+      const { data } = await api.post<ApiResponse<null>>("/api/Auth/verify-otp", payload);
+      return data;
+    }
+  });
+}
+
+
+export function useResendOTP() {
+  return useMutation<ApiResponse<null>, Error, { sessionToken: string }>({
+    mutationFn: async (payload) => {
+      const { data } = await api.post<ApiResponse<null>>(
+        "/api/Auth/resend-otp",
+        payload
+      );
+      return data;
+    },
   });
 }

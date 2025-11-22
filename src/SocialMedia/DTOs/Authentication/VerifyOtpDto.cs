@@ -2,7 +2,7 @@
 {
     public class VerifyOtpDto
     {
-        public string? Email { get; set; }
+        public string SessionToken { get; set; } = null!;
         public string? Code { get; set; }
     }
 }

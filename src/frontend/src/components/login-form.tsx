@@ -14,7 +14,7 @@ import {
   FieldSeparator,
 } from "@frontend/components/ui/field";
 import { Input } from "@frontend/components/ui/input";
-import { useForgotPassword, useLogin } from "@frontend/hooks/use-auth";
+import { useForgotPasswordOtp, useLogin } from "@frontend/hooks/use-auth";
 import { useAuthStore } from "@frontend/stores/useAuthStore";
 
 export function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
@@ -24,9 +24,10 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
 
   const router = useRouter();
   const login = useLogin();
-  const forgotPassword = useForgotPassword();
+  const forgotPasswordOtp = useForgotPasswordOtp();
 
   const token = useAuthStore((s) => s.token);
+  
   useEffect(() => {
     if (token) {
       router.replace("/dashboard");
@@ -35,21 +36,14 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-
     if (!identifier || !password) {
       setErrorMessage("Please fill in both fields.");
       return;
     }
-
-    const payload = { Identifier: identifier, Password: password };
-
-    login.mutate(payload, {
-      onError: (err) => {
-        setErrorMessage(getAxiosErrorMessage(err));
-      },
-      onSuccess: () => {
-        setErrorMessage(null);
-      },
+    
+    login.mutate({ Identifier: identifier, Password: password }, {
+      onError: (err) => setErrorMessage(getAxiosErrorMessage(err)),
+      onSuccess: () => setErrorMessage(null),
     });
   };
 
@@ -59,15 +53,33 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
       return;
     }
 
-    forgotPassword.mutate({ email: identifier }, {
-      onError: (err) => {
-        setErrorMessage(getAxiosErrorMessage(err));
-      },
-      onSuccess: () => {
-         router.push("/auth/forgot-password");
-        setErrorMessage(null);
-      },
-    });
+    if (!identifier.includes("@")) {
+      setErrorMessage("Please enter a valid email address.");
+      return;
+    }
+
+    forgotPasswordOtp.mutate(
+      { email: identifier },
+      {
+        onError: (err) => {
+          setErrorMessage(getAxiosErrorMessage(err));
+        },
+        onSuccess: (response) => {
+          const sessionToken = response?.data?.sessionToken;
+
+          if (!sessionToken) {
+            setErrorMessage("Server error: No session token received.");
+            return;
+          }
+
+          sessionStorage.setItem("resetPasswordSessionToken", sessionToken);
+
+          router.push("/auth/forgot-password-otp");
+
+          setErrorMessage(null);
+        },
+      }
+    );
   };
 
   return (
@@ -98,9 +110,14 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
               <Field>
                 <div className="flex items-center">
                   <FieldLabel htmlFor="password">Password</FieldLabel>
-                  <Button type="button" onClick={handleForgotPassword} variant="link"
-                    className="ml-auto text-sm underline-offset-2 text-primary hover:underline">
-                    Forgot your password?
+                  <Button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    variant="link"
+                    className="ml-auto text-sm underline-offset-2 text-primary hover:underline"
+                    disabled={forgotPasswordOtp.isPending}
+                  >
+                    {forgotPasswordOtp.isPending ? "Waiting..." : "Forgot your password?"}
                   </Button>
                 </div>
                 <Input

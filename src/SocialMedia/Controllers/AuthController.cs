@@ -238,12 +238,12 @@ namespace SocialMedia.Controllers
 
             var code = OtpHelper.GenerateOtp();
             var secret = _config["Otp:Secret"] ?? throw new InvalidOperationException("Otp secret missing");
-            var hash = OtpHelper.HmacHash(code, secret);
+            var codeHash = OtpHelper.HmacHash(code, secret);
 
             var otp = new EmailOtpCode
             {
                 UserId = user.Id,
-                CodeHash = hash,
+                CodeHash = codeHash,
                 ExpiresAt = DateTime.UtcNow.AddMinutes(10),
                 CreatedAt = DateTime.UtcNow
             };
@@ -252,8 +252,9 @@ namespace SocialMedia.Controllers
             var rawIdentityToken = await _userManager.GeneratePasswordResetTokenAsync(user);
             var encodedIdentity = TokenHelper.EncodeToken(rawIdentityToken);
 
-            var sessionRaw = OtpHelper.GenerateSessionToken();
-            var sessionHash = OtpHelper.HmacHash(sessionRaw, secret);
+            var rawSessionToken = OtpHelper.GenerateSessionToken();
+            var sessionHash = OtpHelper.HmacHash(rawSessionToken, secret);
+
             var session = new PasswordResetSession
             {
                 UserId = user.Id,
@@ -261,84 +262,124 @@ namespace SocialMedia.Controllers
                 EncodedIdentityToken = encodedIdentity,
                 IsVerified = false,
                 IsUsed = false,
+                CreatedAt = DateTime.UtcNow,
                 ExpiresAt = DateTime.UtcNow.AddMinutes(30),
-                CreatedAt = DateTime.UtcNow
             };
             await _context.PasswordResetSessions.AddAsync(session);
-
             await _context.SaveChangesAsync();
 
+            var frontendUrl = _config["FrontendUrl"]?.TrimEnd('/') ?? $"{Request.Scheme}://{Request.Host}";
+            var link = $"{frontendUrl}/auth/forgot-password-otp?sessionToken={Uri.EscapeDataString(rawSessionToken)}";
+
             var html = $@"<p>Your password reset code: <strong>{code}</strong></p>
+                  <p>Or open this page: <a href='{link}'>Reset password</a></p>
                   <p>Valid for 10 minutes.</p>";
             await _emailSender.SendEmailAsync(user.Email, "Your password reset code", html);
 
-            return Ok(ApiResponse<object>.SuccessResponse(null, "If this email is registered, you will receive a code."));
+            var responseData = new
+            {
+                sessionToken = rawSessionToken
+            };
+
+            return Ok(ApiResponse<object>.SuccessResponse(responseData, "If this email is registered, you will receive a code."));
         }
+
+
+        [HttpPost("resend-otp")]
+        public async Task<IActionResult> ResendOtp([FromBody] ResendOtpDto model)
+        {
+            if (string.IsNullOrWhiteSpace(model?.SessionToken))
+                return BadRequest(ApiResponse<object>.ErrorResponse("Invalid session"));
+
+            var secret = _config["Otp:Secret"] ?? throw new InvalidOperationException("Otp secret missing");
+            var sessionHash = OtpHelper.HmacHash(model.SessionToken, secret);
+
+            var session = await _context.PasswordResetSessions
+                .FirstOrDefaultAsync(x => x.SessionTokenHash == sessionHash);
+
+            if (session == null || session.IsUsed || session.IsVerified || session.ExpiresAt < DateTime.UtcNow)
+                return BadRequest(ApiResponse<object>.ErrorResponse("Session expired. Please request a new reset link."));
+
+            if ((DateTime.UtcNow - session.CreatedAt).TotalSeconds < 30)
+                return BadRequest(ApiResponse<object>.ErrorResponse("Please wait before requesting a new code."));
+
+            var user = await _userManager.FindByIdAsync(session.UserId.ToString());
+            if (user == null)
+                return BadRequest(ApiResponse<object>.ErrorResponse("User not found"));
+
+            var oldOtps = _context.EmailOtpCodes.Where(x => x.UserId == user.Id && x.CreatedAt < DateTime.UtcNow.AddMinutes(-30));
+            _context.EmailOtpCodes.RemoveRange(oldOtps);
+
+            var code = OtpHelper.GenerateOtp();
+            var codeHash = OtpHelper.HmacHash(code, secret);
+
+            var otp = new EmailOtpCode
+            {
+                UserId = user.Id,
+                CodeHash = codeHash,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(10),
+                CreatedAt = DateTime.UtcNow
+            };
+            await _context.EmailOtpCodes.AddAsync(otp);
+
+            await _context.SaveChangesAsync();
+
+            var html = @$"<p>Your new password reset code: <strong>{code}</strong></p>
+                  <p>Valid for 10 minutes.</p>";
+            await _emailSender.SendEmailAsync(user.Email, "Your new password reset code", html);
+
+            return Ok(ApiResponse<object>.SuccessResponse(null, "New code sent."));
+        }
+
 
         [HttpPost("verify-otp")]
         public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpDto model)
         {
-            if (string.IsNullOrWhiteSpace(model?.Email) || string.IsNullOrWhiteSpace(model?.Code))
-                return BadRequest(ApiResponse<object>.ErrorResponse("Invalid request."));
+            if (string.IsNullOrWhiteSpace(model?.SessionToken) || string.IsNullOrWhiteSpace(model?.Code))
+                return BadRequest(ApiResponse<object>.ErrorResponse("Invalid request"));
 
-            var email = model.Email.Trim().ToLowerInvariant();
-            var user = await _userManager.FindByEmailAsync(email);
+            var secret = _config["Otp:Secret"]!;
+            var sessionHash = OtpHelper.HmacHash(model.SessionToken, secret);
+
+            var session = await _context.PasswordResetSessions
+                .Where(s => s.SessionTokenHash == sessionHash)
+                .OrderByDescending(s => s.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (session == null || session.IsUsed || session.IsVerified || session.ExpiresAt < DateTime.UtcNow)
+                return BadRequest(ApiResponse<object>.ErrorResponse("Session expired. Please request a new reset link."));
+
+            var user = await _userManager.FindByIdAsync(session.UserId.ToString());
             if (user == null)
-                return Unauthorized(ApiResponse<object>.ErrorResponse("Invalid code."));
+                return BadRequest(ApiResponse<object>.ErrorResponse("User not found"));
 
             var otp = await _context.EmailOtpCodes
                 .Where(x => x.UserId == user.Id && !x.IsUsed)
                 .OrderByDescending(x => x.CreatedAt)
                 .FirstOrDefaultAsync();
 
-            if (otp == null)
-                return Unauthorized(ApiResponse<object>.ErrorResponse("No active code."));
+            if (otp == null) return Unauthorized(ApiResponse<object>.ErrorResponse("No active OTP"));
 
             if (otp.FailedAttempts >= 5)
-                return Unauthorized(ApiResponse<object>.ErrorResponse("Code blocked due to too many attempts."));
+                return Unauthorized(ApiResponse<object>.ErrorResponse("OTP blocked"));
 
             if (DateTime.UtcNow > otp.ExpiresAt)
-                return Unauthorized(ApiResponse<object>.ErrorResponse("Code expired."));
+                return Unauthorized(ApiResponse<object>.ErrorResponse("OTP expired"));
 
-            var secret = _config["Otp:Secret"]!;
-            var incomingHash = OtpHelper.HmacHash(model.Code, secret);
-
-            if (incomingHash != otp.CodeHash)
+            if (OtpHelper.HmacHash(model.Code, secret) != otp.CodeHash)
             {
                 otp.FailedAttempts++;
                 await _context.SaveChangesAsync();
-                return Unauthorized(ApiResponse<object>.ErrorResponse("Incorrect code."));
+                return Unauthorized(ApiResponse<object>.ErrorResponse("Incorrect code"));
             }
 
             otp.IsUsed = true;
+            session.IsVerified = true;
             await _context.SaveChangesAsync();
 
-            var session = await _context.PasswordResetSessions
-                .Where(s => s.UserId == user.Id && !s.IsUsed)
-                .OrderByDescending(s => s.CreatedAt)
-                .FirstOrDefaultAsync();
-
-            if (session == null)
-                return Unauthorized(ApiResponse<object>.ErrorResponse("No reset session available."));
-
-            var sessionRaw = OtpHelper.GenerateSessionToken();
-            var sessionHash = OtpHelper.HmacHash(sessionRaw, secret);
-
-            var newSession = new PasswordResetSession
-            {
-                UserId = session.UserId,
-                SessionTokenHash = sessionHash,
-                EncodedIdentityToken = session.EncodedIdentityToken,
-                IsVerified = true,
-                IsUsed = false,
-                CreatedAt = DateTime.UtcNow,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(15)
-            };
-            await _context.PasswordResetSessions.AddAsync(newSession);
-            await _context.SaveChangesAsync();
-
-            return Ok(ApiResponse<string>.SuccessResponse(sessionRaw, "Code verified. Proceed to reset password."));
+            return Ok(ApiResponse<object>.SuccessResponse(null, "OTP verified"));
         }
+
 
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordWithSessionDto dto)
