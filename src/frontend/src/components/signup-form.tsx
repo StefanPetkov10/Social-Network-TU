@@ -37,9 +37,8 @@ export default function SignupForm({...props }) {
     BirthDay,
     BirthMonth,
     BirthYear,
-    registrationInProgress,
     setField,
-    setRegistrationInProgress,
+    startRegistrationFlow,
   } = useRegistrationStore();
 
   const [localError, setLocalError] = useState<string | null>(null);
@@ -119,8 +118,7 @@ export default function SignupForm({...props }) {
 
     register.mutate(payload, {
       onSuccess: () => {
-        localStorage.setItem("pendingConfirmationEmail", Email);
-        setRegistrationInProgress(true);
+        startRegistrationFlow();
         router.push("/auth/confirmation-sent");
       },
       onError: (err) => {

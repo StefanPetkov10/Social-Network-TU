@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { Gender,  RegisterDto } from "@frontend/lib/types/auth";  
+import { createJSONStorage, persist } from "zustand/middleware";
 
 export type SignupState = RegisterDto & {
   confirmPassword: string;
@@ -7,12 +8,12 @@ export type SignupState = RegisterDto & {
 
   setField: <K extends keyof SignupState>(key: K, value: SignupState[K]) => void;
 
-  setRegistrationInProgress: (value: boolean) => void;
+  startRegistrationFlow: () => void;
 
   reset: () => void;
 };
 
-const initialState: SignupState = {
+const initialState: Omit<SignupState, "setField" | "startRegistrationFlow" | "reset"> = {
   FirstName: "",
   LastName: "",
   BirthDay: 1,
@@ -26,46 +27,34 @@ const initialState: SignupState = {
   confirmPassword: "",
 
   registrationInProgress: false,
-
-  setField: () => {},
-  setRegistrationInProgress: () => {},
-  reset: () => {},
 };
 
-/*interface RegistrationState {
-  registrationInProgress: boolean;
-  setRegistrationInProgress: (value: boolean) => void;
-}*/
 
-export const useRegistrationStore = create<SignupState>((set) => ({
-  ...initialState,
+export const useRegistrationStore = create<SignupState>()( 
+  persist(
+    (set) => ({
+      ...initialState,
 
-  setField: (key, value) =>
-    set((state) => ({
-      ...state,
-      [key]: value,
-    })),
+      setField: (key, value) => 
+        set((state) => ({ ...state, [key]: value })),
 
-  setRegistrationInProgress: (value: boolean) => {
-    set({ registrationInProgress: value });
-    localStorage.setItem("registrationInProgress", value ? "true" : "false");
-  },
-  /*  setRegistrationInProgress: (value: boolean) => {
-  set({ registrationInProgress: value });
-  if (value) {
-    localStorage.setItem("registrationInProgress", "true");
-  } else {
-    localStorage.removeItem("registrationInProgress");
-  }
-},*/
-  
-  reset: () => {
-    set({ ...initialState });
-    localStorage.removeItem("registrationInProgress");
-  },
-}));
+      startRegistrationFlow: () =>
+        set({ registrationInProgress: true }),
 
-if (typeof window !== "undefined") {
-  const stored = localStorage.getItem("registrationInProgress") === "true";
-  useRegistrationStore.getState().setRegistrationInProgress(stored);
-}
+      reset: () => {
+        set({ ...initialState });
+      },
+    }),
+    {    
+      name: "signup-flow-store",
+      storage: createJSONStorage(() => sessionStorage),
+    
+      partialize: (state) => ({
+        registrationInProgress: state.registrationInProgress,
+        Email: state.Email,
+        FirstName: state.FirstName,
+      }),
+    }
+  ) 
+);
+

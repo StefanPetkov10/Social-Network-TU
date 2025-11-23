@@ -17,110 +17,104 @@ export default function EmailConfirmedPage() {
   const userId = searchParams.get("userId");
   const token = searchParams.get("token");
 
-  const [confirmed, setConfirmed] = useState(false);
+  const resetStore = useRegistrationStore((state) => state.reset);
+  
   const [error, setError] = useState("");
   const [processing, setProcessing] = useState(true);
   const [accessChecked, setAccessChecked] = useState(false);
 
-  const setRegistrationInProgress = useRegistrationStore((state) => state.setRegistrationInProgress);
-  const registrationInProgress = useRegistrationStore((state) => state.registrationInProgress);
-
   useEffect(() => {
-    const storedProgress = localStorage.getItem("registrationInProgress") === "true";
-    const emailLinkAccess = !!userId && !!token;
-
-    if (!storedProgress && !emailLinkAccess) {
-      router.replace("/auth/login");
-    } else {
-      setAccessChecked(true);
+    const authData = localStorage.getItem("auth-storage");
+    const isAuthenticated = authData && authData.includes("token");
+    
+    if (isAuthenticated) { 
+        router.replace("/");
+        return; 
     }
-  }, [registrationInProgress, router, userId, token]);
-
-  useEffect(() => {
-    if (!accessChecked) return;
 
     if (!userId || !token) {
-      setError("Invalid confirmation link. Missing parameters.");
-      setProcessing(false);
-      return;
+        router.replace("/auth/login"); 
+        return; 
     }
-
-    confirmEmail.mutate({ userId, token }, {
-      onSuccess: () => {
-        setConfirmed(true);
-        setProcessing(false);
-
-        localStorage.removeItem("pendingConfirmationEmail");
-        setRegistrationInProgress(false);
-      },
-      onError: (error: any) => {
-        const errorMsg = getAxiosErrorMessage(error);
-        if (errorMsg.includes("Network Error") || errorMsg.includes("Failed to fetch")) {
-          setError("Cannot connect to server. Please check your internet connection and try again.");
-        } else if (errorMsg.includes("CORS") || errorMsg.includes("Origin")) {
-          setError("Connection issue. Please try again or contact support.");
-        } else {
-          setError(errorMsg);
-        }
-        setProcessing(false);
-      },
-    });
-  }, [accessChecked, userId, token, confirmEmail, setRegistrationInProgress]);
-
+    
+    setAccessChecked(true);
+    
+    confirmEmail.mutate(
+      { userId, token },
+      {
+        onSuccess: () => {
+          setProcessing(false);
+          resetStore(); 
+        },
+        onError: (err: any) => { 
+          setProcessing(false);
+          const errorMsg = getAxiosErrorMessage(err);
+          
+          if (errorMsg.includes("Network Error") || errorMsg.includes("Failed to fetch")) {
+            setError("Cannot connect to server. Please check your internet connection and try again.");
+          } else {
+            setError(errorMsg || "An unknown error occurred during confirmation.");
+          }
+        },
+      }
+    );
+  }, [router, userId, token, resetStore]); 
+  
   const handleRetry = () => {
     setProcessing(true);
     setError("");
     window.location.reload();
   };
+  
   const handleLogin = () => router.push("/auth/login");
   const handleGoToResend = () => router.push("/auth/confirmation-sent");
   const handleGoToHome = () => router.push("/");
 
   if (!accessChecked) {
-    return <div className="p-8 max-w-xl mx-auto text-center">Loading...</div>;
+    return null;
   }
-
-  if (processing) {
-    return (
-      <div className="p-8 max-w-xl mx-auto">
-        <Card>
-          <CardContent className="text-center p-6">
-            <div className="flex flex-col items-center justify-center space-y-4">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
+  
+    if (processing) {
+      return (
+        <div className="p-8 max-w-xl mx-auto">
+          <Card>
+            <CardContent className="text-center p-6">
+              <div className="flex flex-col items-center justify-center space-y-4">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                  <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
+                </div>
+                <h1 className="text-2xl font-bold">Confirming Your Email</h1>
+                <p className="text-muted-foreground">Please wait while we verify your email address...</p>
               </div>
-              <h1 className="text-2xl font-bold">Confirming Your Email</h1>
-              <p className="text-muted-foreground">Please wait while we verify your email address...</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
 
-  if (error) {
-    return (
-      <div className="p-8 max-w-xl mx-auto">
-        <Card>
-          <CardContent className="text-center p-6">
-            <div className="mb-6">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <XCircle className="w-8 h-8 text-red-600" />
+    if (error) {
+      return (
+        <div className="p-8 max-w-xl mx-auto">
+          <Card>
+            <CardContent className="text-center p-6">
+              <div className="mb-6">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <XCircle className="w-8 h-8 text-red-600" />
+                </div>
+                <h1 className="text-2xl font-bold mb-2">Confirmation Failed</h1>
+                <p className="text-muted-foreground mb-4">{error}</p>
               </div>
-              <h1 className="text-2xl font-bold mb-2">Confirmation Failed</h1>
-              <p className="text-muted-foreground mb-4">{error}</p>
-            </div>
 
-            <div className="flex flex-col gap-3">
-              <Button onClick={handleRetry} variant="outline">Try Again</Button>
-              <Button onClick={handleGoToResend} variant="outline">Get New Confirmation Link</Button>
-              <Button onClick={handleGoToHome} variant="ghost">Go to Homepage</Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+              <div className="flex flex-col gap-3">
+                <Button onClick={handleRetry} variant="outline">Try Again</Button>
+                <Button onClick={handleGoToResend} variant="outline">Get New Confirmation Link</Button>
+                <Button onClick={handleGoToHome} variant="ghost">Go to Homepage</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
 
   return (
     <div className="p-8 max-w-xl mx-auto">
