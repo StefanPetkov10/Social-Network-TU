@@ -34,7 +34,10 @@ export default function RootLayout({
          <ReactQueryProvider>
            <AuthInitializer />
           {children}
-          <Toaster />
+          <Toaster 
+          position="top-right" 
+          richColors={true}    
+        />
         </ReactQueryProvider>
       </body>
     </html>

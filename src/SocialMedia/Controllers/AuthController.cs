@@ -276,6 +276,7 @@ namespace SocialMedia.Controllers
                   <p>Valid for 10 minutes.</p>";
             await _emailSender.SendEmailAsync(user.Email, "Your password reset code", html);
 
+
             var responseData = new
             {
                 sessionToken = rawSessionToken
@@ -409,7 +410,11 @@ namespace SocialMedia.Controllers
             var result = await _userManager.ResetPasswordAsync(user, decodedIdentityToken, dto.NewPassword);
 
             if (!result.Succeeded)
-                return BadRequest(ApiResponse<object>.ErrorResponse("Password reset failed."));
+            {
+                var errorMessages = result.Errors.Select(e => e.Description).ToList();
+
+                return BadRequest(ApiResponse<object>.ErrorResponse("Validation failed", errorMessages.ToArray()));
+            }
 
             session.IsUsed = true;
             await _context.SaveChangesAsync();
