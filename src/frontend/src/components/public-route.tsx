@@ -11,7 +11,7 @@ export default function PublicRoute({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (token) {
-      router.replace("/dashboard");
+      router.replace("/");
       return;
     }
 

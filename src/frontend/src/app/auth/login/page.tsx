@@ -1,6 +1,6 @@
 "use client";
 
-import { LoginForm } from "@frontend/components/login-form";
+import { LoginForm } from "@frontend/components/auth-forms/login-form";
 import PublicRoute from "@frontend/components/public-route";
 import { useAuthStore } from "@frontend/stores/useAuthStore";
 import { useRouter } from "next/navigation";
@@ -16,7 +16,7 @@ export default function LoginPage() {
     const token = sessionStorage.getItem("token");
     if (token) {
       setToken(token);       
-      router.replace("/dashboard");
+      router.replace("/");
       return;
     }
     setChecked(true);

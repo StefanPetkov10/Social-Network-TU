@@ -30,7 +30,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
   
   useEffect(() => {
     if (token) {
-      router.replace("/dashboard");
+      router.replace("/");
     }
   }, [token, router]);
 
