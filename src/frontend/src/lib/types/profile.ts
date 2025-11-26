@@ -1,13 +1,21 @@
 import { Gender } from "./auth";
 
 export interface ProfileDto {
-  Id: string;
-  FirstName: string;
-  LastName: string;
-  BirthDate?: string;
-  Sex: Gender;
-  UserName: string;
-  Email: string;
+  id: string;
+  firstName: string;
+  lastName?: string;
+  userName: string;
+  photo?: string; 
+  dateOfBirth: string; 
+  sex: Gender;
+  
+  bio?: string;
+  currentCity?: string;
+  education?: string;
+  
+  friendsCount?: number;
+  followersCount?: number;
+  followingCount?: number;
 }
 
 export interface UpdateProfileDto {

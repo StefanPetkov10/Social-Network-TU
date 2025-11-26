@@ -1,9 +1,11 @@
 ﻿using System.Security.Claims;
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using SocialMedia.Common;
 using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database.Models;
+using SocialMedia.Database.Models.Enums;
 using SocialMedia.DTOs.Profile;
 using SocialMedia.Services.Interfaces;
 
@@ -12,15 +14,20 @@ namespace SocialMedia.Services
     public class ProfileService : BaseService, IProfileService
     {
         private readonly IRepository<Database.Models.Profile, Guid> _profileRepo;
+        private readonly IRepository<Follow, Guid> _followRepo;
+        private readonly IRepository<Friendship, Guid> _friendshipRepo;
         private readonly IMapper _mapper;
 
         public ProfileService(
             UserManager<ApplicationUser> userManager,
             IRepository<Database.Models.Profile, Guid> profileRepo,
+            IRepository<Follow, Guid> followRepo, IRepository<Friendship, Guid> friendshipRepo,
             IMapper mapper
         ) : base(userManager)
         {
             _profileRepo = profileRepo;
+            _followRepo = followRepo;
+            _friendshipRepo = friendshipRepo;
             _mapper = mapper;
         }
 
@@ -36,6 +43,10 @@ namespace SocialMedia.Services
 
             var dto = _mapper.Map<ProfileDto>(profile);
             dto.UserName = userClaims.Identity.Name ?? string.Empty;
+            dto.FollowersCount = await _followRepo.QueryNoTracking().CountAsync(f => f.FollowingId == profile.Id);
+            dto.FollowingCount = await _followRepo.QueryNoTracking().CountAsync(f => f.FollowerId == profile.Id);
+            dto.FriendsCount = await _friendshipRepo.QueryNoTracking().CountAsync(fr =>
+                (fr.RequesterId == profile.Id || fr.AddresseeId == profile.Id) && fr.Status == FriendshipStatus.Accepted);
             return ApiResponse<ProfileDto>.SuccessResponse(dto, "Profile retrieved successfully.");
         }
 

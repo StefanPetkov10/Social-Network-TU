@@ -5,7 +5,7 @@ import { SidebarInset, SidebarProvider } from "@frontend/components/ui/sidebar";
 import { useAuthStore } from "@frontend/stores/useAuthStore";
 import { useMyPost } from "@frontend/hooks/use-post";
 import ProtectedRoute from "@frontend/components/protected-route";
-import { SiteHeader } from "@frontend/components/home-forms/site-header"; 
+import { SiteHeader } from "@frontend/components/site-header"; 
 
 export default function Home() {
   const logout = useAuthStore((s) => s.logout);

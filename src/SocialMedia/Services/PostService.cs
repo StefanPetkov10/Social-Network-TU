@@ -310,7 +310,7 @@ namespace SocialMedia.Services
             await _postRepository.SaveChangesAsync();
 
             var state = _postRepository.GetEntityState(post);
-            Console.WriteLine($"Post state: {state}"); // трябва да е Unchanged
+            Console.WriteLine($"Post state: {state}");
 
             var postToAddMedia = await _postRepository.GetByIdAsync(post.Id);
             if (dto.NewFiles != null && dto.NewFiles.Any())
@@ -334,7 +334,7 @@ namespace SocialMedia.Services
                 }
             }
 
-            await _postRepository.SaveChangesAsync(); //fix
+            await _postRepository.SaveChangesAsync();
 
             var profile = await _profileRepository.GetByIdAsync(post.ProfileId);
             return SuccessPostDto(post, profile, "Post updated successfully.");

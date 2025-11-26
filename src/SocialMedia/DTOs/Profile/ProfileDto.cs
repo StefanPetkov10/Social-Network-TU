@@ -10,5 +10,9 @@
         public string Sex { get; set; } = null!;
         public string? AuthorAvatar { get; set; } //AuthorAvatar
 
+        public int FollowersCount { get; set; }
+        public int FollowingCount { get; set; }
+        public int FriendsCount { get; set; }
+
     }
 }
