@@ -4,18 +4,19 @@ export interface ProfileDto {
   id: string;
   firstName: string;
   lastName?: string;
+  fullName?: string;
   userName: string;
   photo?: string; 
   dateOfBirth: string; 
   sex: Gender;
   
   bio?: string;
-  currentCity?: string;
-  education?: string;
+
   
   friendsCount?: number;
   followersCount?: number;
   followingCount?: number;
+
 }
 
 export interface UpdateProfileDto {

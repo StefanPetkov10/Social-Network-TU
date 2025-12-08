@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@frontend/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
+import { CreatePost } from "@frontend/components/create-post";
 import { Separator } from "@frontend/components/ui/separator";
 import { 
   MapPin, 
@@ -40,6 +41,15 @@ export default function ProfilePage() {
   
   const { data: profile, isLoading, isError, error } = useProfile();
 
+  const displayName = profile?.fullName || profile?.firstName || "";
+
+  const userDataForPost = profile ? {
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      photo: profile.photo
+  } : null;
+  
+
   if (isLoading) {
       return (
         <div className="flex h-screen w-full items-center justify-center bg-muted/10">
@@ -66,12 +76,9 @@ export default function ProfilePage() {
       );
   }
 
-  const displayName = `${profile.firstName} ${profile.lastName || ""}`.trim();
   const initials = getInitials(profile.firstName, profile.lastName);
   
   const bio = profile.bio || ""; 
-  const currentCity = profile.currentCity || "София, България";
-  const education = profile.education || "ТУ - София";
 
   const userForLayout = {
       name: displayName,
@@ -156,26 +163,7 @@ export default function ProfilePage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
                 <div className="space-y-6">
-                    <div className="bg-background rounded-xl border p-4 shadow-sm space-y-4">
-                        <h3 className="font-bold text-lg">Информация</h3>
-                        <div className="space-y-3 text-sm">
-                            <div className="flex items-center gap-3 text-muted-foreground">
-                                <GraduationCap className="h-5 w-5 text-foreground/70" />
-                                <span>Учи: <strong>{education}</strong></span>
-                            </div>
-                            
-                            <div className="flex items-center gap-3 text-muted-foreground">
-                                <MapPin className="h-5 w-5 text-foreground/70" />
-                                <span>Живее в <strong>{currentCity}</strong></span>
-                            </div>
-
-                            <div className="flex items-center gap-3 text-muted-foreground">
-                                <Calendar className="h-5 w-5 text-foreground/70" />
-                                <span>Роден на <strong>{formatDate(profile.dateOfBirth)}</strong></span>
-                            </div>
-                        </div>
-                    </div>
-
+                    
                     <div className="bg-background rounded-xl border p-4 shadow-sm">
                         <div className="flex justify-between items-center mb-3">
                             <h3 className="font-bold text-lg">Медия</h3>
@@ -205,31 +193,7 @@ export default function ProfilePage() {
 
                 <div className="lg:col-span-2 space-y-4">
                     
-                    <div className="bg-background rounded-xl border p-4 shadow-sm">
-                         <div className="flex gap-3 mb-4">
-                            <Avatar>
-                                <AvatarImage src={profile.photo || ""} />
-                                <AvatarFallback className="bg-primary text-white">{initials}</AvatarFallback>
-                            </Avatar>
-                            <input 
-                                type="text" 
-                                placeholder={`Споделете нещо с колегите, ${profile.firstName}...`} 
-                                className="flex-1 bg-muted/50 hover:bg-muted/80 transition-colors rounded-full px-4 text-sm outline-none cursor-pointer"
-                            />
-                        </div>
-                        <Separator className="my-2" />
-                        <div className="flex gap-2 px-2 pt-1">
-                            <Button variant="ghost" size="sm" className="flex-1 gap-2 text-muted-foreground hover:bg-green-50 hover:text-green-700">
-                                <ImageIcon className="h-5 w-5 text-green-600" />
-                                Снимка/Видео
-                            </Button>
-                            
-                            <Button variant="ghost" size="sm" className="flex-1 gap-2 text-muted-foreground hover:bg-primary/10 hover:text-primary">
-                                <FileText className="h-5 w-5 text-primary" />
-                                Качи Документ
-                            </Button>
-                        </div>
-                    </div>
+                    {userDataForPost && <CreatePost user={userDataForPost} />}
 
                     <div className="bg-background rounded-xl border p-4 shadow-sm">
                         <div className="flex justify-between items-start mb-3">

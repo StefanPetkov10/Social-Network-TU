@@ -2,24 +2,62 @@
 
 import { MainLayout } from "@frontend/components/main-layout";
 import ProtectedRoute from "@frontend/components/protected-route";
+import { CreatePost } from "@frontend/components/create-post";
+import { useProfile } from "@frontend/hooks/use-profile";
+import { Loader2, AlertCircle } from "lucide-react";
+import { Button } from "@frontend/components/ui/button";
 
 export default function Home() {
-  const user = { 
-      name: "Стефан Петков", 
-      avatar: "" 
-  }; 
+  const { data: profile, isLoading, isError, error } = useProfile();
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-muted/10">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="text-muted-foreground animate-pulse">Зареждане на съдържанието...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError || !profile) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-muted/10">
+        <div className="text-center space-y-4 max-w-md p-6 bg-background rounded-xl border shadow-sm">
+          <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
+          <h2 className="text-xl font-bold">Възникна грешка</h2>
+          <p className="text-muted-foreground">
+            {(error as any)?.message || "Неуспешно зареждане на потребителските данни."}
+          </p>
+          <Button onClick={() => window.location.reload()}>Опитай отново</Button>
+        </div>
+      </div>
+    );
+  }
+
+  const displayName = profile.fullName || profile.firstName;
+
+  const userForLayout = {
+    name: displayName,
+    avatar: profile.photo || ""
+  };
+
+  const userDataForPost = {
+    firstName: profile.firstName,
+    lastName: profile.lastName,
+    photo: profile.photo
+  };
 
   return (
     <ProtectedRoute>
-      <MainLayout user={user}>
+      <MainLayout user={userForLayout}>
           
           <div className="flex justify-center w-full">
               
               <main className="flex flex-col gap-4 p-4 w-full max-w-2xl">
                  
-                 <div className="bg-background rounded-xl border p-8 text-center text-muted-foreground shadow-sm">
-                     Тук ще бъде формата: "За какво мислите, Стефан?"
-                 </div>
+                 <CreatePost user={userDataForPost} />
 
                  {[1, 2, 3].map((i) => (
                      <div key={i} className="bg-background aspect-video rounded-xl border shadow-sm flex items-center justify-center text-muted-foreground">

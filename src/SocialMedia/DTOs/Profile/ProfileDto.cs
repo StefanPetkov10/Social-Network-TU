@@ -5,6 +5,7 @@
         public Guid Id { get; set; }
         public string FirstName { get; set; } = null!;
         public string LastName { get; set; } = null!;
+        public string FullName { get; set; } = null!;
         public string UserName { get; set; } = null!;
         public DateTime DateOfBirth { get; set; }
         public string Sex { get; set; } = null!;
