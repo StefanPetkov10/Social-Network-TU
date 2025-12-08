@@ -8,7 +8,9 @@ import { SidebarTrigger } from "@frontend/components/ui/sidebar";
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+// SPA Импорти
+import { useRouter, usePathname } from "next/navigation"; 
+import { useQueryClient } from "@tanstack/react-query"; 
 
 import {
   DropdownMenu,
@@ -19,14 +21,27 @@ import {
   DropdownMenuLabel,
 } from "@frontend/components/ui/dropdown-menu";
 
+import { useAuthStore } from "@frontend/stores/useAuthStore";
+
 interface SiteHeaderProps {
   user: { name: string; avatar: string };
-  logout: () => void;
 }
 
-export function SiteHeader({ user, logout }: SiteHeaderProps) {
+export function SiteHeader({ user }: SiteHeaderProps) {
   const [localError, setLocalError] = useState(false);
   const pathname = usePathname();
+  
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const logout = useAuthStore((s) => s.logout);
+
+  const handleLogout = async () => {
+      await queryClient.cancelQueries();
+      logout();
+      queryClient.clear(); 
+      router.replace("/auth/login");
+  };
+
   const getNavButtonClass = (isActive: boolean) => {
     return isActive
       ? "h-12 w-20 rounded-lg border-b-[3px] border-primary text-primary bg-primary/10 hover:bg-primary/20 transition-all"
@@ -41,7 +56,6 @@ export function SiteHeader({ user, logout }: SiteHeaderProps) {
         
         <Link href="/" className="flex items-center gap-2 cursor-pointer">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white font-bold shadow-sm overflow-hidden">
-  
             {!localError ? (
               <div className="bg-muted relative w-full h-full">
                  <Image
@@ -74,26 +88,15 @@ export function SiteHeader({ user, logout }: SiteHeaderProps) {
 
       <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-2 md:flex">
         <Link href="/">
-            <Button 
-                variant="ghost" 
-                size="icon" 
-                className={getNavButtonClass(pathname === "/")}
-            >
+            <Button variant="ghost" size="icon" className={getNavButtonClass(pathname === "/")}>
               <Home className="h-6 w-6" />
             </Button>
         </Link>
         <Link href="/groups-feed">
-            <Button 
-                variant="ghost" 
-                size="icon" 
-                className={getNavButtonClass(pathname === "/groups-feed")}
-            >
+            <Button variant="ghost" size="icon" className={getNavButtonClass(pathname === "/groups-feed")}>
               <Users className="h-6 w-6" />
-              {/* Червената точка за нотификации */}
-              {/* <span className="absolute top-3 right-5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-background" /> */}
             </Button>
         </Link>
-
       </nav>
 
       <div className="flex items-center gap-2">
@@ -150,7 +153,7 @@ export function SiteHeader({ user, logout }: SiteHeaderProps) {
                     <span className="font-medium text-sm">Настройки</span>
                  </DropdownMenuItem>
                  
-                 <DropdownMenuItem onClick={logout} className="transition-colors cursor-pointer p-3 rounded-lg hover:bg-accent focus:bg-accent">
+                 <DropdownMenuItem onClick={handleLogout} className="transition-colors cursor-pointer p-3 rounded-lg hover:bg-accent focus:bg-accent">
                     <div className="flex items-center justify-center h-9 w-9 rounded-full bg-muted mr-3">
                         <LogOut className="h-5 w-5 text-foreground" />
                     </div>

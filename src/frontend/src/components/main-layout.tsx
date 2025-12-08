@@ -1,12 +1,25 @@
-import { AppSidebar } from "./home-forms/app-sidebar";
-import { SiteHeader } from "./site-header";
-import { SidebarInset, SidebarProvider } from "./ui/sidebar";
+"use client";
 
-export function MainLayout({ children, user, logout }: { children: React.ReactNode; user: any; logout: () => void }) {
+import React from "react";
+import { AppSidebar } from "@frontend/components/home-forms/app-sidebar";
+import { SiteHeader } from "@frontend/components/site-header";
+import { SidebarInset, SidebarProvider } from "@frontend/components/ui/sidebar";
+
+interface MainLayoutProps {
+  children: React.ReactNode;
+  user: {
+    name: string;
+    avatar: string;
+  };
+}
+
+export function MainLayout({ children, user }: MainLayoutProps) {
   return (
     <SidebarProvider defaultOpen={true}>
-       <SiteHeader user={user} logout={logout} />
+       <SiteHeader user={user} />
+       
        <AppSidebar />
+       
        <SidebarInset className="pt-16 bg-muted/10 min-h-screen">
           {children}
        </SidebarInset>

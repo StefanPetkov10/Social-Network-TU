@@ -1,10 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { AppSidebar } from "@frontend/components/home-forms/app-sidebar";
-import { SiteHeader } from "@frontend/components/site-header";
-import { SidebarInset, SidebarProvider } from "@frontend/components/ui/sidebar";
-import { useAuthStore } from "@frontend/stores/useAuthStore";
 import { Button } from "@frontend/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { Separator } from "@frontend/components/ui/separator";
@@ -17,14 +13,13 @@ import {
   FileText, 
   MoreHorizontal,
   Users,
-  Loader2,       // Добавено: икона за зареждане
-  AlertCircle    // Добавено: икона за грешка
+  Loader2,      
+  AlertCircle    
 } from "lucide-react";
-
-// Импортираме твоя къстъм хук
+import { MainLayout } from "@frontend/components/main-layout";
 import { useProfile } from "@frontend/hooks/use-profile";
+import ProtectedRoute from "@frontend/components/protected-route";
 
-// Помощна функция за форматиране на дата
 const formatDate = (dateString?: string) => {
     if (!dateString) return "Не е посочена";
     return new Date(dateString).toLocaleDateString("bg-BG", {
@@ -34,7 +29,6 @@ const formatDate = (dateString?: string) => {
     });
 };
 
-// Помощна функция за инициали (напр. Стефан Петков -> СП)
 const getInitials = (first: string, last?: string) => {
     const f = first ? first.charAt(0) : "";
     const l = last ? last.charAt(0) : "";
@@ -42,13 +36,10 @@ const getInitials = (first: string, last?: string) => {
 };
 
 export default function ProfilePage() {
-  const logout = useAuthStore((s) => s.logout);
   const [activeTab, setActiveTab] = useState("Публикации");
   
-  // 1. ИЗВИКВАМЕ ХУКА ЗА ДАННИТЕ
   const { data: profile, isLoading, isError, error } = useProfile();
 
-  // 2. STATE: ЗАРЕЖДАНЕ
   if (isLoading) {
       return (
         <div className="flex h-screen w-full items-center justify-center bg-muted/10">
@@ -60,7 +51,6 @@ export default function ProfilePage() {
       );
   }
 
-  // 3. STATE: ГРЕШКА
   if (isError || !profile) {
       return (
         <div className="flex h-screen w-full items-center justify-center bg-muted/10">
@@ -76,30 +66,27 @@ export default function ProfilePage() {
       );
   }
 
-  // 4. ПОДГОТОВКА НА ДАННИТЕ ЗА UI
   const displayName = `${profile.firstName} ${profile.lastName || ""}`.trim();
   const initials = getInitials(profile.firstName, profile.lastName);
   
-  // Полета, които може да липсват в базата (слагаме Fallback стойности)
   const bio = profile.bio || ""; 
-  const currentCity = profile.currentCity || "София, България"; // Placeholder докато не го добавиш в базата
-  const education = profile.education || "ТУ - София";          // Placeholder докато не го добавиш в базата
+  const currentCity = profile.currentCity || "София, България";
+  const education = profile.education || "ТУ - София";
+
+  const userForLayout = {
+      name: displayName,
+      avatar: profile.photo || ""
+  };
 
   return (
-      <SidebarProvider defaultOpen={true}>
-        {/* Подаваме реалните данни на хедъра */}
-        <SiteHeader user={{ name: displayName, avatar: profile.photo || "" }} logout={logout} />
-        <AppSidebar />
-
-        <SidebarInset className="pt-16 bg-muted/10 min-h-screen">
-          <div className="max-w-5xl mx-auto w-full p-4 md:p-6 space-y-6">
+    <ProtectedRoute>
+      <MainLayout user={userForLayout}>
+        <div className="max-w-5xl mx-auto w-full p-4 md:p-6 space-y-6">
             
-            {/* === ПРОФИЛЕН ХЕДЪР === */}
             <div className="bg-background rounded-xl border shadow-sm overflow-hidden">
                 <div className="p-6 md:p-8">
                     <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
                         
-                        {/* Аватар */}
                         <div className="relative group">
                             <Avatar className="h-32 w-32 md:h-40 md:w-40 border-4 border-background shadow-lg ring-2 ring-muted">
                                 <AvatarImage src={profile.photo || ""} className="object-cover" />
@@ -109,12 +96,10 @@ export default function ProfilePage() {
                             </Avatar>
                         </div>
 
-                        {/* Основна Информация */}
                         <div className="flex-1 text-center md:text-left space-y-2 mt-2">
                             <h1 className="text-3xl font-bold text-foreground">{displayName}</h1>
                             <p className="text-muted-foreground font-medium">@{profile.userName}</p>
                             
-                            {/* Биография (Показва или текст, или подкана за добавяне) */}
                             <div className="max-w-lg mx-auto md:mx-0 mt-3">
                                 {bio ? (
                                     <p className="text-sm text-foreground/90 leading-relaxed">
@@ -133,7 +118,6 @@ export default function ProfilePage() {
                                 )}
                             </div>
 
-                            {/* Статистика (Динамична от базата) */}
                             <div className="flex items-center justify-center md:justify-start gap-6 text-sm font-medium pt-2 text-muted-foreground">
                                 <span className="hover:text-foreground cursor-pointer flex items-center gap-1">
                                     <Users className="h-4 w-4" /> 
@@ -154,7 +138,6 @@ export default function ProfilePage() {
                     </div>
                 </div>
                 
-                {/* Табове */}
                 <div className="px-6 border-t flex gap-6 overflow-x-auto scrollbar-hide">
                     {["Публикации", "Информация", "Приятели", "Медия & Документи"].map((tab) => (
                         <button 
@@ -172,7 +155,6 @@ export default function ProfilePage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
-                {/* ЛЯВА КОЛОНА: Инфо */}
                 <div className="space-y-6">
                     <div className="bg-background rounded-xl border p-4 shadow-sm space-y-4">
                         <h3 className="font-bold text-lg">Информация</h3>
@@ -194,7 +176,6 @@ export default function ProfilePage() {
                         </div>
                     </div>
 
-                    {/* Медия - Остава статична, докато нямаме endpoint за снимки */}
                     <div className="bg-background rounded-xl border p-4 shadow-sm">
                         <div className="flex justify-between items-center mb-3">
                             <h3 className="font-bold text-lg">Медия</h3>
@@ -222,10 +203,8 @@ export default function ProfilePage() {
                     </div>
                 </div>
 
-                {/* ДЯСНА КОЛОНА: Фийд */}
                 <div className="lg:col-span-2 space-y-4">
                     
-                    {/* Create Post - Вече ползва реалния аватар и име */}
                     <div className="bg-background rounded-xl border p-4 shadow-sm">
                          <div className="flex gap-3 mb-4">
                             <Avatar>
@@ -252,7 +231,6 @@ export default function ProfilePage() {
                         </div>
                     </div>
 
-                    {/* Статичен пост, но с динамичен аватар/име (като пример) */}
                     <div className="bg-background rounded-xl border p-4 shadow-sm">
                         <div className="flex justify-between items-start mb-3">
                              <div className="flex gap-3">
@@ -293,8 +271,8 @@ export default function ProfilePage() {
                 </div>
             </div>
 
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
+        </div>
+      </MainLayout>
+    </ProtectedRoute>
   );
 }
