@@ -1,34 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@frontend/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { CreatePost } from "@frontend/components/create-post";
 import { Separator } from "@frontend/components/ui/separator";
 import { 
-  MapPin, 
-  GraduationCap, 
-  Calendar, 
   Edit, 
   Image as ImageIcon,
   FileText, 
   MoreHorizontal,
-  Users,
-  Loader2,      
-  AlertCircle    
+  Users
 } from "lucide-react";
 import { MainLayout } from "@frontend/components/main-layout";
 import { useProfile } from "@frontend/hooks/use-profile";
 import ProtectedRoute from "@frontend/components/protected-route";
-
-const formatDate = (dateString?: string) => {
-    if (!dateString) return "Не е посочена";
-    return new Date(dateString).toLocaleDateString("bg-BG", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric"
-    });
-};
+import { LoadingScreen } from "@frontend/components/common/loading-screen";
+import { ErrorScreen } from "@frontend/components/common/error-screen";
 
 const getInitials = (first: string, last?: string) => {
     const f = first ? first.charAt(0) : "";
@@ -37,48 +26,44 @@ const getInitials = (first: string, last?: string) => {
 };
 
 export default function ProfilePage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("Публикации");
   
   const { data: profile, isLoading, isError, error } = useProfile();
 
-  const displayName = profile?.fullName || profile?.firstName || "";
-
-  const userDataForPost = profile ? {
-      firstName: profile.firstName,
-      lastName: profile.lastName,
-      photo: profile.photo
-  } : null;
-  
+  useEffect(() => {
+    if (isError) {
+        const status = (error as any)?.response?.status || (error as any)?.status;
+        if (status === 401) {
+            localStorage.removeItem("token");
+            router.push("/auth/login");
+        }
+    }
+  }, [isError, error, router]);
 
   if (isLoading) {
-      return (
-        <div className="flex h-screen w-full items-center justify-center bg-muted/10">
-            <div className="flex flex-col items-center gap-2">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                <p className="text-muted-foreground animate-pulse">Зареждане на профила...</p>
-            </div>
-        </div>
-      );
+      return <LoadingScreen />;
   }
 
   if (isError || !profile) {
-      return (
-        <div className="flex h-screen w-full items-center justify-center bg-muted/10">
-            <div className="text-center space-y-4 max-w-md p-6 bg-background rounded-xl border shadow-sm">
-                <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
-                <h2 className="text-xl font-bold">Възникна грешка</h2>
-                <p className="text-muted-foreground">
-                    {(error as any)?.message || "Неуспешно зареждане на данните."}
-                </p>
-                <Button onClick={() => window.location.reload()}>Опитай отново</Button>
-            </div>
-        </div>
-      );
+      const status = (error as any)?.response?.status || (error as any)?.status;
+      
+      if (status === 401) {
+          return null;
+      }
+
+      return <ErrorScreen message={(error as any)?.message} />;
   }
 
+  const displayName = profile.fullName || profile.firstName || "";
   const initials = getInitials(profile.firstName, profile.lastName);
-  
   const bio = profile.bio || ""; 
+
+  const userDataForPost = {
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      photo: profile.photo
+  };
 
   const userForLayout = {
       name: displayName,
@@ -163,7 +148,6 @@ export default function ProfilePage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
                 <div className="space-y-6">
-                    
                     <div className="bg-background rounded-xl border p-4 shadow-sm">
                         <div className="flex justify-between items-center mb-3">
                             <h3 className="font-bold text-lg">Медия</h3>

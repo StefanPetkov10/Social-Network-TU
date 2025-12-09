@@ -24,11 +24,9 @@ export function useLogin() {
   return useMutation<ApiResponse<string>, Error, LoginPayload>({
     mutationFn: async (payload) => {
       const { data } = await api.post<ApiResponse<string>>("/api/Auth/login", payload);
-      console.log("Login response data:", data);
       return data;
     },
     onSuccess: (response) => {
-      console.log("Login response token:", response.data);
       if (response.success && response.data) {
         setToken(response.data);
       }
