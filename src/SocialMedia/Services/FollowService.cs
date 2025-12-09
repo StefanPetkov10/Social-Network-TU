@@ -127,20 +127,6 @@ namespace SocialMedia.Services
             return ApiResponse<IEnumerable<FollowDto>>.SuccessResponse(followerDto, "Followers list retrieved successfully");
         }
 
-        public async Task<ApiResponse<int>> GetFollowersCountAsync(ClaimsPrincipal userClaims)
-        {
-            var invalidUserResponse = GetUserIdOrUnauthorized<int>(userClaims, out var userId);
-            if (invalidUserResponse != null)
-                return ApiResponse<int>.ErrorResponse("Unauthorized.", new[] { "Invalid user claim." });
-
-            var userProfile = await _profileRepository.GetByApplicationIdAsync(userId);
-            if (userProfile == null)
-                return ApiResponse<int>.ErrorResponse("Profile not found.", new[] { "User profile does not exist." });
-
-            var count = await _followRepository.CountAsync(f => f.FollowingId == userProfile.Id);
-            return ApiResponse<int>.SuccessResponse(count, "Followers count retrieved successfully");
-        }
-
         public async Task<ApiResponse<IEnumerable<FollowDto>>> GetFollowingAsync(ClaimsPrincipal userClaims)
         {
             var invalidUserResponse = GetUserIdOrUnauthorized<PostDto>(userClaims, out var userId);
@@ -161,21 +147,6 @@ namespace SocialMedia.Services
             var followerDto = _mapper.Map<IEnumerable<FollowDto>>(followers);
 
             return ApiResponse<IEnumerable<FollowDto>>.SuccessResponse(followerDto, "Following list retrieved successfully");
-        }
-
-
-        public async Task<ApiResponse<int>> GetFollowingCountAsync(ClaimsPrincipal userClaims)
-        {
-            var invalidUserResponse = GetUserIdOrUnauthorized<int>(userClaims, out var userId);
-            if (invalidUserResponse != null)
-                return ApiResponse<int>.ErrorResponse("Unauthorized.", new[] { "Invalid user claim." });
-
-            var userProfile = await _profileRepository.GetByApplicationIdAsync(userId);
-            if (userProfile == null)
-                return ApiResponse<int>.ErrorResponse("Profile not found.", new[] { "User profile does not exist." });
-
-            var count = await _followRepository.CountAsync(f => f.FollowerId == userProfile.Id);
-            return ApiResponse<int>.SuccessResponse(count, "Followers count retrieved successfully");
         }
     }
 }

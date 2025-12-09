@@ -5,19 +5,15 @@ import { useRouter } from "next/navigation";
 import { Button } from "@frontend/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { CreatePost } from "@frontend/components/create-post";
-import { Separator } from "@frontend/components/ui/separator";
-import { 
-  Edit, 
-  Image as ImageIcon,
-  FileText, 
-  MoreHorizontal,
-  Users
-} from "lucide-react";
+import { Edit, Image as ImageIcon, FileText, Users, Loader2 } from "lucide-react";
 import { MainLayout } from "@frontend/components/main-layout";
 import { useProfile } from "@frontend/hooks/use-profile";
 import ProtectedRoute from "@frontend/components/protected-route";
 import { LoadingScreen } from "@frontend/components/common/loading-screen";
 import { ErrorScreen } from "@frontend/components/common/error-screen";
+import { useUserPosts } from "@frontend/hooks/use-post";
+import { PostCard } from "@frontend/components/post-forms/post-card-form";
+import { useIntersection } from "@mantine/hooks"; 
 
 const getInitials = (first: string, last?: string) => {
     const f = first ? first.charAt(0) : "";
@@ -30,6 +26,25 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("Публикации");
   
   const { data: profile, isLoading, isError, error } = useProfile();
+  
+  const { 
+    data: postsData, 
+    fetchNextPage, 
+    hasNextPage, 
+    isFetchingNextPage, 
+    isLoading: postsLoading 
+  } = useUserPosts(profile?.id || "");
+
+  const { ref, entry } = useIntersection({
+    root: null,
+    threshold: 1,
+  });
+
+  useEffect(() => {
+    if (entry?.isIntersecting && hasNextPage) {
+        fetchNextPage();
+    }
+  }, [entry, hasNextPage, fetchNextPage]);
 
   useEffect(() => {
     if (isError) {
@@ -41,17 +56,11 @@ export default function ProfilePage() {
     }
   }, [isError, error, router]);
 
-  if (isLoading) {
-      return <LoadingScreen />;
-  }
+  if (isLoading) return <LoadingScreen />;
 
   if (isError || !profile) {
       const status = (error as any)?.response?.status || (error as any)?.status;
-      
-      if (status === 401) {
-          return null;
-      }
-
+      if (status === 401) return null;
       return <ErrorScreen message={(error as any)?.message} />;
   }
 
@@ -78,7 +87,6 @@ export default function ProfilePage() {
             <div className="bg-background rounded-xl border shadow-sm overflow-hidden">
                 <div className="p-6 md:p-8">
                     <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-                        
                         <div className="relative group">
                             <Avatar className="h-32 w-32 md:h-40 md:w-40 border-4 border-background shadow-lg ring-2 ring-muted">
                                 <AvatarImage src={profile.photo || ""} className="object-cover" />
@@ -98,10 +106,7 @@ export default function ProfilePage() {
                                         {bio}
                                     </p>
                                 ) : (
-                                    <div 
-                                        className="cursor-pointer group flex items-center justify-center md:justify-start gap-2"
-                                        title="Натиснете за добавяне"
-                                    >
+                                    <div className="cursor-pointer group flex items-center justify-center md:justify-start gap-2">
                                         <p className="text-sm text-muted-foreground/60 italic border-b border-transparent group-hover:border-muted-foreground/60 transition-all">
                                             Добавете кратко описание за себе си...
                                         </p>
@@ -179,46 +184,35 @@ export default function ProfilePage() {
                     
                     {userDataForPost && <CreatePost user={userDataForPost} />}
 
-                    <div className="bg-background rounded-xl border p-4 shadow-sm">
-                        <div className="flex justify-between items-start mb-3">
-                             <div className="flex gap-3">
-                                <Avatar>
-                                    <AvatarImage src={profile.photo || ""} />
-                                    <AvatarFallback className="bg-primary text-white">{initials}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <h4 className="font-semibold text-sm">{displayName}</h4>
-                                    <p className="text-xs text-muted-foreground">преди 2 часа • 🎓 Академичен</p>
-                                </div>
-                             </div>
-                             <Button variant="ghost" size="icon"><MoreHorizontal className="h-5 w-5" /></Button>
+                    {postsLoading ? (
+                        <div className="flex justify-center p-4">
+                            <Loader2 className="animate-spin text-primary" />
                         </div>
-                        
-                        <p className="text-sm mb-4">
-                            Това е примерен пост. В бъдеще тук ще се зареждат истинските постове от базата данни, използвайки подобен подход с React Query! 📚
-                        </p>
-                        
-                        <div className="bg-muted/30 border rounded-lg p-3 flex items-center gap-3 mb-4 cursor-pointer hover:bg-muted/50 transition-colors">
-                            <div className="bg-red-100 p-3 rounded-lg">
-                                <FileText className="h-8 w-8 text-red-600" />
+                    ) : (
+                        postsData?.pages.map((page, i) => (
+                            <div key={i} className="space-y-4">
+                                {page.data && page.data.length === 0 && i === 0 ? (
+                                    <div className="text-center p-8 text-muted-foreground bg-muted/20 rounded-xl">
+                                        Все още няма публикации.
+                                    </div>
+                                ) : (
+                                    page.data?.map((post) => (
+                                        <PostCard key={post.id} post={post} />
+                                    ))
+                                )}
                             </div>
-                            <div>
-                                <p className="font-semibold text-sm">Lecture_05_SQL.pdf</p>
-                                <p className="text-xs text-muted-foreground">3.2 MB • Документ</p>
-                            </div>
-                        </div>
+                        ))
+                    )}
 
-                        <Separator />
-                        <div className="flex justify-between pt-2">
-                             <Button variant="ghost" className="flex-1 text-muted-foreground text-xs sm:text-sm">Харесване</Button>
-                             <Button variant="ghost" className="flex-1 text-muted-foreground text-xs sm:text-sm">Коментар</Button>
-                             <Button variant="ghost" className="flex-1 text-muted-foreground text-xs sm:text-sm">Изтегли</Button>
+                    {isFetchingNextPage && (
+                        <div className="flex justify-center p-4">
+                            <Loader2 className="animate-spin text-muted-foreground" />
                         </div>
-                    </div>
-
+                    )}
+                    
+                    <div ref={ref} className="h-10" />
                 </div>
             </div>
-
         </div>
       </MainLayout>
     </ProtectedRoute>

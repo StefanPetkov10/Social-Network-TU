@@ -20,47 +20,39 @@ export function CreatePostForm({ user, onSubmit }: CreatePostFormProps) {
   const [content, setContent] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   
-  // Референции към скритите input полета
   const imageInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
 
-  // Хендлъри за клик върху бутоните
   const handleImageClick = () => imageInputRef.current?.click();
   const handleDocClick = () => docInputRef.current?.click();
 
-  // Хендлър за избор на файл
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
     }
   };
 
-  // Изчистване на файл
   const clearFile = () => {
     setSelectedFile(null);
     if (imageInputRef.current) imageInputRef.current.value = "";
     if (docInputRef.current) docInputRef.current.value = "";
   };
 
-  // Изпращане на поста
   const handleSubmit = () => {
     if (!content && !selectedFile) return;
     
-    // Тук викаме функцията за API или Parent компонента
     console.log("Submitting:", { content, selectedFile });
     
     if (onSubmit) {
       onSubmit({ content, file: selectedFile });
     }
 
-    // Ресет на формата след изпращане
     setContent("");
     clearFile();
   };
 
   return (
     <div className="bg-background rounded-xl border p-4 shadow-sm transition-all">
-      {/* Скрити Input-и за файлове */}
       <input 
         type="file" 
         ref={imageInputRef} 
@@ -94,7 +86,6 @@ export function CreatePostForm({ user, onSubmit }: CreatePostFormProps) {
             className="w-full bg-muted/50 hover:bg-muted/80 focus:bg-background transition-colors rounded-full px-4 py-2.5 text-sm outline-none border border-transparent focus:border-primary/20"
             />
             
-            {/* Файл Preview (Показва се само ако има избран файл) */}
             {selectedFile && (
                 <div className="flex items-center justify-between bg-muted/40 p-2 rounded-md border text-sm animate-in fade-in slide-in-from-top-2">
                     <div className="flex items-center gap-2 overflow-hidden">
@@ -120,7 +111,6 @@ export function CreatePostForm({ user, onSubmit }: CreatePostFormProps) {
 
       <div className="flex justify-between items-center px-2 pt-1">
         <div className="flex gap-2 flex-1">
-            {/* Бутон за снимки */}
             <Button 
                 onClick={handleImageClick}
                 variant="ghost" 
@@ -132,7 +122,6 @@ export function CreatePostForm({ user, onSubmit }: CreatePostFormProps) {
                 <span className="sm:hidden">Медия</span>
             </Button>
             
-            {/* Бутон за документи */}
             <Button 
                 onClick={handleDocClick}
                 variant="ghost" 
@@ -145,7 +134,6 @@ export function CreatePostForm({ user, onSubmit }: CreatePostFormProps) {
             </Button>
         </div>
 
-        {/* Бутон за публикуване (Появява се само при нужда) */}
         {(content || selectedFile) && (
              <Button size="sm" onClick={handleSubmit} className="gap-2 animate-in zoom-in duration-200">
                 Публикувай <Send className="h-3 w-3" />

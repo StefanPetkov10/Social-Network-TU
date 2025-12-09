@@ -67,6 +67,7 @@ namespace SocialMedia.Services
             post.Visibility = dto.GroupId.HasValue ? PostVisibility.Public : dto.Visibility;
             post.Media = new List<PostMedia>();
 
+
             if (dto.Files != null && dto.Files.Any())
             {
                 int order = 0;
@@ -75,6 +76,10 @@ namespace SocialMedia.Services
                 {
                     var (filePath, mediaType) = await _fileService.SaveFileAsync(file);
 
+                    if (string.IsNullOrEmpty(filePath) || mediaType == MediaType.Other)
+                    {
+                        return ApiResponse<PostDto>.ErrorResponse($"File '{file.FileName}' is not supported type.");
+                    }
                     post.Media.Add(new PostMedia
                     {
                         Id = Guid.NewGuid(),
@@ -90,6 +95,11 @@ namespace SocialMedia.Services
             await _postRepository.SaveChangesAsync();
 
             var profile = await _profileRepository.GetByIdAsync(post.ProfileId);
+
+            var postDto = new PostDto
+            {
+
+            };
 
             return SuccessPostDto(post, profile, "Post created successfully.");
         }
@@ -364,6 +374,7 @@ namespace SocialMedia.Services
         private ApiResponse<PostDto> SuccessPostDto(Post post, Database.Models.Profile profile, string message)
         {
             var dto = _mapper.Map<PostDto>(post);
+            dto.CreatedAt = post.CreatedDate;
             dto.AuthorName = profile.FullName ?? "Unknown Author";
             dto.AuthorAvatar = profile.Photo;
 

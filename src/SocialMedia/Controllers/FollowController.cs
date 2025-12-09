@@ -70,27 +70,5 @@ namespace SocialMedia.Controllers
             }
             return BadRequest(response);
         }
-
-        [HttpGet("followers-count")]
-        public async Task<IActionResult> FollowersCount()
-        {
-            var response = await _followService.GetFollowersCountAsync(User);
-            if (response.Success)
-            {
-                return Ok(response);
-            }
-            return BadRequest(response);
-        }
-
-        [HttpGet("following-count")]
-        public async Task<IActionResult> FollowingCount()
-        {
-            var response = await _followService.GetFollowingCountAsync(User);
-            if (response.Success)
-            {
-                return Ok(response);
-            }
-            return BadRequest(response);
-        }
     }
 }

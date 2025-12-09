@@ -18,6 +18,14 @@ namespace SocialMedia.Services
         public async Task<(string filePath, MediaType mediaType)> SaveFileAsync(IFormFile file)
         {
             string extension = Path.GetExtension(file.FileName).ToLower();
+
+            MediaType mediaType = GetMediaType(extension);
+
+            if (mediaType == MediaType.Other)
+            {
+                return (null, MediaType.Other);
+            }
+
             string fileName = Guid.NewGuid() + extension;
             string destPath = Path.Combine(_uploadsFolder, fileName);
 
@@ -26,14 +34,14 @@ namespace SocialMedia.Services
                 await file.CopyToAsync(stream);
             }
 
-            return (Path.Combine("Uploads", fileName), GetMediaType(extension));
+            return (Path.Combine("Uploads", fileName).Replace("\\", "/"), mediaType);
         }
 
         protected MediaType GetMediaType(string extension)
         {
             return extension switch
             {
-                ".jpg" or ".jpeg" or ".png" => MediaType.Image,
+                ".jpg" or ".jpeg" or ".png" or ".webp" => MediaType.Image,
                 ".mp4" or ".avi" or ".mov" => MediaType.Video,
                 ".pdf" or ".docx" or ".txt" => MediaType.Document,
                 ".gif" => MediaType.Gif,
@@ -41,5 +49,4 @@ namespace SocialMedia.Services
             };
         }
     }
-
 }

@@ -13,8 +13,5 @@ namespace SocialMedia.Services.Interfaces
 
         Task<ApiResponse<IEnumerable<FollowDto>>> GetFollowersAsync(ClaimsPrincipal userClaims);
         Task<ApiResponse<IEnumerable<FollowDto>>> GetFollowingAsync(ClaimsPrincipal userClaims);
-
-        Task<ApiResponse<int>> GetFollowersCountAsync(ClaimsPrincipal userClaims);
-        Task<ApiResponse<int>> GetFollowingCountAsync(ClaimsPrincipal userClaims);
     }
 }
