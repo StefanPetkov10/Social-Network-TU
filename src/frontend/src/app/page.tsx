@@ -2,7 +2,7 @@
 
 import { MainLayout } from "@frontend/components/main-layout";
 import ProtectedRoute from "@frontend/components/protected-route";
-import { CreatePost } from "@frontend/components/create-post";
+import { CreatePost } from "@frontend/components/post-forms/create-post";
 import { useProfile } from "@frontend/hooks/use-profile";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
