@@ -77,7 +77,6 @@ namespace SocialMedia.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResponse("Validation failed", errors));
             }
 
-            // Слагаме try/catch за да хванем DbUpdateConcurrencyException и други
             try
             {
                 var response = await _postService.UpdatePostAsync(User, postId, dto);
@@ -85,7 +84,6 @@ namespace SocialMedia.Controllers
                 if (response.Success)
                     return Ok(response);
 
-                // ако не е Success, може да е NotFound или Unauthorized
                 if (response.Message?.Contains("not authorized", StringComparison.OrdinalIgnoreCase) == true)
                     return Forbid();
 
@@ -96,7 +94,6 @@ namespace SocialMedia.Controllers
             }
             catch (DbUpdateConcurrencyException ex)
             {
-                // Тук ще видиш точната причина (0 rows affected и т.н.)
                 return Conflict(ApiResponse<object>.ErrorResponse("Concurrency error", new[] { ex.Message }));
             }
             catch (Exception ex)
@@ -109,6 +106,17 @@ namespace SocialMedia.Controllers
         public async Task<IActionResult> DeletePost(Guid postId)
         {
             var response = await _postService.DeletePostAsync(User, postId);
+            if (response.Success)
+            {
+                return Ok(response);
+            }
+            return NotFound(response);
+        }
+
+        [HttpGet("media/{profileId}")]
+        public async Task<IActionResult> GetProfileMedia(Guid profileId)
+        {
+            var response = await _postService.GetProfileMediaAsync(User, profileId);
             if (response.Success)
             {
                 return Ok(response);

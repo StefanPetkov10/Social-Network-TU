@@ -1,6 +1,11 @@
 import api from "../../lib/axios";
-import { PostDto } from "../../lib/types/posts";
+import { PostDto, PostMediaDto } from "../../lib/types/posts";
 import { ApiResponse } from "@frontend/lib/types/api"; 
+
+export interface ProfileMediaResponse {
+    images: PostMediaDto[];
+    documents: PostMediaDto[];
+}
 
 export const postService = {
   getUserPosts: async (profileId: string, lastPostId?: string) => {
@@ -18,6 +23,11 @@ export const postService = {
     const { data } = await api.post<ApiResponse<any>>("/api/Posts", formData, {
         headers: { "Content-Type": "multipart/form-data" },
     });
+    return data;
+  },
+
+  getProfileMedia: async (profileId: string) => {
+    const { data } = await api.get<ApiResponse<ProfileMediaResponse>>(`/api/Posts/media/${profileId}`);
     return data;
   }
 };

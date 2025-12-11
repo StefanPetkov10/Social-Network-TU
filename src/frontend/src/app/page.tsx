@@ -2,7 +2,7 @@
 
 import { MainLayout } from "@frontend/components/main-layout";
 import ProtectedRoute from "@frontend/components/protected-route";
-import { CreatePost } from "@frontend/components/post-forms/create-post";
+import { CreatePost } from "@frontend/components/post-forms/create-post-form";
 import { useProfile } from "@frontend/hooks/use-profile";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -45,18 +45,20 @@ export default function Home() {
     avatar: profile.photo || ""
   };
 
-  const userDataForPost = {
-    firstName: profile.firstName,
-    lastName: profile.lastName,
-    photo: profile.photo
-  };
-
+const userDataForPost = {
+        firstName: profile.firstName,
+        lastName: profile.lastName ?? "",
+        photo: profile.photo ?? null
+    };
+    
   return (
     <ProtectedRoute>
       <MainLayout user={userForLayout}>
           <div className="flex justify-center w-full">
               <main className="flex flex-col gap-4 p-4 w-full max-w-2xl">
+
                  <CreatePost user={userDataForPost} />
+
                  {[1, 2, 3].map((i) => (
                       <div key={i} className="bg-background aspect-video rounded-xl border shadow-sm flex items-center justify-center text-muted-foreground">
                            Пост номер {i}

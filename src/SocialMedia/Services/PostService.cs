@@ -414,5 +414,69 @@ namespace SocialMedia.Services
 
             return ApiResponse<PostDto>.SuccessResponse(dto, message);
         }
+
+        public async Task<ApiResponse<ProfileMediaDto>> GetProfileMediaAsync(ClaimsPrincipal userClaims, Guid profileId)
+        {
+            var invalidUserResponse = GetUserIdOrUnauthorized<ProfileMediaDto>(userClaims, out var userId);
+            if (invalidUserResponse != null) return invalidUserResponse;
+
+            var viewerProfile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (viewerProfile == null) return ApiResponse<ProfileMediaDto>.ErrorResponse("Invalid user profile.");
+
+            bool isOwner = viewerProfile.Id == profileId;
+
+            bool isFriend = await _friendshipRepository.AnyAsync(f =>
+                f.Status == FriendshipStatus.Accepted &&
+                ((f.RequesterId == viewerProfile.Id && f.AddresseeId == profileId) ||
+                 (f.AddresseeId == viewerProfile.Id && f.RequesterId == profileId)));
+
+            bool isFollower = await _profileRepository.QueryNoTracking()
+                .Where(p => p.Id == profileId)
+                .AnyAsync(p => p.Followers.Any(f => f.FollowerId == viewerProfile.Id));
+
+            var query = _postMediaRepository.QueryNoTracking()
+                .Include(m => m.Post)
+                .Where(m => !m.Post.IsDeleted && m.Post.ProfileId == profileId)
+                .Where(m =>
+                    m.Post.Visibility == PostVisibility.Public ||
+                    isOwner ||
+                    (m.Post.Visibility == PostVisibility.FriendsOnly && isFriend) ||
+                    isFollower
+                );
+
+            var images = await query
+                .Where(m => m.MediaType == MediaType.Image || m.MediaType == MediaType.Video)
+                .OrderByDescending(m => m.Post.CreatedDate)
+                .Take(6)
+                .Select(m => new PostMediaDto
+                {
+                    Id = m.Id,
+                    Url = $"{_httpContextAccessor.HttpContext!.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}/{m.FilePath}",
+                    MediaType = m.MediaType,
+                    FileName = m.FileName,
+                    Order = m.Order
+                })
+                .ToListAsync();
+
+            var documents = await query
+                .Where(m => m.MediaType == MediaType.Document)
+                .OrderByDescending(m => m.Post.CreatedDate)
+                .Take(3)
+                .Select(m => new PostMediaDto
+                {
+                    Id = m.Id,
+                    Url = $"{_httpContextAccessor.HttpContext!.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}/{m.FilePath}",
+                    MediaType = m.MediaType,
+                    FileName = m.FileName,
+                    Order = m.Order
+                })
+                .ToListAsync();
+
+            return ApiResponse<ProfileMediaDto>.SuccessResponse(new ProfileMediaDto
+            {
+                Images = images,
+                Documents = documents
+            });
+        }
     }
 }
