@@ -8,7 +8,8 @@ import {
   Globe, 
   Users, 
   Lock, 
-  Loader2
+  Loader2,
+  Download
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { Button } from "@frontend/components/ui/button";
@@ -72,12 +73,18 @@ export function CreatePost({ user }: CreatePostProps) {
     }
   };
 
-  const removeFile = (index: number) => {
-    setFiles(files.filter((_, i) => i !== index));
+  const removeFile = (fileToRemove: File) => {
+    const index = files.indexOf(fileToRemove);
+    if (index > -1) {
+        setFiles(files.filter((_, i) => i !== index));
+    }
   };
 
   const handleSubmit = () => {
-    if (!content.trim() && files.length === 0) return;
+    if (!content.trim()) {
+        toast.error("Моля, въведете текст за публикацията.");
+        return;
+    }
 
     const formData = new FormData();
     formData.append("Content", content);
@@ -95,6 +102,9 @@ export function CreatePost({ user }: CreatePostProps) {
         }
     });
   };
+
+  const isMedia = (file: File) => file.type.startsWith("image/") || file.type.startsWith("video/");
+  const isDoc = (file: File) => !isMedia(file);
 
   return (
     <>
@@ -154,9 +164,9 @@ export function CreatePost({ user }: CreatePostProps) {
             
             <Select value={visibility} onValueChange={setVisibility}>
                 <SelectTrigger className="h-6 text-xs bg-muted/50 border-none px-2 py-0 mt-1 w-fit gap-1 rounded-md">
-                   <div className="flex items-center">
+                    <div className="flex items-center">
                         <SelectValue />
-                   </div>
+                    </div>
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem value="0"><div className="flex items-center"><Globe className="h-4 w-4 mr-2"/> Публично</div></SelectItem>
@@ -182,35 +192,57 @@ export function CreatePost({ user }: CreatePostProps) {
                         size="icon" 
                         className="absolute top-4 right-4 z-10 rounded-full h-8 w-8 bg-background/80 hover:bg-background"
                         onClick={() => setFiles([])}
+                        title="Изчисти всички файлове"
                     >
                         <X className="h-4 w-4" />
                     </Button>
 
                     <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
-                        {files.map((file, i) => (
-                            <div key={i} className="relative group rounded-md overflow-hidden border bg-muted/20">
+                        
+                        {files.filter(isDoc).map((file, i) => (
+                            <div key={`doc-${i}`} className="relative group rounded-md overflow-hidden border bg-muted/50 hover:bg-muted transition-colors">
+                                <div className="flex items-center p-3 gap-3">
+                                    <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 shrink-0">
+                                        <FileText className="h-5 w-5"/>
+                                    </div>
+                                    
+                                    <div className="flex-1 overflow-hidden">
+                                        <div className="text-sm font-medium truncate">{file.name}</div>
+                                        <div className="text-xs text-muted-foreground">
+                                            {(file.size / 1024 / 1024).toFixed(2)} MB • {file.name.split('.').pop()?.toUpperCase()}
+                                        </div>
+                                    </div>
+                                    
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-8 w-8 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                        onClick={() => removeFile(file)}
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        ))}
+
+                        {files.filter(isMedia).map((file, i) => (
+                            <div key={`media-${i}`} className="relative group rounded-md overflow-hidden border bg-muted/20">
                                 {file.type.startsWith("image/") ? (
                                     <img src={URL.createObjectURL(file)} alt="preview" className="w-full h-auto object-cover max-h-[300px]" />
-                                ) : file.type.startsWith("video/") ? (
-                                    <video src={URL.createObjectURL(file)} controls className="w-full max-h-[300px]" />
                                 ) : (
-                                    <div className="flex items-center p-4 gap-3">
-                                        <div className="bg-red-100 p-2 rounded text-red-600"><FileText className="h-6 w-6"/></div>
-                                        <div className="flex-1 truncate font-medium">{file.name}</div>
-                                        <div className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</div>
-                                    </div>
+                                    <video src={URL.createObjectURL(file)} controls className="w-full max-h-[300px]" />
                                 )}
-                                
                                 <Button 
                                     variant="destructive" 
                                     size="icon" 
                                     className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={() => removeFile(i)}
+                                    onClick={() => removeFile(file)}
                                 >
                                     <X className="h-3 w-3" />
                                 </Button>
                             </div>
                         ))}
+
                     </div>
                 </div>
             )}
@@ -245,7 +277,7 @@ export function CreatePost({ user }: CreatePostProps) {
         <div className="p-4 pt-0">
             <Button 
                 className="w-full text-base font-semibold py-5" 
-                disabled={(!content && files.length === 0) || isPending}
+                disabled={isPending} 
                 onClick={handleSubmit}
             >
                 {isPending ? (

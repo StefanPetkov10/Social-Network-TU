@@ -14,6 +14,7 @@ namespace SocialMedia.Services
     public class PostService : BaseService, IPostService
     {
         private readonly IRepository<Post, Guid> _postRepository;
+        private readonly IRepository<Reaction, Guid> _reactionRepository;
         private readonly IRepository<PostMedia, Guid> _postMediaRepository;
         private readonly IRepository<Group, Guid> _groupRepository;
         private readonly IRepository<Database.Models.Profile, Guid> _profileRepository;
@@ -27,7 +28,7 @@ namespace SocialMedia.Services
             IMapper mapper, IRepository<Database.Models.Profile, Guid> profileRepository,
               IRepository<Friendship, Guid> friendshipRepository, IFileService fileService,
                IRepository<Group, Guid> groupRepository, IRepository<PostMedia, Guid> postMediaRepository,
-                IHttpContextAccessor httpContextAccessor)
+                IHttpContextAccessor httpContextAccessor, IRepository<Reaction, Guid> reactionRepository)
             : base(userManager)
         {
             _postRepository = postRepository;
@@ -38,6 +39,7 @@ namespace SocialMedia.Services
             _groupRepository = groupRepository;
             _postMediaRepository = postMediaRepository;
             _httpContextAccessor = httpContextAccessor;
+            _reactionRepository = reactionRepository;
         }
 
         public async Task<ApiResponse<PostDto>> CreatePostAsPost(ClaimsPrincipal userClaims, CreatePostDto dto)
@@ -67,11 +69,9 @@ namespace SocialMedia.Services
             post.Visibility = dto.GroupId.HasValue ? PostVisibility.Public : dto.Visibility;
             post.Media = new List<PostMedia>();
 
-
             if (dto.Files != null && dto.Files.Any())
             {
                 int order = 0;
-
                 foreach (var file in dto.Files)
                 {
                     var (filePath, mediaType) = await _fileService.SaveFileAsync(file);
@@ -80,12 +80,14 @@ namespace SocialMedia.Services
                     {
                         return ApiResponse<PostDto>.ErrorResponse($"File '{file.FileName}' is not supported type.");
                     }
+
                     post.Media.Add(new PostMedia
                     {
                         Id = Guid.NewGuid(),
                         PostId = post.Id,
                         FilePath = filePath,
                         MediaType = mediaType,
+                        FileName = file.FileName,
                         Order = order++
                     });
                 }
@@ -95,11 +97,6 @@ namespace SocialMedia.Services
             await _postRepository.SaveChangesAsync();
 
             var profile = await _profileRepository.GetByIdAsync(post.ProfileId);
-
-            var postDto = new PostDto
-            {
-
-            };
 
             return SuccessPostDto(post, profile, "Post created successfully.");
         }
@@ -223,10 +220,10 @@ namespace SocialMedia.Services
             );
         }
         public async Task<ApiResponse<IEnumerable<PostDto>>> GetUserPostsAsync(
-                ClaimsPrincipal userClaims,
-                Guid profileId,
-                Guid? lastPostId = null,
-                int take = 20)
+        ClaimsPrincipal userClaims,
+        Guid profileId,
+        Guid? lastPostId = null,
+        int take = 20)
         {
             if (take <= 0 || take > 50) take = 20;
 
@@ -271,7 +268,31 @@ namespace SocialMedia.Services
 
             var posts = await query.Take(take).ToListAsync();
 
-            var dtos = posts.Select(p => SuccessPostDto(p, p.Profile, "").Data).ToList();
+            var postIds = posts.Select(p => p.Id).ToList();
+
+            var userReactions = await _reactionRepository.QueryNoTracking()
+                .Where(r => postIds.Contains((Guid)r.PostId) && r.ProfileId == viewerProfile.Id)
+                .Select(r => new { r.PostId, r.Type })
+                .ToListAsync();
+
+            var reactionsDict = userReactions.ToDictionary(k => k.PostId, v => v.Type);
+
+            var dtos = posts.Select(p =>
+            {
+                var dto = SuccessPostDto(p, p.Profile, "").Data;
+
+                if (reactionsDict.TryGetValue(p.Id, out var type))
+                {
+                    dto.UserReaction = type;
+                }
+                else
+                {
+                    dto.UserReaction = null;
+                }
+
+                return dto;
+            }).ToList();
+
             var last = posts.LastOrDefault()?.Id;
 
             return ApiResponse<IEnumerable<PostDto>>.SuccessResponse(
@@ -280,7 +301,6 @@ namespace SocialMedia.Services
                 new { lastPostId = last }
             );
         }
-
 
         public async Task<ApiResponse<PostDto>> UpdatePostAsync(ClaimsPrincipal userClaims, Guid postId, UpdatePostDto dto)
         {
@@ -337,6 +357,7 @@ namespace SocialMedia.Services
                         FilePath = filePath,
                         PostId = post.Id,
                         MediaType = mediaType,
+                        FileName = file.FileName,
                         Order = ++order
                     };
                     postToAddMedia.UpdatedDate = DateTime.UtcNow;
@@ -386,6 +407,7 @@ namespace SocialMedia.Services
                     Id = m.Id,
                     Url = $"{baseUrl}/{m.FilePath}",
                     MediaType = m.MediaType,
+                    FileName = m.FileName,
                     Order = m.Order
                 }).ToList();
             }

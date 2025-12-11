@@ -10,6 +10,7 @@ export interface PostMediaDto {
   id: string;
   url: string;
   mediaType: number; 
+  fileName: string;
   order: number;
 }
 
@@ -33,3 +34,4 @@ export interface PostDto {
   userReaction?: ReactionType | null; 
   isOwner?: boolean; 
 }
+

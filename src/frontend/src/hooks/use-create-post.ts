@@ -1,20 +1,13 @@
-// src/hooks/use-create-post.ts
-
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../lib/axios";
 import { toast } from "sonner";
-import { ApiResponse } from "@frontend/lib/types/api";
+import { postService } from "@frontend/app/services/post-service"; 
 
 export function useCreatePost() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (formData: FormData) => {
-      const { data } = await api.post<ApiResponse<any>>("/api/Posts", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      return data;
-    },
+    mutationFn: (formData: FormData) => postService.createPost(formData),
+
     onSuccess: (response) => {
       if (!response.success) {
         toast.error("Грешка при качване", {
@@ -23,6 +16,7 @@ export function useCreatePost() {
         return; 
       }
       toast.success("Успех!", { description: "Постът е публикуван успешно." });
+      
       queryClient.invalidateQueries({ queryKey: ["posts"] });
     },
     onError: (error: any) => {

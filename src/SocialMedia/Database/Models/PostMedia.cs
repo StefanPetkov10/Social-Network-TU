@@ -19,6 +19,9 @@ namespace SocialMedia.Database.Models
         public string FilePath { get; set; } = null!;
 
         [Required]
+        public string FileName { get; set; } = null!;
+
+        [Required]
         public MediaType MediaType { get; set; }
 
         public int Order { get; set; }

@@ -16,6 +16,7 @@ namespace SocialMedia.DTOs.Post
         public PostVisibility Visibility { get; set; }
 
         public int LikesCount { get; set; }
+        public ReactionType? UserReaction { get; set; }
         public int CommentsCount { get; set; }
 
         public Guid? GroupId { get; set; }

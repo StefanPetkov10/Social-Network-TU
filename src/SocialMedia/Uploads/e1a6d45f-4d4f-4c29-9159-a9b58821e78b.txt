@@ -1,0 +1,147 @@
+using System;
+using System.Collections.Generic;
+
+class Program
+{
+    /// <summary>
+    /// Given a dictionary of airport codes to a dictionary of metadata (name, city, country) implement the function ByCountryByCity
+    /// to extract a dictionary of countries to a dictionary of cities to a list of pairs of airport codes and names.
+    /// Example input: ({'LCY': {'name': 'London City Airport', 'city': 'London', 'country': 'UK'}})
+    /// Example output {'UK': {'London': [('LCY', 'London City Airport'), ('GAT', 'Gatwick Airport')]}}
+    /// </summary>
+    static void Main()
+    {
+        var airports = new Dictionary<string, Dictionary<string, string>>
+        {
+            {
+                "LCY", new Dictionary<string, string>
+                {
+                    { "name", "London City Airport" },
+                    { "city", "London" },
+                    { "country", "UK" }
+                },
+                "GAT", new Dictionary<string, string>
+                {
+                    { "name", "Gatwick Airport" },
+                    { "city", "London" },
+                    { "country", "UK" }
+                },
+                "SOF", new Dictionary<string, string>
+                {
+                    { "name", "Sofia Airport" },
+                    { "city", "Sofia" },
+                    { "country", "BG" }
+                }
+            }
+        };
+
+        // Call the function
+        var result = ByCountryByCity(airports);
+
+        // Print the result
+        foreach (var country in result.Keys)
+        {
+            Console.WriteLine($"Country: {country}");
+            foreach (var city in result[country].Keys)
+            {
+                Console.WriteLine($"  City: {city}");
+                foreach (var airport in result[country][city])
+                {
+                    Console.WriteLine($"    Airport Code: {airport.Item1}, Name: {airport.Item2}");
+                }
+            }
+        }
+    }
+
+    static Dictionary<string, Dictionary<string, List<(string, string)>>> ByCountryByCity(Dictionary<string, Dictionary<string, string>> airports)
+    {
+        Dictionary<string, Dictionary<string, List<(string, string) newDictionary = new();
+        
+        foreach(var airport in airports)
+        {
+          var airportValue = airport.Value;
+          
+          var country = airportValue["country"];
+          var city = airport["city"];
+          
+          var key = airport.Key;
+          
+          var nameAirport = airport["name"];
+          
+          if (!newDictionary.ContainsKey(country))
+          {
+              newDictionary[country] = new Dictionary<string, List<(string, string)>;
+              
+              var nestedKey = newDictionary[country]
+              
+               if (!nestedKey.ContainsKey(city))
+               {
+                 nestedKey[city] = new List<(string, string)>;
+                 
+                 
+               }
+              
+          }
+        }
+        
+        
+    }
+}
+------------------
+using System;
+
+/// <summary>
+/// Problem Statement:
+/// You are given an array prices where prices[i] is the price of a given stock on the ith day.
+/// You want to maximize your profit by choosing a single day to buy one stock and choosing a different day in the future to sell that stock.
+/// Return the maximum profit you can achieve from this transaction. If you cannot achieve any profit, return 0.
+///
+/// Example:
+/// Input: prices = [7,1,5,3,6,4], [7, 6, 5, 4]
+/// Output: 5
+/// Explanation: 
+/// Buy on day 2 (price = 1) and sell on day 5 (price = 6), profit = 6-1 = 5.
+/// Note that buying on day 2 and selling on day 1 is not allowed because you must buy before you sell.
+/// </summary>
+class Program2
+{
+    static void Main()
+    {
+        // Test Input
+        int[] prices = { 7, 1, 5, 3, 6, 4 };
+
+        // Expected Output
+        int expectedProfit = 5;
+
+        // Call the method (to be implemented by the candidate)
+        int result = MaxProfit(prices);
+
+        // Print the result
+        Console.WriteLine($"Calculated Profit: {result}");
+        Console.WriteLine($"Expected Profit: {expectedProfit}");
+        Console.WriteLine(result == expectedProfit ? "Test Passed!" : "Test Failed!");
+    }
+
+    /// <summary>
+    /// This method should calculate the maximum profit that can be achieved from a single buy-sell transaction.
+    /// </summary>
+    /// <param name="prices">An integer array where prices[i] represents the stock price on the ith day.</param>
+    /// <returns>The maximum profit as an integer, or 0 if no profit can be achieved.</returns>
+    static int MaxProfit(int[] prices)
+    {
+        int maxProf = 0;
+        
+        for (int i = 0; i < prices.Length - 1; i++)
+        {
+          for (int j = i; j < prices.Length - 1; j++)
+          {
+            if(prices[j] - prices[i] > maxProf)
+            {
+              maxProf = prices[j] - prices[i];
+            }
+          }
+        }
+        
+        return maxProf;
+    }
+}

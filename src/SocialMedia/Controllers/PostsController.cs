@@ -55,7 +55,7 @@ namespace SocialMedia.Controllers
         }
 
         [HttpGet("profile/{profileId:guid}")]
-        public async Task<IActionResult> GetUserPosts(Guid profileId, [FromQuery] Guid? lastPostId, [FromQuery] int take = 20)
+        public async Task<IActionResult> GetUserPosts(Guid profileId, [FromQuery] Guid? lastPostId, [FromQuery] int take = 10)
         {
             var response = await _postService.GetUserPostsAsync(User, profileId, lastPostId, take);
             if (response.Success)

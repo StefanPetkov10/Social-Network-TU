@@ -13,4 +13,11 @@ export const postService = {
 
     return data; 
   },
+
+  createPost: async (formData: FormData) => {
+    const { data } = await api.post<ApiResponse<any>>("/api/Posts", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+    });
+    return data;
+  }
 };
