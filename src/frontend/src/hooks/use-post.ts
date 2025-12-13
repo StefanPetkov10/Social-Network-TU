@@ -3,6 +3,20 @@ import { postService } from "@frontend/app/services/post-service";
 import { PostDto } from "@frontend/lib/types/posts";
 import { ApiResponse } from "@frontend/lib/types/api";
 
+export const useFeedPosts = () => {
+  return useInfiniteQuery<ApiResponse<PostDto[]>, Error>({
+    queryKey: ["posts", "feed"],
+    queryFn: async ({ pageParam = undefined }) => {
+      return await postService.getFeed(pageParam as string | undefined);
+    },
+    getNextPageParam: (lastPageResponse) => {
+      return lastPageResponse.meta?.lastPostId || undefined;
+    },
+    
+    initialPageParam: undefined,
+  });
+}
+
 export const useUserPosts = (profileId: string) => {
   return useInfiniteQuery<ApiResponse<PostDto[]>, Error>({
     queryKey: ["posts", profileId],
