@@ -1,5 +1,5 @@
-import api from "../../lib/axios";
-import { PostDto, PostMediaDto } from "../../lib/types/posts";
+import api from "../lib/axios";
+import { PostDto, PostMediaDto } from "../lib/types/posts";
 import { ApiResponse } from "@frontend/lib/types/api"; 
 
 export interface ProfileMediaResponse {

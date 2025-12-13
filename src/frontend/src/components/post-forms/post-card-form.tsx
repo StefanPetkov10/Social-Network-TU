@@ -31,7 +31,7 @@ import {
 } from "@frontend/components/ui/carousel";
 import { cn } from "@frontend/lib/utils";
 import { PostDto, ReactionType } from "@frontend/lib/types/posts";
-import { reactionService } from "@frontend/app/services/reaction-service";
+import { reactionService } from "@frontend/services/reaction-service";
 
 const REACTION_CONFIG = {
   [ReactionType.Like]: { icon: "👍", label: "Харесва ми", color: "text-blue-600" },

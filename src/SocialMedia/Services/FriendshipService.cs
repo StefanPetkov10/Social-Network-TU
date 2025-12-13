@@ -28,6 +28,96 @@ namespace SocialMedia.Services
             _mapper = mapper;
         }
 
+        public async Task<ApiResponse<IEnumerable<FriendSuggestionDto>>> GetFriendSuggestionsAsync(ClaimsPrincipal userClaims, int limit = 20)
+        {
+            var invalidUserResponse = GetUserIdOrUnauthorized<PostDto>(userClaims, out var userId);
+            if (invalidUserResponse != null) return ApiResponse<IEnumerable<FriendSuggestionDto>>.ErrorResponse("Unauthorized.", new[] { "Invalid user claim." });
+
+            var userProfile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (userProfile == null) return ApiResponse<IEnumerable<FriendSuggestionDto>>.ErrorResponse("Profile not found.", new[] { "User profile does not exist." });
+
+            var currentUserId = userProfile.Id;
+
+            var existingConnections = await _friendshipRepository.QueryNoTracking()
+                .Where(f => f.RequesterId == currentUserId || f.AddresseeId == currentUserId)
+                .Select(f => f.RequesterId == currentUserId ? f.AddresseeId : f.RequesterId)
+                .ToListAsync();
+
+            var excludeIds = new HashSet<Guid>(existingConnections) { currentUserId };
+
+            var myFriendsIds = await _friendshipRepository.QueryNoTracking()
+                .Where(f => (f.RequesterId == currentUserId || f.AddresseeId == currentUserId) && f.Status == FriendshipStatus.Accepted)
+                .Select(f => f.RequesterId == currentUserId ? f.AddresseeId : f.RequesterId)
+                .ToListAsync();
+
+            List<FriendSuggestionDto> suggestions = new List<FriendSuggestionDto>();
+
+            if (myFriendsIds.Any())
+            {
+                var rawSuggestions = await _friendshipRepository.QueryNoTracking()
+                    .Where(f => f.Status == FriendshipStatus.Accepted &&
+                               (myFriendsIds.Contains(f.RequesterId) || myFriendsIds.Contains(f.AddresseeId)))
+                    .Select(f => new
+                    {
+                        CandidateId = myFriendsIds.Contains(f.RequesterId) ? f.AddresseeId : f.RequesterId
+                    })
+                    .Where(x => !excludeIds.Contains(x.CandidateId))
+                    .ToListAsync();
+
+                var grouped = rawSuggestions
+                    .GroupBy(x => x.CandidateId)
+                    .Select(g => new { ProfileId = g.Key, MutualCount = g.Count() })
+                    .OrderByDescending(x => x.MutualCount)
+                    .Take(limit)
+                    .ToList();
+
+                var profileIds = grouped.Select(x => x.ProfileId).ToList();
+                var profiles = await _profileRepository.QueryNoTracking()
+                    .Where(p => profileIds.Contains(p.Id))
+                    .ToListAsync();
+
+                suggestions = grouped.Join(profiles,
+                    g => g.ProfileId,
+                    p => p.Id,
+                    (g, p) => new FriendSuggestionDto
+                    {
+                        ProfileId = p.Id,
+                        FirstName = p.FirstName,
+                        LastName = p.LastName,
+                        AuthorAvatar = p.Photo,
+                        MutualFriendsCount = g.MutualCount
+                    }).ToList();
+            }
+
+            //Фаза 4 (Бъдеще): Когато интегрирам pgVector и OpenAI/Embeddings, ще заменя (или допълня)
+            //тази стъпка. Вместо да връщам "случайни непознати", ще връщам "непознати със сходни интереси".
+            if (suggestions.Count < limit)
+            {
+                int needed = limit - suggestions.Count;
+
+                var existingSuggestionIds = suggestions.Select(s => s.ProfileId).ToList();
+                excludeIds.UnionWith(existingSuggestionIds);
+
+                var randomStrangers = await _profileRepository.QueryNoTracking()
+                    .Where(p => !excludeIds.Contains(p.Id))
+                    .OrderBy(r => Guid.NewGuid())
+                    .Take(needed)
+                    .Select(p => new FriendSuggestionDto
+                    {
+                        ProfileId = p.Id,
+                        FirstName = p.FirstName,
+                        LastName = p.LastName,
+                        AuthorAvatar = p.Photo,
+                        MutualFriendsCount = 0
+                    })
+                    .ToListAsync();
+
+                suggestions.AddRange(randomStrangers);
+            }
+
+            return ApiResponse<IEnumerable<FriendSuggestionDto>>.SuccessResponse(suggestions, "Suggestions retrieved.");
+        }
+
         public async Task<ApiResponse<bool>> SendFriendRequestAsync(ClaimsPrincipal userClaims, Guid targetProfileId)
         {
             try

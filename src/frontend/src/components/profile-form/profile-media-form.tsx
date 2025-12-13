@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { postService } from "@frontend/app/services/post-service";
+import { postService } from "@frontend/services/post-service";
 import { FileText, Download } from "lucide-react";
 import { Button } from "@frontend/components/ui/button";
 import { Skeleton } from "@frontend/components/ui/skeleton";

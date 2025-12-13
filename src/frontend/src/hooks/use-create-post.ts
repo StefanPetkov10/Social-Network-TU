@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { postService } from "@frontend/app/services/post-service"; 
+import { postService } from "@frontend/services/post-service"; 
 
 export function useCreatePost() {
   const queryClient = useQueryClient();

@@ -21,73 +21,58 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar"
 
 const data = {
-  user: {
-    name: "Стефан Петков",
-    email: "stefan@tu-sofia.bg",
-    avatar: "", 
-  },
   navMain: [
-    {
-      title: "Приятели",
-      url: "/friends",
-      icon: UserPlus,
-    },
-    {
-      title: "Последователи",
-      url: "/followers",
-      icon: Users,
-    },
-    {
-      title: "Запазени",
-      url: "/saved",
-      icon: Bookmark,
-    },
+    { title: "Приятели", url: "/friends", icon: UserPlus },
+    { title: "Последователи", url: "/followers", icon: Users },
+    { title: "Запазени", url: "/saved", icon: Bookmark },
     {
       title: "Моите Групи",
       url: "/groups",
       icon: LayoutGrid,
       isActive: true,
       items: [
-        {
-          title: "Софтуерно Инженерство '24",
-          url: "/groups/ksi",
-        },
-        {
-          title: "Спортен клуб ТУ",
-          url: "/groups/sport",
-        },
+        { title: "Софтуерно Инженерство '24", url: "/groups/ksi" },
+        { title: "Спортен клуб ТУ", url: "/groups/sport" },
       ],
     },
   ],
   navSecondary: [
-    {
-      title: "Поддръжка (Support)",
-      url: "/support",
-      icon: LifeBuoy,
-    },
-    {
-      title: "Обратна връзка (Feedback)",
-      url: "/feedback",
-      icon: Send,
-    },
+    { title: "Поддръжка (Support)", url: "/support", icon: LifeBuoy },
+    { title: "Обратна връзка (Feedback)", url: "/feedback", icon: Send },
   ],
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+
+type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
+  user: {
+    name: string;
+    avatar: string;
+  };
+}
+
+export function AppSidebar({ user, ...props }: AppSidebarProps) {
   return (
     <Sidebar 
         collapsible="icon" 
         {...props} 
+        style={{
+            "--sidebar-width": "18rem",
+            "--sidebar-width-icon": "4.5rem" 
+        } as React.CSSProperties}
         className="top-16 h-[calc(100vh-4rem)] border-r z-30" 
     >
       <SidebarHeader className="p-4 pb-2"> 
-        <a href="/profile" className="flex items-center gap-4 p-3 hover:bg-sidebar-accent rounded-xl transition-colors group-data-[collapsible=icon]:justify-center">
-           <Avatar className="h-12 w-12 border cursor-pointer shadow-sm">
-              <AvatarImage src={data.user.avatar} />
+        <a 
+            href="/profile" 
+            className="flex items-center gap-4 p-3 hover:bg-sidebar-accent rounded-xl transition-colors group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-1"
+        >
+           <Avatar className="h-12 w-12 border cursor-pointer shadow-sm shrink-0">
+              <AvatarImage src={user.avatar} />
               <AvatarFallback className="bg-primary text-white text-lg">СП</AvatarFallback>
            </Avatar>
+           
            <div className="grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
-              <span className="truncate font-bold text-lg text-foreground">{data.user.name}</span>
+              <span className="truncate font-bold text-lg text-foreground">{user.name}</span>
               <span className="truncate text-sm text-muted-foreground">Студент @ ТУ-София</span>
            </div>
         </a>
