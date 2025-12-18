@@ -48,6 +48,16 @@ namespace SocialMedia.Controllers
             return Ok(response);
         }
 
+        [HttpGet("suggestions")]
+        public async Task<IActionResult> GetFriendSuggestions([FromQuery] int skip, [FromQuery] int take)
+        {
+            var userClaims = User;
+            var response = await _friendshipService.GetFriendSuggestionsAsync(userClaims, skip, take);
+            if (!response.Success)
+                return BadRequest(response);
+            return Ok(response);
+        }
+
         [HttpGet("friends")]
         public async Task<IActionResult> GetFriends()
         {

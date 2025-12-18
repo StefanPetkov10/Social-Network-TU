@@ -10,7 +10,7 @@ interface ProfileMediaFormProps {
   profileId: string;
 }
 
-export function ProfileMediaForm({ profileId }: ProfileMediaFormProps) {
+export function ProfileMediaCard({ profileId }: ProfileMediaFormProps) {
   const { data: response, isLoading } = useQuery({
     queryKey: ["profile-media", profileId],
     queryFn: () => postService.getProfileMedia(profileId),

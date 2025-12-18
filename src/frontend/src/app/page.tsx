@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { MainLayout } from "@frontend/components/main-layout";
 import ProtectedRoute from "@frontend/components/protected-route";
 import { CreatePost } from "@frontend/components/post-forms/create-post-form";
-import { PostCard } from "@frontend/components/post-forms/post-card-form";
+import { PostCard } from "@frontend/components/post-forms/post-card";
 import { useProfile } from "@frontend/hooks/use-profile";
 import { useFeedPosts } from "@frontend/hooks/use-post";
 import { useIntersection } from "@mantine/hooks";
@@ -78,7 +78,7 @@ export default function Home() {
       <MainLayout user={userForLayout}>
           <div className="min-h-screen bg-gray-100">
               
-                  <div className="max-w-7xl mx-auto flex justify-center gap-8 pt-6 px-4 pb-10">
+                  <div className="max-w-7xl ml-18 mx-auto flex justify-center gap-8 pt-6 px-4 pb-10">
 
                   <main className="w-full max-w-2xl flex flex-col gap-5">
 

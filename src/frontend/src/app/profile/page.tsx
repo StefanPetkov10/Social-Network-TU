@@ -12,8 +12,8 @@ import { ErrorScreen } from "@frontend/components/common/error-screen";
 import { useProfile } from "@frontend/hooks/use-profile";
 import { useUserPosts } from "@frontend/hooks/use-post";
 import { CreatePost } from "@frontend/components/post-forms/create-post-form"; 
-import { PostCard } from "@frontend/components/post-forms/post-card-form"; 
-import { ProfileMediaForm } from "@frontend/components/profile-form/profile-media-form"; 
+import { PostCard } from "@frontend/components/post-forms/post-card"; 
+import { ProfileMediaCard } from "@frontend/components/profile-form/profile-media-card"; 
 import { useIntersection } from "@mantine/hooks";
 
 const getInitials = (first: string, last?: string) => {
@@ -85,7 +85,7 @@ export default function ProfilePage() {
             <MainLayout user={userForLayout}>
                 <div className="min-h-screen bg-gray-100 pb-10">
                     
-                    <div className="max-w-6xl mx-auto w-full p-4 space-y-5">
+                    <div className="max-w-5xl mx-auto w-full p-4 space-y-5">
 
                         <div className="bg-background rounded-xl border shadow-sm overflow-hidden">
                             <div className="p-5 md:p-6">
@@ -156,7 +156,7 @@ export default function ProfilePage() {
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
 
                             <div className="lg:col-span-1 space-y-5 sticky top-20 h-fit">
-                                <ProfileMediaForm profileId={profile.id} />
+                                <ProfileMediaCard profileId={profile.id} />
                             </div>
 
                             <div className="lg:col-span-2 space-y-4">

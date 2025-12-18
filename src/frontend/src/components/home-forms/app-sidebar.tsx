@@ -56,7 +56,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         collapsible="icon" 
         {...props} 
         style={{
-            "--sidebar-width": "18rem",
+            "--sidebar-width": "19rem",
             "--sidebar-width-icon": "4.5rem" 
         } as React.CSSProperties}
         className="top-16 h-[calc(100vh-4rem)] border-r z-30" 

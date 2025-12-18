@@ -8,7 +8,6 @@ import { SidebarTrigger } from "@frontend/components/ui/sidebar";
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-// SPA Импорти
 import { useRouter, usePathname } from "next/navigation"; 
 import { useQueryClient } from "@tanstack/react-query"; 
 
@@ -42,6 +41,7 @@ export function SiteHeader({ user }: SiteHeaderProps) {
       router.replace("/auth/login");
   };
 
+
   const getNavButtonClass = (isActive: boolean) => {
     return isActive
       ? "h-12 w-20 rounded-lg border-b-[3px] border-primary text-primary bg-primary/10 hover:bg-primary/20 transition-all"
@@ -52,7 +52,7 @@ export function SiteHeader({ user }: SiteHeaderProps) {
     <header className="fixed top-0 left-0 right-0 z-50 flex h-16 items-center justify-between border-b bg-background px-4 shadow-sm supports-[backdrop-filter]:bg-background/60 backdrop-blur">
 
       <div className="flex items-center gap-4">
-        <SidebarTrigger className="md:hidden" /> 
+        <SidebarTrigger className="md:hidden [&_svg]:!size-6" /> 
         
         <Link href="/" className="flex items-center gap-2 cursor-pointer">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white font-bold shadow-sm overflow-hidden">
@@ -77,7 +77,7 @@ export function SiteHeader({ user }: SiteHeaderProps) {
         </Link>
         
         <div className="relative hidden lg:block ml-2">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-2.5 !size-5 text-muted-foreground" />
           <Input
             type="search"
             placeholder="Търсене..."
@@ -89,22 +89,22 @@ export function SiteHeader({ user }: SiteHeaderProps) {
       <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-2 md:flex">
         <Link href="/">
             <Button variant="ghost" size="icon" className={getNavButtonClass(pathname === "/")}>
-              <Home className="h-6 w-6" />
+              <Home className="!size-5" />
             </Button>
         </Link>
         <Link href="/groups-feed">
             <Button variant="ghost" size="icon" className={getNavButtonClass(pathname === "/groups-feed")}>
-              <Users className="h-6 w-6" />
+              <Users className="!size-5" />
             </Button>
         </Link>
       </nav>
 
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" className="cursor-pointer rounded-full bg-muted/50 relative sm:flex hover:bg-primary hover:text-white">
-          <MessageCircle className="h-5 w-5" />
+          <MessageCircle className="!size-5" />
         </Button>
         <Button variant="ghost" size="icon" className="cursor-pointer rounded-full bg-muted/50 relative hover:bg-primary hover:text-white">
-          <Bell className="h-5 w-5" />
+          <Bell className="!size-5" />
         </Button>
 
         <DropdownMenu>
@@ -117,7 +117,7 @@ export function SiteHeader({ user }: SiteHeaderProps) {
                 </AvatarFallback>
               </Avatar>
                <div className="absolute -bottom-1 -right-1 bg-background rounded-full p-[2px] border shadow-sm flex items-center justify-center">
-                 <ChevronDown className="h-3 w-3 text-foreground" />
+                 <ChevronDown className="!size-4 text-foreground" />
               </div>
             </Button>
           </DropdownMenuTrigger>
@@ -147,15 +147,15 @@ export function SiteHeader({ user }: SiteHeaderProps) {
 
              <div className="space-y-1 mt-1">
                  <DropdownMenuItem className="transition-colors cursor-pointer p-3 rounded-lg hover:bg-accent focus:bg-accent">
-                    <div className="flex items-center justify-center h-9 w-9 rounded-full bg-muted mr-3">
-                        <Settings className="h-5 w-5 text-foreground" />
+                    <div className="flex items-center justify-center h-10 w-10 rounded-full bg-muted mr-3">
+                        <Settings className="!size-6 text-foreground" />
                     </div>
                     <span className="font-medium text-sm">Настройки</span>
                  </DropdownMenuItem>
                  
                  <DropdownMenuItem onClick={handleLogout} className="transition-colors cursor-pointer p-3 rounded-lg hover:bg-accent focus:bg-accent">
-                    <div className="flex items-center justify-center h-9 w-9 rounded-full bg-muted mr-3">
-                        <LogOut className="h-5 w-5 text-foreground" />
+                    <div className="flex items-center justify-center h-10 w-10 rounded-full bg-muted mr-3">
+                        <LogOut className="!size-6 text-foreground" />
                     </div>
                     <span className="font-medium text-sm">Изход</span>
                  </DropdownMenuItem>
