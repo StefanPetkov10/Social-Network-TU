@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { friendsService } from "@frontend/services/friends-service";
 import { FriendRequest, FriendSuggestion } from "@frontend/lib/types/friends";
 import { ApiResponse } from "@frontend/lib/types/api";
+import { toast } from "sonner";
 
 export const useFriendRequests = () => {
    return useQuery({
@@ -28,3 +29,25 @@ export const useInfiniteSuggestions = () => {
     select: (data) => data.pages.flatMap((page) => page.data),
   });
 };
+
+  export const useSendFriendRequest = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+      mutationFn: (profileId: string) => friendsService.sendFriendRequest(profileId),
+      onSuccess: (response) => {
+        if(!response.success) {
+          toast.error("Грешка при изпращане на покана", {
+            description: response.message || "Опитайте отново по-късно."
+          });
+          return;
+        }
+        queryClient.invalidateQueries({ queryKey: ["friend-suggestions-infinite"] });
+        toast.success("Поканата е изпратена успешно!");
+      },
+      onError: (error: any) => {
+        const msg = error?.response?.data?.message || "Възникна неочаквана грешка.";
+        toast.error("Грешка при изпращане на покана", { description: msg });
+      }
+    });
+  }

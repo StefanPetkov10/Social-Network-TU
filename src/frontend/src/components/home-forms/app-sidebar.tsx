@@ -50,6 +50,12 @@ type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
   };
 }
 
+const getInitials = (name: string) => {
+    const names = name.split(" ");
+    const initials = names.map(n => n.charAt(0).toUpperCase()).join("");
+    return initials;
+}
+
 export function AppSidebar({ user, ...props }: AppSidebarProps) {
   return (
     <Sidebar 
@@ -68,7 +74,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         >
            <Avatar className="h-12 w-12 border cursor-pointer shadow-sm shrink-0">
               <AvatarImage src={user.avatar} />
-              <AvatarFallback className="bg-primary text-white text-lg">СП</AvatarFallback>
+              <AvatarFallback className="bg-primary text-white text-lg">{getInitials(user.name)}</AvatarFallback>
            </Avatar>
            
            <div className="grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">

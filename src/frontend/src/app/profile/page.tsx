@@ -85,7 +85,7 @@ export default function ProfilePage() {
             <MainLayout user={userForLayout}>
                 <div className="min-h-screen bg-gray-100 pb-10">
                     
-                    <div className="max-w-5xl mx-auto w-full p-4 space-y-5">
+                    <div className="max-w-5xl ml-36 mx-auto w-full p-4 space-y-5">
 
                         <div className="bg-background rounded-xl border shadow-sm overflow-hidden">
                             <div className="p-5 md:p-6">

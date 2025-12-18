@@ -43,7 +43,16 @@ export function CreatePost({ user }: CreatePostProps) {
   const { mutate: createPost, isPending } = useCreatePost();
 
   const displayName = `${user.firstName} ${user.lastName}`;
-  const initials = (user.firstName[0] + user.lastName[0]).toUpperCase();
+
+ /* const getInitials = (first: string, last?: string) => {
+    return ((first?.charAt(0) || "") + (last?.charAt(0) || "")).toUpperCase();
+};
+  const initials = getInitials(user.firstName, user.lastName);*/
+  const getInitials = (name: string) => {
+    const names = name.split(" ");
+    const initials = names.map(n => n.charAt(0).toUpperCase()).join("");
+    return initials;
+}
 
   const handleOpen = (triggerType: "text" | "media" | "doc") => {
     setIsOpen(true);
@@ -112,7 +121,7 @@ export function CreatePost({ user }: CreatePostProps) {
       <div className="flex gap-3 mb-4">
         <Avatar>
           <AvatarImage src={user.photo || ""} />
-          <AvatarFallback className="bg-primary text-white">{initials}</AvatarFallback>
+          <AvatarFallback className="bg-primary text-white">{getInitials(displayName)}</AvatarFallback>
         </Avatar>
         <button 
             onClick={() => handleOpen("text")}
@@ -157,7 +166,7 @@ export function CreatePost({ user }: CreatePostProps) {
         <div className="p-4 flex gap-3">
           <Avatar>
             <AvatarImage src={user.photo || ""} />
-            <AvatarFallback>{initials}</AvatarFallback>
+            <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
           </Avatar>
           <div>
             <div className="font-semibold text-sm">{displayName}</div>
