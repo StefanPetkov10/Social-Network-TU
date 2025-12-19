@@ -209,7 +209,7 @@ namespace SocialMedia.Services
             return ApiResponse<bool>.SuccessResponse(true, "Friend request accepted successfully.");
         }
 
-        public async Task<ApiResponse<IEnumerable<PendingFriendDto>>> GetPendingFriendRequestsAsync(ClaimsPrincipal userClaims)
+        public async Task<ApiResponse<IEnumerable<PendingFriendDto>>> GetPendingFriendRequestsAsync(ClaimsPrincipal userClaims, DateTime? lastRequestDate = null, int take = 10)
         {
             var invalidUserResponse = GetUserIdOrUnauthorized<FriendDto>(userClaims, out var userId);
             if (invalidUserResponse != null)
@@ -219,19 +219,33 @@ namespace SocialMedia.Services
             if (userProfile == null)
                 return ApiResponse<IEnumerable<PendingFriendDto>>.ErrorResponse("Profile not found.", new[] { "User profile does not exist." });
 
-            var pendingRequests = await _friendshipRepository.QueryNoTracking()
-                .Where(f => f.AddresseeId == userProfile.Id
-                    && f.Status == FriendshipStatus.Pending)
+            var query = _friendshipRepository.QueryNoTracking()
+                .Where(f => f.AddresseeId == userProfile.Id && f.Status == FriendshipStatus.Pending);
+
+            if (lastRequestDate.HasValue)
+            {
+                query = query.Where(f => f.RequestedAt < lastRequestDate.Value);
+            }
+
+            var pendingRequests = await query
+                .OrderByDescending(f => f.RequestedAt)
+                .Take(take)
                 .Include(f => f.Requester)
                     .ThenInclude(r => r.User)
                 .ToListAsync();
 
             var friendDtos = _mapper.Map<IEnumerable<PendingFriendDto>>(pendingRequests);
 
-            return ApiResponse<IEnumerable<PendingFriendDto>>.SuccessResponse(friendDtos, "Pending friend requests retrieved successfully.");
+            var nextCursor = pendingRequests.LastOrDefault()?.RequestedAt;
+
+            return ApiResponse<IEnumerable<PendingFriendDto>>.SuccessResponse(
+                friendDtos,
+                "Pending friend requests retrieved successfully.",
+                new { nextCursor }
+            );
         }
 
-        public async Task<ApiResponse<IEnumerable<FriendDto>>> GetFriendsListAsync(ClaimsPrincipal userClaims)
+        public async Task<ApiResponse<IEnumerable<FriendDto>>> GetFriendsListAsync(ClaimsPrincipal userClaims, DateTime? lastFriendshipDate = null, int take = 10)
         {
             var invalidUserResponse = GetUserIdOrUnauthorized<PostDto>(userClaims, out var userId);
             if (invalidUserResponse != null)
@@ -241,10 +255,18 @@ namespace SocialMedia.Services
             if (userProfile == null)
                 return ApiResponse<IEnumerable<FriendDto>>.ErrorResponse("Profile not found.", new[] { "User profile does not exist." });
 
-            var friendships = await _friendshipRepository
-                .QueryNoTracking()
+            var query = _friendshipRepository.QueryNoTracking()
                 .Where(f => (f.RequesterId == userProfile.Id || f.AddresseeId == userProfile.Id)
-                            && f.Status == FriendshipStatus.Accepted)
+                            && f.Status == FriendshipStatus.Accepted);
+
+            if (lastFriendshipDate.HasValue)
+            {
+                query = query.Where(f => f.AcceptedAt < lastFriendshipDate.Value);
+            }
+
+            var friendships = await query
+                .OrderByDescending(f => f.AcceptedAt)
+                .Take(take)
                 .Include(f => f.Requester)
                     .ThenInclude(p => p.User)
                 .Include(f => f.Addressee)
@@ -257,10 +279,13 @@ namespace SocialMedia.Services
 
             var friendDtos = _mapper.Map<List<FriendDto>>(friendEntities);
 
-            //var friendDtos = _mapper.Map<List<FriendDto>>(
-            //friendships.Select(f => f.RequesterId == userProfile.Id ? f.Addressee : f.Requester)
+            var nextCursor = friendships.LastOrDefault()?.AcceptedAt;
 
-            return ApiResponse<IEnumerable<FriendDto>>.SuccessResponse(friendDtos, "Friends list retrieved successfully.");
+            return ApiResponse<IEnumerable<FriendDto>>.SuccessResponse(
+                friendDtos,
+                "Friends list retrieved successfully.",
+                new { nextCursor }
+            );
         }
 
         public async Task<ApiResponse<bool>> DeclineFriendRequestAsync(ClaimsPrincipal userClaims, Guid requestId)
@@ -303,9 +328,9 @@ namespace SocialMedia.Services
                 return ApiResponse<bool>.ErrorResponse("You cannot remove yourself from friends.");
 
             var friendship = await _friendshipRepository.FirstOrDefaultAsync(f =>
-                                (f.RequesterId == userProfile.Id && f.AddresseeId == friendProfileId ||
-                                       f.RequesterId == friendProfileId && f.AddresseeId == userProfile.Id)
-                                           && f.Status == FriendshipStatus.Accepted);
+                            (f.RequesterId == userProfile.Id && f.AddresseeId == friendProfileId ||
+                                    f.RequesterId == friendProfileId && f.AddresseeId == userProfile.Id)
+                                    && f.Status == FriendshipStatus.Accepted);
 
             if (friendship == null)
                 return ApiResponse<bool>.ErrorResponse("Friendship not found.", new[] { "You are not friends with this user." });
@@ -315,7 +340,5 @@ namespace SocialMedia.Services
 
             return ApiResponse<bool>.SuccessResponse(true, "Friend removed successfully.");
         }
-
-
     }
 }

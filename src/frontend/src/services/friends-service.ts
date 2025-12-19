@@ -3,8 +3,12 @@ import { FriendRequest, FriendSuggestion } from "@frontend/lib/types/friends";
 import { ApiResponse } from "@frontend/lib/types/api";
 
 export const friendsService = {
-    getFriendRequests: async () => {
-        const { data } = await api.get<ApiResponse<FriendRequest[]>>("/api/Friendship/pending-requests");
+    getFriendRequests: async (cursor: string | null = null, take: number = 10) => {
+        const params = new URLSearchParams();
+        if (cursor) params.append("lastRequestDate", cursor);
+        params.append("take", take.toString());
+
+        const { data } = await api.get<ApiResponse<FriendRequest[]>>(`/api/Friendship/pending-requests?${params.toString()}`);
         return data;
     },
 
@@ -25,6 +29,15 @@ export const friendsService = {
 
     declineFriendRequest: async (pendingRequestId: string) => {
         const { data } = await api.delete<ApiResponse<null>>(`/api/Friendship/decline/${pendingRequestId}`);
+        return data;
+    },
+
+    getFriendsList: async (cursor: string | null = null, take: number = 10) => {
+        const params = new URLSearchParams();
+        if (cursor) params.append("lastFriendshipDate", cursor);
+        params.append("take", take.toString());
+
+        const { data } = await api.get<ApiResponse<FriendSuggestion[]>>(`/api/Friendship/friends?${params.toString()}`);
         return data;
     }
 };

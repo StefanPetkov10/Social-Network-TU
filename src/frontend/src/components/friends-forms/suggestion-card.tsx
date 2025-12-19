@@ -37,13 +37,19 @@ export function SuggestionCard({ person, onAdd, onRemove }: SuggestionCardProps)
         </p>
         <div className="flex flex-col gap-2">
           <button 
-            onClick={() => onAdd(person.profileId)} 
+            onClick={(e) => {
+                e.stopPropagation();
+                onAdd(person.profileId);
+            }} 
             className="w-full bg-primary/10 text-primary py-1.5 rounded-md font-medium hover:bg-primary/20 transition"
           >
             Добавяне
           </button>
           <button 
-            onClick={() => onRemove(person.profileId)} 
+            onClick={(e) => {
+                e.stopPropagation();
+                onRemove(person.profileId);
+            }} 
             className="w-full bg-gray-100 text-gray-800 py-1.5 rounded-md font-medium hover:bg-gray-200 transition"
           >
             Премахване

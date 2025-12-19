@@ -1,14 +1,17 @@
-import { useMutation, useQueryClient, useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { friendsService } from "@frontend/services/friends-service";
-import { FriendRequest, FriendSuggestion } from "@frontend/lib/types/friends";
-import { ApiResponse } from "@frontend/lib/types/api";
 import { toast } from "sonner";
 
-export const useFriendRequests = () => {
-  return useQuery({
-    queryKey: ["friend-requests"],
-    queryFn: async () => friendsService.getFriendRequests(),
-    select: (response: ApiResponse<FriendRequest[]>) => response.data,
+export const useInfiniteFriendRequests = () => {
+  return useInfiniteQuery({
+    queryKey: ["friend-requests-infinite"],
+    queryFn: ({ pageParam = null }) => friendsService.getFriendRequests(pageParam as string | null, 10),
+    initialPageParam: null,
+    getNextPageParam: (lastPage) => {
+      return lastPage.meta?.nextCursor ?? undefined;
+    },
+    select: (data) => data.pages.flatMap((page) => page.data),
+    refetchInterval: 5000, 
   });
 };
 
@@ -28,13 +31,25 @@ export const useInfiniteSuggestions = () => {
   });
 };
 
+export const useInfiniteFriends = () => {
+  return useInfiniteQuery({
+    queryKey: ["my-friends-infinite"],
+    queryFn: ({ pageParam = null }) => friendsService.getFriendsList(pageParam as string | null, 10),
+    initialPageParam: null,
+    getNextPageParam: (lastPage) => {
+      return lastPage.meta?.nextCursor ?? undefined;
+    },
+    select: (data) => data.pages.flatMap((page) => page.data),
+  });
+};
+
 export const useSendFriendRequest = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (profileId: string) => friendsService.sendFriendRequest(profileId),
     onSuccess: (response) => {
       if (!response.success) {
-        toast.error("Грешка при изпращане на покана", { description: response.message });
+        toast.error("Грешка", { description: response.message });
         return;
       }
       queryClient.invalidateQueries({ queryKey: ["friend-suggestions-infinite"] });
@@ -42,7 +57,7 @@ export const useSendFriendRequest = () => {
     },
     onError: (error: any) => {
       const msg = error?.response?.data?.message || "Възникна неочаквана грешка.";
-      toast.error("Грешка при изпращане на покана", { description: msg });
+      toast.error("Грешка", { description: msg });
     }
   });
 };
@@ -52,7 +67,8 @@ export const useAcceptFriendRequest = () => {
   return useMutation({
     mutationFn: (pendingRequestId: string) => friendsService.acceptFriendRequest(pendingRequestId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["friend-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["friend-requests-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["my-friends-infinite"] });
       queryClient.invalidateQueries({ queryKey: ["friend-suggestions-infinite"] });
       toast.success("Успешно приехте поканата!");
     },
@@ -68,7 +84,7 @@ export const useDeclineFriendRequest = () => {
   return useMutation({
     mutationFn: (pendingRequestId: string) => friendsService.declineFriendRequest(pendingRequestId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["friend-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["friend-requests-infinite"] });
       toast.success("Поканата е отхвърлена.");
     },
     onError: (error: any) => {

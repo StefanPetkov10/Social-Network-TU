@@ -1,18 +1,37 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Home, UserCheck, UserPlus, Users } from "lucide-react";
 
-interface FriendsSidebarProps {
-  activeTab: string;
-  setActiveTab: (id: string) => void;
-}
+export function FriendsSidebar() {
+  const pathname = usePathname();
 
-export function FriendsSidebar({ activeTab, setActiveTab }: FriendsSidebarProps) {
   const menuItems = [
-    { id: 'home', label: 'Начало', icon: Home },
-    { id: 'requests', label: 'Покани за приятелство', icon: UserCheck },
-    { id: 'suggestions', label: 'Предложения', icon: UserPlus },
-    { id: 'all', label: 'Всички приятели', icon: Users },
+    { 
+      id: 'home', 
+      label: 'Начало', 
+      icon: Home, 
+      href: '/friends' 
+    },
+    { 
+      id: 'requests', 
+      label: 'Покани за приятелство', 
+      icon: UserCheck, 
+      href: '/friends/friend-request' 
+    },
+    { 
+      id: 'suggestions', 
+      label: 'Предложения', 
+      icon: UserPlus, 
+      href: '/friends/friend-suggestion' 
+    },
+    { 
+      id: 'all', 
+      label: 'Всички приятели', 
+      icon: Users, 
+      href: '/friends/all-friends' 
+    },
   ];
 
   return (
@@ -21,12 +40,14 @@ export function FriendsSidebar({ activeTab, setActiveTab }: FriendsSidebarProps)
         <h2 className="text-2xl font-bold mb-6 text-gray-800 px-2 pt-2">Приятели</h2>
         <div className="space-y-1">
           {menuItems.map((item) => {
-            const isActive = activeTab === item.id;
+            const isActive = item.href === '/friends' 
+                ? pathname === '/friends'
+                : pathname?.startsWith(item.href);
             
             return (
-              <button
+              <Link
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                href={item.href}
                 className={`w-full flex items-center gap-4 px-3 py-2 rounded-xl text-left text-base font-medium transition-colors group h-12 mb-1
                   ${isActive 
                     ? 'bg-gray-100 text-primary' 
@@ -44,7 +65,7 @@ export function FriendsSidebar({ activeTab, setActiveTab }: FriendsSidebarProps)
                 </div>
                 
                 <span>{item.label}</span>
-              </button>
+              </Link>
             );
           })}
         </div>

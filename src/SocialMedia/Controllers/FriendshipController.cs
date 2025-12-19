@@ -39,10 +39,10 @@ namespace SocialMedia.Controllers
         }
 
         [HttpGet("pending-requests")]
-        public async Task<IActionResult> GetPendingRequests()
+        public async Task<IActionResult> GetPendingRequests([FromQuery] DateTime? lastRequestDate, [FromQuery] int take = 10)
         {
             var userClaims = User;
-            var response = await _friendshipService.GetPendingFriendRequestsAsync(userClaims);
+            var response = await _friendshipService.GetPendingFriendRequestsAsync(userClaims, lastRequestDate, take);
             if (!response.Success)
                 return BadRequest(response);
             return Ok(response);
@@ -59,10 +59,10 @@ namespace SocialMedia.Controllers
         }
 
         [HttpGet("friends")]
-        public async Task<IActionResult> GetFriends()
+        public async Task<IActionResult> GetFriends([FromQuery] DateTime? lastFriendshipDate, [FromQuery] int take = 10)
         {
             var userClaims = User;
-            var response = await _friendshipService.GetFriendsListAsync(userClaims);
+            var response = await _friendshipService.GetFriendsListAsync(userClaims, lastFriendshipDate, take);
             if (!response.Success)
                 return BadRequest(response);
             return Ok(response);
