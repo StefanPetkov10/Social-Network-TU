@@ -12,6 +12,6 @@ namespace SocialMedia.Services.Interfaces
         Task<ApiResponse<bool>> DeclineFriendRequestAsync(ClaimsPrincipal userClaims, Guid requestId);
         Task<ApiResponse<bool>> RemoveFriendAsync(ClaimsPrincipal userClaims, Guid friendProfileId);
         Task<ApiResponse<IEnumerable<FriendDto>>> GetFriendsListAsync(ClaimsPrincipal userClaims);
-        Task<ApiResponse<IEnumerable<FriendDto>>> GetPendingFriendRequestsAsync(ClaimsPrincipal userClaims);
+        Task<ApiResponse<IEnumerable<PendingFriendDto>>> GetPendingFriendRequestsAsync(ClaimsPrincipal userClaims);
     }
 }

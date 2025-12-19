@@ -134,7 +134,7 @@ namespace SocialMedia.Services
         {
             try
             {
-                var invalidUserResponse = GetUserIdOrUnauthorized<PostDto>(userClaims, out var userId);
+                var invalidUserResponse = GetUserIdOrUnauthorized<FriendDto>(userClaims, out var userId);
                 if (invalidUserResponse != null)
                     return ApiResponse<bool>.ErrorResponse("Unauthorized.", new[] { "Invalid user claim." });
 
@@ -182,7 +182,7 @@ namespace SocialMedia.Services
 
         public async Task<ApiResponse<bool>> AcceptFriendRequestAsync(ClaimsPrincipal userClaims, Guid requestId)
         {
-            var invalidUserResponse = GetUserIdOrUnauthorized<PostDto>(userClaims, out var userId);
+            var invalidUserResponse = GetUserIdOrUnauthorized<FriendDto>(userClaims, out var userId);
             if (invalidUserResponse != null)
                 return ApiResponse<bool>.ErrorResponse("Unauthorized.", new[] { "Invalid user claim." });
 
@@ -209,27 +209,26 @@ namespace SocialMedia.Services
             return ApiResponse<bool>.SuccessResponse(true, "Friend request accepted successfully.");
         }
 
-        public async Task<ApiResponse<IEnumerable<FriendDto>>> GetPendingFriendRequestsAsync(ClaimsPrincipal userClaims)
+        public async Task<ApiResponse<IEnumerable<PendingFriendDto>>> GetPendingFriendRequestsAsync(ClaimsPrincipal userClaims)
         {
-            var invalidUserResponse = GetUserIdOrUnauthorized<PostDto>(userClaims, out var userId);
+            var invalidUserResponse = GetUserIdOrUnauthorized<FriendDto>(userClaims, out var userId);
             if (invalidUserResponse != null)
-                return ApiResponse<IEnumerable<FriendDto>>.ErrorResponse("Unauthorized.", new[] { "Invalid user claim." });
+                return ApiResponse<IEnumerable<PendingFriendDto>>.ErrorResponse("Unauthorized.", new[] { "Invalid user claim." });
 
             var userProfile = await _profileRepository.GetByApplicationIdAsync(userId);
             if (userProfile == null)
-                return ApiResponse<IEnumerable<FriendDto>>.ErrorResponse("Profile not found.", new[] { "User profile does not exist." });
+                return ApiResponse<IEnumerable<PendingFriendDto>>.ErrorResponse("Profile not found.", new[] { "User profile does not exist." });
 
             var pendingRequests = await _friendshipRepository.QueryNoTracking()
                 .Where(f => f.AddresseeId == userProfile.Id
                     && f.Status == FriendshipStatus.Pending)
                 .Include(f => f.Requester)
                     .ThenInclude(r => r.User)
-                .Select(f => f.Requester)
                 .ToListAsync();
 
-            var friendDtos = _mapper.Map<IEnumerable<FriendDto>>(pendingRequests);
+            var friendDtos = _mapper.Map<IEnumerable<PendingFriendDto>>(pendingRequests);
 
-            return ApiResponse<IEnumerable<FriendDto>>.SuccessResponse(friendDtos, "Pending friend requests retrieved successfully.");
+            return ApiResponse<IEnumerable<PendingFriendDto>>.SuccessResponse(friendDtos, "Pending friend requests retrieved successfully.");
         }
 
         public async Task<ApiResponse<IEnumerable<FriendDto>>> GetFriendsListAsync(ClaimsPrincipal userClaims)
@@ -266,7 +265,7 @@ namespace SocialMedia.Services
 
         public async Task<ApiResponse<bool>> DeclineFriendRequestAsync(ClaimsPrincipal userClaims, Guid requestId)
         {
-            var invalidUserResponse = GetUserIdOrUnauthorized<PostDto>(userClaims, out var userId);
+            var invalidUserResponse = GetUserIdOrUnauthorized<FriendDto>(userClaims, out var userId);
             if (invalidUserResponse != null)
                 return ApiResponse<bool>.ErrorResponse("Unauthorized.", new[] { "Invalid user claim." });
 
@@ -292,7 +291,7 @@ namespace SocialMedia.Services
 
         public async Task<ApiResponse<bool>> RemoveFriendAsync(ClaimsPrincipal userClaims, Guid friendProfileId)
         {
-            var invalidUserResponse = GetUserIdOrUnauthorized<PostDto>(userClaims, out var userId);
+            var invalidUserResponse = GetUserIdOrUnauthorized<FriendDto>(userClaims, out var userId);
             if (invalidUserResponse != null)
                 return ApiResponse<bool>.ErrorResponse("Unauthorized.", new[] { "Invalid user claim." });
 

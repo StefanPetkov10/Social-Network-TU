@@ -10,7 +10,12 @@ import { FriendRequestCard } from "@frontend/components/friends-forms/friend-req
 import { SuggestionCard } from "@frontend/components/friends-forms/suggestion-card";
 import { FriendsSidebar } from "@frontend/components/friends-forms/friends-sidebar";
 
-import { useFriendRequests, useInfiniteSuggestions, useSendFriendRequest } from "@frontend/hooks/use-friends";
+import { useFriendRequests, 
+  useInfiniteSuggestions, 
+  useSendFriendRequest, 
+  useAcceptFriendRequest, 
+  useDeclineFriendRequest } from "@frontend/hooks/use-friends";
+
 import { useProfile } from "@frontend/hooks/use-profile";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -41,6 +46,16 @@ export default function FriendsPage() {
     name: profile ? `${profile.firstName} ${profile.lastName || ""}` : "Потребител",
     avatar: profile?.photo || ""
   }), [profile]);
+
+  const acceptFriendRequestMutation = useAcceptFriendRequest();
+  const declineFriendRequestMutation = useDeclineFriendRequest();
+
+  const handleConfirmRequest = (id: string) => {
+    acceptFriendRequestMutation.mutate(id);
+  }
+  const handleDeleteRequest = (id: string) => {
+    declineFriendRequestMutation.mutate(id);
+  }
 
   const handleAddFriend = (id: string) => {
     sendFriendRequestMutation.mutate(id);
@@ -81,16 +96,19 @@ export default function FriendsPage() {
                   ))}
                 </div>
               ) : requests.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                  {requests.slice(0, visibleRequestsCount).map((req) => (
+               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                {requests && requests.length > 0 && requests.slice(0, visibleRequestsCount).map((req) => {
+                  if (!req || !req.profileId) return null;
+                  return (
                     <FriendRequestCard 
-                      key={req.id || `req-${Math.random()}`} 
+                      key={req.pendingRequestId} 
                       request={req} 
-                      onConfirm={(id) => console.log(id)} 
-                      onDelete={(id) => console.log(id)} 
+                      onConfirm={(pendingRequestId) => handleConfirmRequest(pendingRequestId)} 
+                      onDelete={(pendingRequestId) => handleDeleteRequest(pendingRequestId)} 
                     />
-                  ))}
-                </div>
+                  );
+                })}
+              </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-8 opacity-60">
                   <UserX className="size-8 text-gray-400 mb-2" />

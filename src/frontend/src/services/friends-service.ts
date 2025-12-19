@@ -1,8 +1,6 @@
 import api from "../lib/axios";
 import { FriendRequest, FriendSuggestion } from "@frontend/lib/types/friends";
 import { ApiResponse } from "@frontend/lib/types/api";
-import { get } from "http";
-import { send } from "process";
 
 export const friendsService = {
     getFriendRequests: async () => {
@@ -18,5 +16,15 @@ export const friendsService = {
     sendFriendRequest: async (addresseeId: string) => {
         const { data } = await api.post<ApiResponse<null>>(`/api/Friendship/send-request/${addresseeId}`);
         return data;
+    },
+
+    acceptFriendRequest: async (pendingRequestId: string) => {
+        const { data } = await api.post<ApiResponse<null>>(`/api/Friendship/accept-request/${pendingRequestId}`);
+        return data;
+    },
+
+    declineFriendRequest: async (pendingRequestId: string) => {
+        const { data } = await api.delete<ApiResponse<null>>(`/api/Friendship/decline/${pendingRequestId}`);
+        return data;
     }
-}
+};

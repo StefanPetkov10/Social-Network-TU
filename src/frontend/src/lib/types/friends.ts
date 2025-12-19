@@ -1,8 +1,9 @@
 export interface FriendRequest {
-  id: string;
-  firstName: string;
-  lastName: string;
-  authorAvatar?: string;
+  pendingRequestId: string; 
+  profileId: string;       
+  displayFullName: string;
+  userName: string;
+  avatarUrl: string | null;
   mutualFriendsCount: number;
 }
 
@@ -13,3 +14,4 @@ export interface FriendSuggestion {
   authorAvatar?: string;
   mutualFriendsCount: number;
 }
+
