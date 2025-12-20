@@ -9,7 +9,7 @@ import { SidebarProvider } from "@frontend/components/ui/sidebar";
 
 import { FriendsSidebar } from "@frontend/components/friends-forms/friends-sidebar";
 import { FriendRequestCard } from "@frontend/components/friends-forms/friend-request-card";
-import { FriendProfileView } from "@frontend/components/profile-form/profile-view";
+import { FriendProfileView } from "@frontend/components/friends-forms/friend-profile-view";
 
 import { 
   useInfiniteFriendRequests, 

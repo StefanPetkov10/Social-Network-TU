@@ -22,6 +22,8 @@ import { ScrollArea } from "@frontend/components/ui/scroll-area";
 import { useCreatePost } from "@frontend/hooks/use-create-post";
 import { validateFile } from "@frontend/lib/file-validation";
 import { toast } from "sonner";
+import { getInitials, getUserDisplayName } from "@frontend/lib/utils";
+import { get } from "http";
 
 interface CreatePostProps {
   user: {
@@ -42,17 +44,8 @@ export function CreatePost({ user }: CreatePostProps) {
   
   const { mutate: createPost, isPending } = useCreatePost();
 
-  const displayName = `${user.firstName} ${user.lastName}`;
-
- /* const getInitials = (first: string, last?: string) => {
-    return ((first?.charAt(0) || "") + (last?.charAt(0) || "")).toUpperCase();
-};
-  const initials = getInitials(user.firstName, user.lastName);*/
-  const getInitials = (name: string) => {
-    const names = name.split(" ");
-    const initials = names.map(n => n.charAt(0).toUpperCase()).join("");
-    return initials;
-}
+  const displayName = getUserDisplayName(user);
+  const initials = getInitials(displayName);
 
   const handleOpen = (triggerType: "text" | "media" | "doc") => {
     setIsOpen(true);
@@ -121,7 +114,7 @@ export function CreatePost({ user }: CreatePostProps) {
       <div className="flex gap-3 mb-4">
         <Avatar>
           <AvatarImage src={user.photo || ""} />
-          <AvatarFallback className="bg-primary text-white">{getInitials(displayName)}</AvatarFallback>
+          <AvatarFallback className="bg-primary text-white">{initials}</AvatarFallback>
         </Avatar>
         <button 
             onClick={() => handleOpen("text")}

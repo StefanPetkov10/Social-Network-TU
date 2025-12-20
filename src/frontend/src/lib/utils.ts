@@ -29,6 +29,42 @@ export function getAxiosErrorMessage(err: unknown): string {
   return (err as Error).message ?? String(err);
 }
 
+
+export function getUserDisplayName(profile: any): string {
+  if (!profile) return "Потребител";
+  
+  if (profile.displayFullName) return profile.displayFullName;
+  
+  if (profile.firstName || profile.lastName) {
+    return [profile.firstName, profile.lastName].filter(Boolean).join(" ").trim();
+  }
+
+  return "Потребител";
+}
+
+
+export function getInitials(name: string = ""): string {
+  const parts = name?.trim().split(/\s+/).filter(Boolean);
+
+  if (!parts || parts.length === 0) return "??";
+
+  const firstInitial = parts[0][0];
+
+  if (parts.length === 1) {
+    return firstInitial.toUpperCase();
+  }
+  const lastInitial = parts[parts.length - 1][0];
+
+  return (firstInitial + lastInitial).toUpperCase();
+}
+
+export function getUserUsername(profile: any): string {
+  if (profile && profile.userName) {
+    return `@${profile.userName}`;
+  }
+  return "";
+}
+
 /*
 export function getAxiosErrorMessage(err: unknown): string {
   if (!err) return "An unknown error occurred";

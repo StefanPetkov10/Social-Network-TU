@@ -19,6 +19,7 @@ import {
   SidebarRail,
 } from "@frontend/components/ui/sidebar"
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar"
+import { getInitials, getUserDisplayName } from "@frontend/lib/utils";
 
 const data = {
   navMain: [
@@ -50,13 +51,11 @@ type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
   };
 }
 
-const getInitials = (name: string) => {
-    const names = name.split(" ");
-    const initials = names.map(n => n.charAt(0).toUpperCase()).join("");
-    return initials;
-}
 
 export function AppSidebar({ user, ...props }: AppSidebarProps) {
+  const initials = getInitials(user.name);
+  const displayName = getUserDisplayName(user);
+
   return (
     <Sidebar 
         collapsible="icon" 
@@ -74,11 +73,11 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         >
            <Avatar className="h-12 w-12 border cursor-pointer shadow-sm shrink-0">
               <AvatarImage src={user.avatar} />
-              <AvatarFallback className="bg-primary text-white text-lg">{getInitials(user.name)}</AvatarFallback>
+              <AvatarFallback className="bg-primary text-white text-lg">{initials}</AvatarFallback>
            </Avatar>
            
            <div className="grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
-              <span className="truncate font-bold text-lg text-foreground">{user.name}</span>
+              <span className="truncate font-bold text-lg text-foreground">{displayName}</span>
               <span className="truncate text-sm text-muted-foreground">Студент @ ТУ-София</span>
            </div>
         </a>

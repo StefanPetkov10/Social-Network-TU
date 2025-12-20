@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowLeft, UserPlus, UserCheck, MessageCircle, MoreHorizontal, UserMinus } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowLeft, UserPlus, UserCheck, MessageCircle, MoreHorizontal, UserMinus, Image as ImageIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { Button } from "@frontend/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { PostCard } from "@frontend/components/post-forms/post-card";
 import { ProfileMediaCard } from "@frontend/components/profile-form/profile-media-card";
+import { ProfileFriendsCard } from "@frontend/components/profile-form/profile-friends-card";
 import { useUserPosts } from "@frontend/hooks/use-post";
 import { useIntersection } from "@mantine/hooks";
-import { useEffect } from "react";
+import { getInitials, getUserDisplayName, getUserUsername } from "@frontend/lib/utils";
+
 
 interface FriendProfileViewProps {
     profileId: string;
@@ -20,10 +22,6 @@ interface FriendProfileViewProps {
     requestId?: string;
 }
 
-const getInitials = (name: string) => {
-    return name ? name.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2) : "??";
-};
-
 export function FriendProfileView({ 
     profileId, 
     initialData, 
@@ -33,15 +31,11 @@ export function FriendProfileView({
 }: FriendProfileViewProps) {
     const [activeTab, setActiveTab] = useState("Публикации");
     
-    const profile = initialData || {
-        displayFullName: "Зареждане...",
-        userName: "user",
-        bio: "",
-        photo: null,
-        friendsCount: 0,
-        followersCount: 0,
-        followingCount: 0
-    };
+    const profile = initialData || {};
+    
+    const displayName = getUserDisplayName(profile);
+    const initials = getInitials(displayName);
+    const userName = getUserUsername(profile);
 
     const { 
         data: postsData, 
@@ -62,29 +56,26 @@ export function FriendProfileView({
         }
     }, [entry, hasNextPage, fetchNextPage]);
 
-    const initials = getInitials(profile.displayFullName);
-
     return (
-        <div className="flex flex-col animate-in slide-in-from-right-4 duration-300 w-full bg-gray-100 min-h-screen">
+        <div className="flex flex-col animate-in slide-in-from-right-4 duration-300 w-full bg-gray-100 min-h-screen relative">
             
-            <div className="sticky top-0 z-30 bg-gray-100/80 backdrop-blur-md px-4 py-2 mb-4 border-b">
+            <div className="sticky top-4 left-4 z-50 w-full px-4 pointer-events-none h-0 overflow-visible">
                 <Button 
-                    variant="ghost" 
+                    size="icon"
                     onClick={onBack} 
-                    className="gap-2 pl-0 hover:bg-transparent hover:text-primary transition-colors text-gray-700 font-medium"
+                    className="h-10 w-10 rounded-full bg-white/80 backdrop-blur-md shadow-md border hover:bg-white text-gray-700 pointer-events-auto transition-all hover:scale-105"
                 >
                     <ArrowLeft className="h-5 w-5" />
-                    Назад към списъка
                 </Button>
             </div>
 
-            <div className="max-w-5xl mx-auto w-full px-4 space-y-5 pb-10">
+            <div className="max-w-5xl mx-auto w-full px-4 space-y-5 pb-10 pt-14"> 
                 <div className="bg-background rounded-xl border shadow-sm overflow-hidden">
                     <div className="p-5 md:p-6">
                         <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
                             <div className="relative group shrink-0">
                                 <Avatar className="h-28 w-28 md:h-36 md:w-36 border-4 border-background shadow-lg ring-2 ring-muted">
-                                    <AvatarImage src={profile.avatarUrl || profile.photo} className="object-cover" />
+                                    <AvatarImage src={profile.avatarUrl || profile.authorAvatar || profile.photo} className="object-cover" />
                                     <AvatarFallback className="bg-primary text-white text-3xl font-bold">
                                         {initials}
                                     </AvatarFallback>
@@ -92,8 +83,13 @@ export function FriendProfileView({
                             </div>
 
                             <div className="flex-1 text-center md:text-left space-y-2 mt-2">
-                                <h1 className="text-2xl md:text-3xl font-bold text-foreground">{profile.displayFullName}</h1>
-                                <p className="text-muted-foreground font-medium">@{profile.userName}</p>
+                                <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+                                    {displayName}
+                                </h1>
+                                
+                                {userName && (
+                                    <p className="text-muted-foreground font-medium">@{userName}</p>
+                                )}
 
                                 <div className="max-w-lg mx-auto md:mx-0 py-2">
                                     {profile.bio ? (
@@ -192,27 +188,9 @@ export function FriendProfileView({
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
                     
                     <div className="lg:col-span-1 space-y-5 sticky top-20 h-fit">
-                        
-                        <div className="bg-background rounded-xl border p-4 shadow-sm">
-                            <h3 className="font-bold text-lg mb-4 text-foreground">Приятели</h3>
-                            <div className="grid grid-cols-3 gap-2">
-                                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
-                                    <div key={i} className="flex flex-col items-center gap-1 cursor-pointer group">
-                                        <div className="w-full aspect-square rounded-lg bg-gray-200 overflow-hidden relative">
-                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                                        </div>
-                                        <span className="text-xs font-medium text-center truncate w-full px-1 text-gray-700 group-hover:text-primary transition-colors">
-                                            Приятел {i}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                            <Button variant="secondary" className="w-full mt-4 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700">
-                                Виж всички приятели
-                            </Button>
-                        </div>
-
+                        {/* МЕДИЯТА Е ПЪРВА */}
                         <ProfileMediaCard profileId={profileId} />
+                        <ProfileFriendsCard profileId={profileId} />
                     </div>
 
                     <div className="lg:col-span-2 space-y-4 pb-20">
@@ -224,23 +202,27 @@ export function FriendProfileView({
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
-                                        {postsData?.pages.map((page: any, i: number) => (
-                                            <div key={i} className="space-y-4">
-                                                {page.data?.length === 0 && i === 0 ? (
-                                                    <div className="text-center p-12 text-muted-foreground bg-white rounded-xl border border-dashed shadow-sm flex flex-col items-center gap-2">
-                                                        <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-2">
-                                                            <MoreHorizontal className="h-6 w-6 text-gray-400" />
-                                                        </div>
-                                                        <p className="font-medium text-gray-900">Няма публикации</p>
-                                                        <p className="text-sm">Потребителят все още не е публикувал нищо.</p>
-                                                    </div>
-                                                ) : (
-                                                    page.data?.map((post: any) => (
+                                        {postsData?.pages[0]?.data?.length === 0 ? (
+                                             <div className="bg-background rounded-xl border p-12 shadow-sm text-center flex flex-col items-center justify-center gap-3">
+                                                <div className="bg-muted/30 p-4 rounded-full">
+                                                    <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <h3 className="font-semibold text-lg">Няма публикации</h3>
+                                                    <p className="text-muted-foreground text-sm max-w-[250px]">
+                                                        {displayName} все още не е споделил нищо във фийда си.
+                                                    </p>
+                                                </div>
+                                             </div>
+                                        ) : (
+                                            postsData?.pages.map((page: any, i: number) => (
+                                                <div key={i} className="space-y-4">
+                                                    {page.data?.map((post: any) => (
                                                         <PostCard key={post.id} post={post} />
-                                                    ))
-                                                )}
-                                            </div>
-                                        ))}
+                                                    ))}
+                                                </div>
+                                            ))
+                                        )}
                                         
                                         {isFetchingNextPage && (
                                             <div className="flex justify-center p-4">

@@ -2,6 +2,7 @@
 
 import { FriendSuggestion } from "@frontend/lib/types/friends"; 
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
+import { getInitials, getUserDisplayName } from "@frontend/lib/utils";
 
 interface SuggestionCardProps {
   person: FriendSuggestion;
@@ -9,12 +10,10 @@ interface SuggestionCardProps {
   onRemove: (id: string) => void;
 }
 
-const getInitials = (first: string, last?: string) => {
-    return ((first?.charAt(0) || "") + (last?.charAt(0) || "")).toUpperCase();
-};
 
 export function SuggestionCard({ person, onAdd, onRemove }: SuggestionCardProps) {
-  const initials = getInitials(person.firstName, person.lastName);
+  const initials = getInitials(person.displayFullName);
+  const displayName = getUserDisplayName(person);
 
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
@@ -28,7 +27,7 @@ export function SuggestionCard({ person, onAdd, onRemove }: SuggestionCardProps)
       </div>
       <div className="p-3">
         <h3 className="font-semibold text-gray-900 truncate">
-          {person.firstName} {person.lastName}
+          {displayName}
         </h3>
         <p className="text-sm text-gray-500 mb-3">
           {person.mutualFriendsCount > 0 

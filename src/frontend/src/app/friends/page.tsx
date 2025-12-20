@@ -13,7 +13,7 @@ import { Separator } from "@frontend/components/ui/separator";
 import { FriendRequestCard } from "@frontend/components/friends-forms/friend-request-card";
 import { SuggestionCard } from "@frontend/components/friends-forms/suggestion-card";
 import { FriendsSidebar } from "@frontend/components/friends-forms/friends-sidebar";
-import { FriendProfileView } from "@frontend/components/profile-form/profile-view";
+import { FriendProfileView } from "@frontend/components/friends-forms/friend-profile-view";
 
 import { 
   useInfiniteFriendRequests, 

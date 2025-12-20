@@ -1,6 +1,7 @@
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
+import { getInitials } from "@frontend/lib/utils";
 
 interface FriendRequestCardProps {
   request: any; 
@@ -9,14 +10,8 @@ interface FriendRequestCardProps {
 }
 
 export function FriendRequestCard({ request, onConfirm, onDelete }: FriendRequestCardProps) {
-  const initials = request.displayFullName
-    ? request.displayFullName
-        .split(" ")
-        .map((n: string) => n[0])
-        .join("")
-        .toUpperCase()
-    : "??";
-
+  const initials = getInitials(request.displayFullName);
+  
  return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200 flex flex-col h-full">
       <div className="h-48 w-full relative bg-gray-50 cursor-pointer group">
