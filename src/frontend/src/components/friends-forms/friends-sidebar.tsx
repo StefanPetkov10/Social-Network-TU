@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, UserCheck, UserPlus, Users } from "lucide-react";
+import { Home, UserCheck, UserPlus,UserSearch, Users } from "lucide-react";
 
 export function FriendsSidebar() {
   const pathname = usePathname();
@@ -17,13 +17,13 @@ export function FriendsSidebar() {
     { 
       id: 'requests', 
       label: 'Покани за приятелство', 
-      icon: UserCheck, 
+      icon: UserPlus, 
       href: '/friends/friend-request' 
     },
     { 
       id: 'suggestions', 
       label: 'Предложения', 
-      icon: UserPlus, 
+      icon: UserSearch, 
       href: '/friends/friend-suggestion' 
     },
     { 

@@ -21,7 +21,6 @@ import {
 } from "@frontend/components/ui/dropdown-menu";
 
 import { useAuthStore } from "@frontend/stores/useAuthStore";
-import { getUserDisplayName } from "@frontend/lib/utils";
 
 interface SiteHeaderProps {
   user: { name: string; avatar: string };
@@ -42,7 +41,6 @@ export function SiteHeader({ user }: SiteHeaderProps) {
       router.replace("/auth/login");
   };
 
-  const displayName = getUserDisplayName(user);
 
   const getNavButtonClass = (isActive: boolean) => {
     return isActive
@@ -113,9 +111,9 @@ export function SiteHeader({ user }: SiteHeaderProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-10 w-10 rounded-full ml-1 p-0 ring-2 ring-transparent hover:bg-transparent">
               <Avatar className="h-10 w-10 hover:brightness-95 transition-all cursor-pointer border border-muted">
-                <AvatarImage src={user.avatar} alt={displayName} className="object-cover"/>
+                <AvatarImage src={user.avatar} alt={user.name} className="object-cover"/>
                 <AvatarFallback className="bg-primary text-white font-bold">
-                  {displayName ? displayName.charAt(0).toUpperCase() : "U"}
+                  {user.name ? user.name.charAt(0).toUpperCase() : "U"}
                 </AvatarFallback>
               </Avatar>
                <div className="absolute -bottom-1 -right-1 bg-background rounded-full p-[2px] border shadow-sm flex items-center justify-center">

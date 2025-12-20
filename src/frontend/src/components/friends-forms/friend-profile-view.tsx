@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, UserPlus, UserCheck, MessageCircle, MoreHorizontal, UserMinus, Image as ImageIcon } from "lucide-react";
+import {
+    ArrowLeft,
+    UserPlus,
+    UserCheck,
+    MessageCircle,
+    MoreHorizontal,
+    UserMinus,
+    Image as ImageIcon
+} from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { Button } from "@frontend/components/ui/button";
 import { Loader2 } from "lucide-react";
@@ -10,44 +18,46 @@ import { ProfileMediaCard } from "@frontend/components/profile-form/profile-medi
 import { ProfileFriendsCard } from "@frontend/components/profile-form/profile-friends-card";
 import { useUserPosts } from "@frontend/hooks/use-post";
 import { useIntersection } from "@mantine/hooks";
-import { getInitials, getUserDisplayName, getUserUsername } from "@frontend/lib/utils";
-
+import { getInitials, getUserDisplayName, getUserUsername, cn } from "@frontend/lib/utils";
 
 interface FriendProfileViewProps {
     profileId: string;
     initialData?: any;
     onBack: () => void;
-    requestStatus?: 'pending_received' | 'pending_sent' | 'friend' | 'none';
+    requestStatus?: "pending_received" | "pending_sent" | "friend" | "none";
     isFollowing?: boolean;
     requestId?: string;
 }
 
-export function FriendProfileView({ 
-    profileId, 
-    initialData, 
-    onBack, 
-    requestStatus = 'none',
+export function FriendProfileView({
+    profileId,
+    initialData,
+    onBack,
+    requestStatus = "none",
     isFollowing = false
 }: FriendProfileViewProps) {
     const [activeTab, setActiveTab] = useState("Публикации");
-    
+    const [isScrolled, setIsScrolled] = useState(false);
+
     const profile = initialData || {};
-    
+
     const displayName = getUserDisplayName(profile);
     const initials = getInitials(displayName);
     const userName = getUserUsername(profile);
+    const profileImage =
+        profile.authorAvatar || profile.avatarUrl || profile.photo || null;
 
-    const { 
-        data: postsData, 
-        fetchNextPage, 
-        hasNextPage, 
+    const {
+        data: postsData,
+        fetchNextPage,
+        hasNextPage,
         isFetchingNextPage,
-        isLoading: postsLoading 
+        isLoading: postsLoading
     } = useUserPosts(profileId);
 
     const { ref, entry } = useIntersection({
         root: null,
-        threshold: 1,
+        threshold: 1
     });
 
     useEffect(() => {
@@ -56,27 +66,76 @@ export function FriendProfileView({
         }
     }, [entry, hasNextPage, fetchNextPage]);
 
+    useEffect(() => {
+        const scrollableEl =
+            document.querySelector<HTMLElement>(".scroll-smooth") ||
+            document.querySelector<HTMLElement>("main");
+
+        const handleScroll = () => {
+            if (scrollableEl) {
+                setIsScrolled(scrollableEl.scrollTop > 10);
+            } else {
+                setIsScrolled(window.scrollY > 10);
+            }
+        };
+
+        handleScroll();
+
+        if (scrollableEl) {
+            scrollableEl.addEventListener("scroll", handleScroll);
+        } else {
+            window.addEventListener("scroll", handleScroll);
+        }
+
+        return () => {
+            if (scrollableEl) {
+                scrollableEl.removeEventListener("scroll", handleScroll);
+            } else {
+                window.removeEventListener("scroll", handleScroll);
+            }
+        };
+    }, []);
+
     return (
-        <div className="flex flex-col animate-in slide-in-from-right-4 duration-300 w-full bg-gray-100 min-h-screen relative">
-            
-            <div className="sticky top-4 left-4 z-50 w-full px-4 pointer-events-none h-0 overflow-visible">
-                <Button 
-                    size="icon"
-                    onClick={onBack} 
-                    className="h-10 w-10 rounded-full bg-white/80 backdrop-blur-md shadow-md border hover:bg-white text-gray-700 pointer-events-auto transition-all hover:scale-105"
+        <div className="flex flex-col animate-in slide-in-from-right-4 duration-300 w-full min-h-screen relative pb-10">
+
+            <div className="fixed top-4 left-4 z-50 pointer-events-none">
+                <Button
+                    onClick={onBack}
+                    className={cn(
+                        "pointer-events-auto h-11 rounded-full bg-white/90 backdrop-blur-md border border-gray-200 text-gray-700 shadow-lg",
+                        "transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] flex items-center overflow-hidden group",
+                        isScrolled
+                            ? "w-11 px-0 justify-center"
+                            : "px-6 w-auto"
+                    )}
                 >
-                    <ArrowLeft className="h-5 w-5" />
+                    <ArrowLeft
+                        className={cn(
+                            "h-5 w-5 transition-transform duration-300 group-hover:-translate-x-0.5",
+                            isScrolled ? "" : "mr-2"
+                        )}
+                    />
+                    <span
+                        className={cn(
+                            "font-medium text-sm whitespace-nowrap transition-all duration-500",
+                            isScrolled ? "max-w-0 opacity-0" : "max-w-[120px] opacity-100"
+                        )}
+                    >
+                        Назад
+                    </span>
                 </Button>
             </div>
 
-            <div className="max-w-5xl mx-auto w-full px-4 space-y-5 pb-10 pt-14"> 
+            <div className="max-w-5xl mx-auto w-full space-y-6 pt-2"> 
+                
                 <div className="bg-background rounded-xl border shadow-sm overflow-hidden">
-                    <div className="p-5 md:p-6">
+                    <div className="p-6">
                         <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
                             <div className="relative group shrink-0">
-                                <Avatar className="h-28 w-28 md:h-36 md:w-36 border-4 border-background shadow-lg ring-2 ring-muted">
-                                    <AvatarImage src={profile.avatarUrl || profile.authorAvatar || profile.photo} className="object-cover" />
-                                    <AvatarFallback className="bg-primary text-white text-3xl font-bold">
+                                <Avatar className="h-28 w-28 md:h-36 md:w-36 border-4 border-background shadow-lg ring-1 ring-border/20">
+                                    <AvatarImage src={profileImage} className="object-cover" />
+                                    <AvatarFallback className="bg-primary text-primary-foreground text-3xl font-bold">
                                         {initials}
                                     </AvatarFallback>
                                 </Avatar>
@@ -122,7 +181,7 @@ export function FriendProfileView({
                                        <Button className="w-full bg-primary hover:bg-primary/90 shadow-sm transition-all hover:shadow-md">
                                           Потвърди
                                        </Button>
-                                       <Button variant="secondary" className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800">
+                                       <Button variant="secondary" className="w-full bg-muted hover:bg-muted/80">
                                           Изтрий
                                        </Button>
                                     </>
@@ -141,26 +200,26 @@ export function FriendProfileView({
                                 )}
 
                                 {requestStatus === 'pending_sent' && (
-                                    <Button variant="secondary" className="w-full gap-2 text-muted-foreground" disabled>
+                                    <Button variant="secondary" className="w-full gap-2 text-muted-foreground cursor-default" disabled>
                                        <Loader2 className="h-4 w-4 animate-spin" /> Изпратена
                                     </Button>
                                 )}
 
                                 {isFollowing ? (
-                                    <Button variant="outline" className="w-full gap-2 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors">
+                                    <Button variant="outline" className="w-full gap-2 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-colors">
                                         <UserMinus className="h-4 w-4" /> Отследване
                                     </Button>
                                 ) : (
-                                    <Button variant="secondary" className="w-full gap-2 hover:bg-gray-200 text-gray-800">
+                                    <Button variant="secondary" className="w-full gap-2">
                                         Последвай
                                     </Button>
                                 )}
 
                                 <div className="flex gap-2 mt-1">
-                                    <Button variant="secondary" className="flex-1 gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800">
+                                    <Button variant="secondary" className="flex-1 gap-2">
                                         <MessageCircle className="h-4 w-4" /> Съобщение
                                     </Button>
-                                    <Button variant="ghost" size="icon" className="hover:bg-gray-100">
+                                    <Button variant="ghost" size="icon" className="hover:bg-muted">
                                         <MoreHorizontal className="h-5 w-5" />
                                     </Button>
                                 </div>
@@ -168,16 +227,17 @@ export function FriendProfileView({
                         </div>
                     </div>
 
-                    <div className="px-6 border-t flex gap-8 overflow-x-auto scrollbar-hide bg-gray-50/50">
+                    <div className="px-6 border-t flex gap-8 overflow-x-auto scrollbar-hide bg-muted/30">
                         {["Публикации", "Информация", "Приятели", "Снимки"].map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
-                                className={`py-3 text-sm font-semibold border-b-[3px] transition-all whitespace-nowrap px-1 ${
+                                className={cn(
+                                    "py-3 text-sm font-semibold border-b-[3px] transition-all whitespace-nowrap px-1",
                                     activeTab === tab 
                                     ? "border-primary text-primary" 
-                                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300"
-                                }`}
+                                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                                )}
                             >
                                 {tab}
                             </button>
@@ -185,26 +245,25 @@ export function FriendProfileView({
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                     
-                    <div className="lg:col-span-1 space-y-5 sticky top-20 h-fit">
-                        {/* МЕДИЯТА Е ПЪРВА */}
+                    <div className="lg:col-span-1 space-y-6 sticky top-24 h-fit">
                         <ProfileMediaCard profileId={profileId} />
                         <ProfileFriendsCard profileId={profileId} />
                     </div>
 
-                    <div className="lg:col-span-2 space-y-4 pb-20">
+                    <div className="lg:col-span-2 space-y-4 pb-10">
                         {activeTab === "Публикации" && (
                             <>
                                 {postsLoading ? (
-                                    <div className="flex justify-center p-8">
+                                    <div className="flex justify-center p-12">
                                         <Loader2 className="animate-spin text-primary h-8 w-8" />
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
                                         {postsData?.pages[0]?.data?.length === 0 ? (
-                                             <div className="bg-background rounded-xl border p-12 shadow-sm text-center flex flex-col items-center justify-center gap-3">
-                                                <div className="bg-muted/30 p-4 rounded-full">
+                                             <div className="bg-background rounded-xl border p-12 shadow-sm text-center flex flex-col items-center justify-center gap-3 animate-in fade-in zoom-in duration-300">
+                                                <div className="bg-muted/50 p-4 rounded-full">
                                                     <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
                                                 </div>
                                                 <div className="space-y-1">
@@ -225,12 +284,12 @@ export function FriendProfileView({
                                         )}
                                         
                                         {isFetchingNextPage && (
-                                            <div className="flex justify-center p-4">
+                                            <div className="flex justify-center p-6">
                                                 <Loader2 className="animate-spin text-muted-foreground h-6 w-6" />
                                             </div>
                                         )}
                                         
-                                        <div ref={ref} className="h-10 w-full" />
+                                        <div ref={ref} className="h-4 w-full" />
                                     </div>
                                 )}
                             </>

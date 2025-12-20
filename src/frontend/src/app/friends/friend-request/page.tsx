@@ -17,6 +17,7 @@ import {
   useDeclineFriendRequest 
 } from "@frontend/hooks/use-friends";
 import { useProfile } from "@frontend/hooks/use-profile";
+import ProtectedRoute from '@frontend/components/protected-route';
 
 export default function FriendRequestsPage() {
   const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
@@ -135,7 +136,8 @@ export default function FriendRequestsPage() {
   };
 
   return (
-    <SidebarProvider>
+    <ProtectedRoute>
+      <SidebarProvider>
       <div className="h-screen w-full bg-[#f0f2f5] overflow-hidden flex flex-col text-foreground">
         
         <SiteHeader user={userForLayout} />
@@ -186,6 +188,7 @@ export default function FriendRequestsPage() {
           </div>
         </div>
       </div>
-    </SidebarProvider>
+     </SidebarProvider>
+    </ProtectedRoute>
   );
 }

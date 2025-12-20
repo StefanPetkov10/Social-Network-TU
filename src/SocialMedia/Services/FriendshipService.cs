@@ -93,8 +93,7 @@ namespace SocialMedia.Services
                     .Select(p => new FriendSuggestionDto
                     {
                         ProfileId = p.Id,
-                        FirstName = p.FirstName,
-                        LastName = p.LastName,
+                        DisplayFullName = p.FullName,
                         AuthorAvatar = p.Photo,
                         MutualFriendsCount = 0
                     })
@@ -103,7 +102,7 @@ namespace SocialMedia.Services
                 allPotentialPool.AddRange(randomStrangers);
             }
 
-            var missingIds = allPotentialPool.Where(s => string.IsNullOrEmpty(s.FirstName)).Select(s => s.ProfileId).ToList();
+            var missingIds = allPotentialPool.Where(s => string.IsNullOrEmpty(s.DisplayFullName)).Select(s => s.ProfileId).ToList();
             if (missingIds.Any())
             {
                 var profiles = await _profileRepository.QueryNoTracking()
@@ -114,8 +113,7 @@ namespace SocialMedia.Services
                 {
                     if (profiles.TryGetValue(s.ProfileId, out var p))
                     {
-                        s.FirstName = p.FirstName;
-                        s.LastName = p.LastName;
+                        s.DisplayFullName = p.FullName;
                         s.AuthorAvatar = p.Photo;
                     }
                 }

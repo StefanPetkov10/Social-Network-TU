@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useInView } from 'react-intersection-observer';
-import { UserX, UserPlus, Sparkles, ArrowRight } from "lucide-react"; 
+import { UserX, UserPlus, UserSearch, ArrowRight } from "lucide-react"; 
 import Link from 'next/link'; 
 
 import { SiteHeader } from '@frontend/components/site-header';
@@ -25,6 +25,7 @@ import {
 
 import { useProfile } from "@frontend/hooks/use-profile";
 import { useQueryClient } from "@tanstack/react-query";
+import ProtectedRoute from '@frontend/components/protected-route';
 
 export default function FriendsPage() {
   const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
@@ -63,7 +64,6 @@ export default function FriendsPage() {
         }
         if (!found) return oldData;
 
-        // Ако го има, го махаме
         return {
           ...oldData,
           pages: oldData.pages.map((page: any) => ({
@@ -94,7 +94,7 @@ export default function FriendsPage() {
   }, [suggestionsInView, hasNextSuggestions, isFetchingNextSuggestions, fetchNextSuggestions, selectedProfile]);
 
   const userForLayout = useMemo(() => ({
-    name: profile ? `${profile.firstName} ${profile.lastName || ""}` : "Потребител",
+    name: profile ? `${profile.fullName || ""}` : "Потребител",
     avatar: profile?.photo || ""
   }), [profile]);
 
@@ -211,7 +211,8 @@ export default function FriendsPage() {
   );
 
   return (
-    <SidebarProvider>
+    <ProtectedRoute>
+     <SidebarProvider>
 
       <div className="h-screen w-full bg-[#f0f2f5] overflow-hidden flex flex-col text-foreground">
         
@@ -264,7 +265,7 @@ export default function FriendsPage() {
                     <section>
                           <div className="flex items-center justify-between mb-4">
                             <h2 className="text-xl font-bold flex items-center gap-2 text-gray-800">
-                                <Sparkles className="h-6 w-6 text-yellow-500 fill-yellow-500/20" />
+                                <UserSearch className="h-6 w-6 text-purple-600" />
                                 Хора, които може би познавате
                             </h2>
                         </div>
@@ -279,6 +280,7 @@ export default function FriendsPage() {
           </div>
         </div>
       </div>
-    </SidebarProvider>
+     </SidebarProvider>
+    </ProtectedRoute>
   );
 }
