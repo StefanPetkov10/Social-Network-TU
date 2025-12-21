@@ -13,7 +13,6 @@ interface SuggestionCardProps {
 
 export function SuggestionCard({ person, onAdd, onRemove }: SuggestionCardProps) {
   const initials = getInitials(person.displayFullName);
-  console.log("Person Data:", person);
   const displayName = getUserDisplayName(person);
 
   return (

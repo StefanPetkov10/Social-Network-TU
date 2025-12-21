@@ -33,7 +33,6 @@ export function FriendCard({ friend, onViewProfile, onRemove }: FriendCardProps)
         onClick={() => onViewProfile(friend)}
         className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col items-center text-center h-full cursor-pointer group hover:shadow-md transition-all hover:-translate-y-1"
     >
-      {/* Avatar - Центриран и по-голям */}
       <Avatar className="h-24 w-24 shadow-sm rounded-full mb-4 border-2 border-gray-50">
         <AvatarImage src={friend.avatarUrl || friend.photo || ""} className="object-cover" />
         <AvatarFallback className="bg-primary text-white text-2xl font-bold">
@@ -41,21 +40,19 @@ export function FriendCard({ friend, onViewProfile, onRemove }: FriendCardProps)
         </AvatarFallback>
       </Avatar>
 
-      {/* Информация за потребителя */}
       <div className="flex flex-col flex-1 w-full">
         <div className="mb-4">
             <h3 className="font-semibold text-gray-900 truncate text-lg group-hover:text-primary transition-colors">
             {displayName}
             </h3>
             {username && (
-                <p className="text-sm text-gray-500 truncate">@{username}</p>
+                <p className="text-sm text-gray-500 truncate">{username}</p>
             )}
              <p className="text-xs text-gray-400 mt-2 flex items-center justify-center gap-1">
                 <UserCheck className="w-3 h-3" /> Приятели
             </p>
         </div>
 
-        {/* Бутони - w-full за да запълнят широчината */}
         <div className="mt-auto grid grid-cols-2 gap-2 w-full">
           <Button 
             variant="outline"
@@ -83,7 +80,7 @@ export function FriendCard({ friend, onViewProfile, onRemove }: FriendCardProps)
                 <AlertDialogHeader>
                     <AlertDialogTitle>Премахване на приятел?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Сигурни ли сте, че искате да премахнете **{displayName}** от списъка с приятели?
+                        Сигурни ли сте, че искате да премахнете {displayName} от списъка с приятели?
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

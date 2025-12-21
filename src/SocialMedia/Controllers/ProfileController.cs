@@ -22,6 +22,10 @@ namespace SocialMedia.Controllers
         public async Task<IActionResult> GetMyProfile() =>
             Ok(await _profileService.GetProfileAsync(User));
 
+        [HttpGet("{profileId:guid}")]
+        public async Task<IActionResult> GetProfileById([FromRoute] Guid profileId) =>
+            Ok(await _profileService.GetProfileByIdAsync(User, profileId));
+
         [HttpPut]
         public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateProfileDto dto)
         {

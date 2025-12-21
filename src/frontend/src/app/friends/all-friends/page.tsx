@@ -24,9 +24,8 @@ export default function AllFriendsPage() {
   const queryClient = useQueryClient();
   const { data: profile } = useProfile();
   
-  // 1. Използваме твоя hook (няма аргументи, връща директно масив заради select)
   const { 
-    data: friendsList = [], // Default value, защото може да е undefined в началото
+    data: friendsList = [], 
     fetchNextPage, 
     hasNextPage, 
     isFetchingNextPage,
@@ -36,7 +35,6 @@ export default function AllFriendsPage() {
   const { ref, inView } = useInView();
   const removeFriendMutation = useRemoveFriend();
 
-  // Локално филтриране, тъй като API-то в момента не поддържа сървърно търсене
   const filteredFriends = useMemo(() => {
     if (!searchQuery) return friendsList;
     return friendsList.filter((friend: any) => 
@@ -44,7 +42,6 @@ export default function AllFriendsPage() {
     );
   }, [friendsList, searchQuery]);
 
-  // Infinite Scroll Trigger
   useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage && !selectedProfile && !searchQuery) {
       fetchNextPage();
@@ -67,11 +64,9 @@ export default function AllFriendsPage() {
   const handleRemoveFriend = (id: string) => {
     removeFriendMutation.mutate(id, {
         onSuccess: () => {
-            // При успех затваряме профила, ако е отворен
             if (selectedProfile?.id === id || selectedProfile?.profileId === id) {
                 setSelectedProfile(null);
             }
-            // invalidateQueries се случва автоматично в hook-а ти
         }
     });
   };
@@ -102,7 +97,6 @@ export default function AllFriendsPage() {
                     />
                 </div>
             ) : (
-                // --- ИЗГЛЕД: Списък с приятели ---
                 <div className="animate-in fade-in duration-300 max-w-7xl mx-auto pb-20">
                     
                     <div className="mb-8 space-y-4">
@@ -118,7 +112,6 @@ export default function AllFriendsPage() {
                                 <p className="text-gray-500 mt-1">Управлявайте списъка си с приятели тук.</p>
                             </div>
                             
-                            {/* Търсачка */}
                             <div className="relative w-full md:w-72">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                                 <Input 
@@ -160,14 +153,12 @@ export default function AllFriendsPage() {
                                 />
                             ))}
                             
-                            {/* Лоудър за следващи страници (само ако не търсим) */}
                             {isFetchingNextPage && !searchQuery && [...Array(4)].map((_, i) => (
                                 <div key={`loader-${i}`} className="h-64 bg-gray-200 animate-pulse rounded-xl" />
                             ))}
                         </div>
                     )}
                     
-                    {/* Trigger element за Infinite Scroll (скрит при търсене) */}
                     {!searchQuery && <div ref={ref} className="h-10 w-full mt-4" />}
                 </div>
             )} 

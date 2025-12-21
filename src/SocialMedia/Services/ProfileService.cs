@@ -42,11 +42,30 @@ namespace SocialMedia.Services
                 return NotFoundResponse<ProfileDto>("Profile");
 
             var dto = _mapper.Map<ProfileDto>(profile);
-            dto.UserName = userClaims.Identity.Name ?? string.Empty;
+            dto.UserName = userClaims.Identity?.Name ?? string.Empty;
             dto.FollowersCount = await _followRepo.QueryNoTracking().CountAsync(f => f.FollowingId == profile.Id);
             dto.FollowingCount = await _followRepo.QueryNoTracking().CountAsync(f => f.FollowerId == profile.Id);
             dto.FriendsCount = await _friendshipRepo.QueryNoTracking().CountAsync(fr =>
                 (fr.RequesterId == profile.Id || fr.AddresseeId == profile.Id) && fr.Status == FriendshipStatus.Accepted);
+            return ApiResponse<ProfileDto>.SuccessResponse(dto, "Profile retrieved successfully.");
+        }
+
+        public async Task<ApiResponse<ProfileDto>> GetProfileByIdAsync(ClaimsPrincipal userClaims, Guid profileId)
+        {
+            var profile = await _profileRepo.GetByIdAsync(profileId);
+            if (profile == null)
+                return NotFoundResponse<ProfileDto>("Profile");
+
+            var dto = _mapper.Map<ProfileDto>(profile);
+
+            dto.UserName = profile.ApplicationId != null
+                ? (await _userManager.FindByIdAsync(profile.ApplicationId.ToString()))?.UserName ?? string.Empty
+                : string.Empty;
+            dto.FollowersCount = await _followRepo.QueryNoTracking().CountAsync(f => f.FollowingId == profile.Id);
+            dto.FollowingCount = await _followRepo.QueryNoTracking().CountAsync(f => f.FollowerId == profile.Id);
+            dto.FriendsCount = await _friendshipRepo.QueryNoTracking().CountAsync(fr =>
+                (fr.RequesterId == profile.Id || fr.AddresseeId == profile.Id) && fr.Status == FriendshipStatus.Accepted);
+
             return ApiResponse<ProfileDto>.SuccessResponse(dto, "Profile retrieved successfully.");
         }
 

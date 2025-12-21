@@ -2,25 +2,105 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query"; 
+import { useIntersection } from "@mantine/hooks";
+import { Edit, Users, Loader2 } from "lucide-react";
+
 import { Button } from "@frontend/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
-import { Edit, Users, Loader2 } from "lucide-react";
+import { Skeleton } from "@frontend/components/ui/skeleton"; 
 import { MainLayout } from "@frontend/components/main-layout";
-import ProtectedRoute from "@frontend/components/protected-route";
 import { LoadingScreen } from "@frontend/components/common/loading-screen";
 import { ErrorScreen } from "@frontend/components/common/error-screen";
-import { useProfile } from "@frontend/hooks/use-profile";
-import { useUserPosts } from "@frontend/hooks/use-post";
+import ProtectedRoute from "@frontend/components/protected-route";
+
 import { CreatePost } from "@frontend/components/post-forms/create-post-form"; 
 import { PostCard } from "@frontend/components/post-forms/post-card"; 
 import { ProfileMediaCard } from "@frontend/components/profile-form/profile-media-card"; 
-import { useIntersection } from "@mantine/hooks";
 
-const getInitials = (first: string, last?: string) => {
-    const f = first ? first.charAt(0) : "";
-    const l = last ? last.charAt(0) : "";
-    return (f + l).toUpperCase();
-};
+import { useProfile } from "@frontend/hooks/use-profile";
+import { useUserPosts } from "@frontend/hooks/use-post";
+import { friendsService } from "@frontend/services/friends-service"; 
+
+import { getInitials, getUserUsername, getUserDisplayName } from "@frontend/lib/utils";
+
+
+function ProfileFriendsCard({ profileId }: { profileId: string }) {
+  const { data: response, isLoading } = useQuery({
+    queryKey: ["profile-friends-widget", profileId],
+    queryFn: () => friendsService.getFriendsList(null, 9), 
+    enabled: !!profileId,
+  });
+
+  const friends = response?.data || [];
+
+  return (
+    <div className="bg-background rounded-xl border p-4 shadow-sm h-fit">
+      <div className="flex justify-between items-center mb-4">
+        <div>
+           <h3 className="font-bold text-lg leading-none">Приятели</h3>
+           {friends.length > 0 && (
+             <span className="text-xs text-muted-foreground">{friends.length} (общо)</span>
+           )}
+        </div>
+        {friends.length > 0 && (
+            <Button variant="link" className="text-primary p-0 h-auto font-semibold">Виж всички</Button>
+        )}
+      </div>
+
+      {friends.length === 0 ? (
+         <div className="py-8 flex flex-col items-center justify-center text-center text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
+            <Users className="h-8 w-8 mb-2 opacity-20" />
+            <p className="text-sm font-medium">Няма добавени приятели</p>
+         </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-3">
+            {friends.map((friend: any) => {
+                const name = getUserDisplayName(friend);
+                const username = getUserUsername(friend);
+                const initials = getInitials(name);
+                const avatarSrc = friend.authorAvatar || friend.avatarUrl || friend.photo || "";
+
+                return (
+                    <div key={friend.profileId || Math.random()} className="flex flex-col items-center gap-1 cursor-pointer group">
+                        
+                        <div className="w-full aspect-square rounded-lg overflow-hidden relative border border-border/50 bg-gray-100">
+                            <Avatar className="h-full w-full rounded-none">
+                                <AvatarImage 
+                                    src={avatarSrc} 
+                                    className="object-cover transition-transform group-hover:scale-105 duration-300" 
+                                />
+                                <AvatarFallback className="rounded-none bg-primary/10 text-primary font-bold text-sm flex items-center justify-center h-full w-full">
+                                    {initials}
+                                </AvatarFallback>
+                            </Avatar>
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
+                        </div>
+
+                        <div className="w-full text-center">
+                            <p className="text-xs font-semibold text-foreground/90 truncate w-full px-0.5 group-hover:text-primary transition-colors leading-tight">
+                                {name}
+                            </p>
+                            {username && (
+                                <p className="text-[10px] text-muted-foreground truncate w-full px-0.5 leading-tight">
+                                    {username}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+      )}
+
+      {friends.length > 0 && (
+        <Button variant="secondary" className="w-full mt-4 text-sm bg-muted/50 hover:bg-muted text-foreground font-medium transition-colors">
+            Виж всички приятели
+        </Button>
+      )}
+    </div>
+  );
+}
 
 export default function ProfilePage() {
     const router = useRouter();
@@ -66,7 +146,7 @@ export default function ProfilePage() {
     }
 
     const displayName = profile.fullName || profile.firstName || "";
-    const initials = getInitials(profile.firstName, profile.lastName);
+    const initials = getInitials(displayName);
     const bio = profile.bio || "";
 
     const userDataForPost = {
@@ -156,6 +236,7 @@ export default function ProfilePage() {
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
 
                             <div className="lg:col-span-1 space-y-5 sticky top-20 h-fit">
+                                <ProfileFriendsCard profileId={profile.id} />
                                 <ProfileMediaCard profileId={profile.id} />
                             </div>
 

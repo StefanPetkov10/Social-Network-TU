@@ -6,39 +6,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/ava
 import { Button } from "@frontend/components/ui/button";
 import { Skeleton } from "@frontend/components/ui/skeleton";
 import { Users } from "lucide-react";
+import { getInitials, getUserUsername, getUserDisplayName } from "@frontend/lib/utils";
 
 interface ProfileFriendsCardProps {
   profileId: string;
 }
-
-// 1. УМНА ФУНКЦИЯ ЗА ИМЕТО
-// Проверява всички възможни варианти, за да не връща "undefined"
-const getFriendName = (friend: any) => {
-    // Вариант 1: Има цяло име
-    if (friend.displayFullName) return friend.displayFullName;
-    // Вариант 2: Има първо и/или фамилно име
-    if (friend.firstName || friend.lastName) {
-        return `${friend.firstName || ""} ${friend.lastName || ""}`.trim();
-    }
-    // Вариант 3: Има само потребителско име
-    if (friend.userName) return friend.userName;
-    
-    return "Потребител";
-};
-
-// 2. ФУНКЦИЯ ЗА ПОТРЕБИТЕЛСКО ИМЕ
-const getFriendUsername = (friend: any) => {
-    if (friend.userName) return `@${friend.userName}`;
-    return ""; 
-};
-
-// 3. ФУНКЦИЯ ЗА ИНИЦИАЛИ
-const getInitials = (name: string) => {
-    if (!name) return "??";
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-};
 
 export function ProfileFriendsCard({ profileId }: ProfileFriendsCardProps) {
   const { data: response, isLoading } = useQuery({
@@ -75,16 +47,14 @@ export function ProfileFriendsCard({ profileId }: ProfileFriendsCardProps) {
       ) : (
         <div className="grid grid-cols-3 gap-3">
             {friends.map((friend: any) => {
-                const name = getFriendName(friend);
-                const username = getFriendUsername(friend);
+                const name = getUserDisplayName(friend);
+                const username = getUserUsername(friend);
                 const initials = getInitials(name);
-                // Проверяваме различни полета за снимка, за да сме сигурни
                 const avatarSrc = friend.authorAvatar || friend.avatarUrl || friend.photo || "";
 
                 return (
                     <div key={friend.profileId || Math.random()} className="flex flex-col items-center gap-1 cursor-pointer group">
                         
-                        {/* АВАТАР */}
                         <div className="w-full aspect-square rounded-lg overflow-hidden relative border border-border/50 bg-gray-100">
                             <Avatar className="h-full w-full rounded-none">
                                 <AvatarImage 
@@ -95,11 +65,9 @@ export function ProfileFriendsCard({ profileId }: ProfileFriendsCardProps) {
                                     {initials}
                                 </AvatarFallback>
                             </Avatar>
-                            {/* Тънък слой при hover */}
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
                         </div>
 
-                        {/* ИМЕНА ПОД СНИМКАТА */}
                         <div className="w-full text-center">
                             <p className="text-xs font-semibold text-foreground/90 truncate w-full px-0.5 group-hover:text-primary transition-colors leading-tight">
                                 {name}

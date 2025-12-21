@@ -8,7 +8,8 @@ import {
     MessageCircle,
     MoreHorizontal,
     UserMinus,
-    Image as ImageIcon
+    Image as ImageIcon,
+    Users
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { Button } from "@frontend/components/ui/button";
@@ -19,6 +20,7 @@ import { ProfileFriendsCard } from "@frontend/components/profile-form/profile-fr
 import { useUserPosts } from "@frontend/hooks/use-post";
 import { useIntersection } from "@mantine/hooks";
 import { getInitials, getUserDisplayName, getUserUsername, cn } from "@frontend/lib/utils";
+import { useProfileById } from "@frontend/hooks/use-profile";
 
 interface FriendProfileViewProps {
     profileId: string;
@@ -27,6 +29,9 @@ interface FriendProfileViewProps {
     requestStatus?: "pending_received" | "pending_sent" | "friend" | "none";
     isFollowing?: boolean;
     requestId?: string;
+    friendsCount?: number;
+    followersCount?: number;
+    followingCount?: number;
 }
 
 export function FriendProfileView({
@@ -34,18 +39,27 @@ export function FriendProfileView({
     initialData,
     onBack,
     requestStatus = "none",
-    isFollowing = false
+    isFollowing = false,
+    friendsCount,
+    followersCount,
+    followingCount
 }: FriendProfileViewProps) {
     const [activeTab, setActiveTab] = useState("Публикации");
     const [isScrolled, setIsScrolled] = useState(false);
 
-    const profile = initialData || {};
+    const { data: fetchedProfile, isLoading: isProfileLoading } = useProfileById(profileId);
+
+    const profile = fetchedProfile?.data || initialData || {};
+
+    const displayFriendsCount = profile.friendsCount ?? friendsCount ?? 0;
+    const displayFollowersCount = profile.followersCount ?? followersCount ?? 0;
+    const displayFollowingCount = profile.followingCount ?? followingCount ?? 0;
 
     const displayName = getUserDisplayName(profile);
     const initials = getInitials(displayName);
     const userName = getUserUsername(profile);
-    const profileImage =
-        profile.authorAvatar || profile.avatarUrl || profile.photo || null;
+    const profileImage = profile.authorAvatar || profile.avatarUrl || profile.photo || null;
+    const bio = profile.bio || "";
 
     const {
         data: postsData,
@@ -72,11 +86,8 @@ export function FriendProfileView({
             document.querySelector<HTMLElement>("main");
 
         const handleScroll = () => {
-            if (scrollableEl) {
-                setIsScrolled(scrollableEl.scrollTop > 10);
-            } else {
-                setIsScrolled(window.scrollY > 10);
-            }
+            const scrollTop = scrollableEl ? scrollableEl.scrollTop : window.scrollY;
+            setIsScrolled(scrollTop > 10);
         };
 
         handleScroll();
@@ -102,32 +113,19 @@ export function FriendProfileView({
                 <Button 
                     onClick={onBack}
                     className={cn(
-                        "transition-all duration-500  flex items-center overflow-hidden group",
+                        "transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] flex items-center overflow-hidden group",
                         "-mt-2 -ml-2 pointer-events-auto h-11 rounded-full bg-white/90 backdrop-blur-md border border-gray-200 text-gray-700 shadow-lg",
-                        isScrolled
-                            ? "w-11 px-0 justify-center"
-                            : "px-6 w-auto"
+                        isScrolled ? "w-11 px-0 justify-center" : "px-6 w-auto"
                     )}
                 >
-                    <ArrowLeft
-                        className={cn(
-                            "h-5 w-5 transition-transform ml-1 duration-300 group-hover:-translate-x-0.5",
-                            isScrolled ? "" : "mr-3"
-                        )}
-                    />
-                    <span
-                        className={cn(
-                            "font-medium text-sm whitespace-nowrap ", //transition-all duration-400
-                            isScrolled ? "max-w-0 opacity-0" : "max-w-[120px] opacity-100"
-                        )}
-                    >
+                    <ArrowLeft className={cn("h-5 w-5 transition-transform ml-1 duration-300 group-hover:-translate-x-0.5", isScrolled ? "" : "mr-3")} />
+                    <span className={cn("font-medium text-sm whitespace-nowrap", isScrolled ? "max-w-0 opacity-0" : "max-w-[120px] opacity-100")}>
                         Назад
                     </span>
                 </Button>
             </div>
 
             <div className="max-w-5xl mx-auto w-full space-y-6 pt-6"> 
-                
                 <div className="bg-background rounded-xl border shadow-sm overflow-hidden">
                     <div className="p-6">
                         <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
@@ -150,26 +148,27 @@ export function FriendProfileView({
                                 )}
 
                                 <div className="max-w-lg mx-auto md:mx-0 py-2">
-                                    {profile.bio ? (
-                                        <p className="text-sm text-foreground/90 leading-relaxed">
-                                            {profile.bio}
-                                        </p>
-                                    ) : (
-                                        <p className="text-sm text-muted-foreground italic">
-                                            Потребителят няма добавено описание.
-                                        </p>
-                                    )}
+                                    <p className="text-sm text-foreground/90 leading-relaxed">
+                                        {bio}
+                                    </p>
                                 </div>
 
-                                <div className="flex items-center justify-center md:justify-start gap-6 text-sm font-medium text-muted-foreground">
-                                    <span className="flex items-center gap-1 hover:text-foreground cursor-pointer transition-colors">
-                                        <strong className="text-foreground">{profile.friendsCount || 0}</strong> Приятели
+                                <div className="flex items-center justify-center md:justify-start gap-5 text-sm font-medium pt-2 text-muted-foreground">
+                                    <span className="hover:text-foreground cursor-pointer flex items-center gap-1">
+                                        <Users className="h-4 w-4" />
+                                        <strong className="text-foreground">
+                                            {isProfileLoading && !profile.friendsCount ? "..." : displayFriendsCount}
+                                        </strong> Приятели
                                     </span>
-                                    <span className="flex items-center gap-1 hover:text-foreground cursor-pointer transition-colors">
-                                        <strong className="text-foreground">{profile.followersCount || 0}</strong> Последователи
+                                    <span className="hover:text-foreground cursor-pointer">
+                                        <strong className="text-foreground">
+                                            {isProfileLoading && !profile.followersCount ? "..." : displayFollowersCount}
+                                        </strong> Последователи
                                     </span>
-                                    <span className="flex items-center gap-1 hover:text-foreground cursor-pointer transition-colors">
-                                        <strong className="text-foreground">{profile.followingCount || 0}</strong> Последвани
+                                    <span className="hover:text-foreground cursor-pointer">
+                                        <strong className="text-foreground">
+                                            {isProfileLoading && !profile.followingCount ? "..." : displayFollowingCount}
+                                        </strong> Последвани
                                     </span>
                                 </div>
                             </div>
@@ -247,8 +246,8 @@ export function FriendProfileView({
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                     
                     <div className="lg:col-span-1 space-y-6 sticky top-24 h-fit">
-                        <ProfileMediaCard profileId={profileId} />
                         <ProfileFriendsCard profileId={profileId} />
+                        <ProfileMediaCard profileId={profileId} />
                     </div>
 
                     <div className="lg:col-span-2 space-y-4 pb-10">
