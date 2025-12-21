@@ -93,3 +93,19 @@ export const useDeclineFriendRequest = () => {
     }
   });
 };
+
+export const useRemoveFriend = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (profileId: string) => {
+      return friendsService.removeFriend(profileId);},
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-friends-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["friend-suggestions-infinite"] });
+      toast.success("Приятелят е премахнат.");
+    },
+    onError: () => {
+      toast.error("Грешка при премахване.");
+    }
+  });
+};

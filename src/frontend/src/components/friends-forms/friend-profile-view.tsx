@@ -98,13 +98,12 @@ export function FriendProfileView({
 
     return (
         <div className="flex flex-col animate-in slide-in-from-right-4 duration-300 w-full min-h-screen relative pb-10">
-
-            <div className="fixed top-4 left-4 z-50 pointer-events-none">
-                <Button
+            <div className="sticky top-0 left-0 z-50 pointer-events-none">
+                <Button 
                     onClick={onBack}
                     className={cn(
-                        "pointer-events-auto h-11 rounded-full bg-white/90 backdrop-blur-md border border-gray-200 text-gray-700 shadow-lg",
-                        "transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] flex items-center overflow-hidden group",
+                        "transition-all duration-500  flex items-center overflow-hidden group",
+                        "-mt-2 -ml-2 pointer-events-auto h-11 rounded-full bg-white/90 backdrop-blur-md border border-gray-200 text-gray-700 shadow-lg",
                         isScrolled
                             ? "w-11 px-0 justify-center"
                             : "px-6 w-auto"
@@ -112,13 +111,13 @@ export function FriendProfileView({
                 >
                     <ArrowLeft
                         className={cn(
-                            "h-5 w-5 transition-transform duration-300 group-hover:-translate-x-0.5",
-                            isScrolled ? "" : "mr-2"
+                            "h-5 w-5 transition-transform ml-1 duration-300 group-hover:-translate-x-0.5",
+                            isScrolled ? "" : "mr-3"
                         )}
                     />
                     <span
                         className={cn(
-                            "font-medium text-sm whitespace-nowrap transition-all duration-500",
+                            "font-medium text-sm whitespace-nowrap ", //transition-all duration-400
                             isScrolled ? "max-w-0 opacity-0" : "max-w-[120px] opacity-100"
                         )}
                     >
@@ -127,7 +126,7 @@ export function FriendProfileView({
                 </Button>
             </div>
 
-            <div className="max-w-5xl mx-auto w-full space-y-6 pt-2"> 
+            <div className="max-w-5xl mx-auto w-full space-y-6 pt-6"> 
                 
                 <div className="bg-background rounded-xl border shadow-sm overflow-hidden">
                     <div className="p-6">
@@ -147,7 +146,7 @@ export function FriendProfileView({
                                 </h1>
                                 
                                 {userName && (
-                                    <p className="text-muted-foreground font-medium">@{userName}</p>
+                                    <p className="text-muted-foreground font-medium">{userName}</p>
                                 )}
 
                                 <div className="max-w-lg mx-auto md:mx-0 py-2">

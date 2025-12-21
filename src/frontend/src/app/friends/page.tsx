@@ -211,7 +211,7 @@ export default function FriendsPage() {
   );
 
   return (
-    <ProtectedRoute>
+ 
      <SidebarProvider>
 
       <div className="h-screen w-full bg-[#f0f2f5] overflow-hidden flex flex-col text-foreground">
@@ -281,6 +281,6 @@ export default function FriendsPage() {
         </div>
       </div>
      </SidebarProvider>
-    </ProtectedRoute>
+   
   );
 }
