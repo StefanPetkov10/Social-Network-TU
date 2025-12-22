@@ -25,6 +25,8 @@ namespace SocialMedia.Database.Models
         [Required]
         public Gender Sex { get; set; }
 
+        public string Bio { get; set; } = string.Empty;
+
         [ForeignKey(nameof(User))]
         public Guid ApplicationId { get; set; }
 

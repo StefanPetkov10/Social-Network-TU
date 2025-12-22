@@ -9,6 +9,7 @@ namespace SocialMedia.Services.Interfaces
         Task<ApiResponse<ProfileDto>> GetProfileAsync(ClaimsPrincipal user);
         Task<ApiResponse<ProfileDto>> GetProfileByIdAsync(ClaimsPrincipal user, Guid profileId);
         Task<ApiResponse<object>> UpdateProfileAsync(ClaimsPrincipal user, UpdateProfileDto dto);
+        Task<ApiResponse<string>> UpdateBioAsync(ClaimsPrincipal user, string bio);
         Task<ApiResponse<object>> ChangePasswordAsync(ClaimsPrincipal user, ChangePasswordDto dto);
     }
 }

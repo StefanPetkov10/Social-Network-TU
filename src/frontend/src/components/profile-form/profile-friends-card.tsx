@@ -7,6 +7,7 @@ import { Button } from "@frontend/components/ui/button";
 import { Skeleton } from "@frontend/components/ui/skeleton";
 import { Users } from "lucide-react";
 import { getInitials, getUserUsername, getUserDisplayName } from "@frontend/lib/utils";
+import Link from "next/link"; 
 
 interface ProfileFriendsCardProps {
   profileId: string;
@@ -35,7 +36,10 @@ export function ProfileFriendsCard({ profileId }: ProfileFriendsCardProps) {
            )}
         </div>
         {friends.length > 0 && (
-            <Button variant="link" className="text-primary p-0 h-auto font-semibold">Виж всички</Button>
+            // ВАЖНО: Провери дали този път съществува в структурата ти (src/app/profile/[id]/friends)
+            <Link href={`/profile/${profileId}/friends`} className="text-primary text-sm font-semibold hover:underline">
+                Виж всички
+            </Link>
         )}
       </div>
 
@@ -51,9 +55,21 @@ export function ProfileFriendsCard({ profileId }: ProfileFriendsCardProps) {
                 const username = getUserUsername(friend);
                 const initials = getInitials(name);
                 const avatarSrc = friend.authorAvatar || friend.avatarUrl || friend.photo || "";
+                
+                // Взимаме ID-то
+                const targetProfileId = friend.profileId || friend.id;
+
+                // Ако няма ID, не рендираме линк, за да не счупим UI-а
+                if (!targetProfileId) return null;
 
                 return (
-                    <div key={friend.profileId || Math.random()} className="flex flex-col items-center gap-1 cursor-pointer group">
+                    <Link 
+                        key={targetProfileId} 
+                        // ВАЖНО: Промених пътя от /public-profile/ на /profile/
+                        // Защото твоята папка [id] се намира вътре в папка profile
+                        href={`/profile/${targetProfileId}`} 
+                        className="flex flex-col items-center gap-1 cursor-pointer group"
+                    >
                         
                         <div className="w-full aspect-square rounded-lg overflow-hidden relative border border-border/50 bg-gray-100">
                             <Avatar className="h-full w-full rounded-none">
@@ -78,21 +94,23 @@ export function ProfileFriendsCard({ profileId }: ProfileFriendsCardProps) {
                                 </p>
                             )}
                         </div>
-                    </div>
+                    </Link>
                 );
             })}
         </div>
       )}
 
       {friends.length > 0 && (
-        <Button variant="secondary" className="w-full mt-4 text-sm bg-muted/50 hover:bg-muted text-foreground font-medium transition-colors">
+        // ВАЖНО: Тук също промених пътя на /profile/
+        <Link href={`/profile/${profileId}/friends`} className="w-full mt-4 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-muted/50 hover:bg-muted text-foreground h-10 px-4 py-2">
             Виж всички приятели
-        </Button>
+        </Link>
       )}
     </div>
   );
 }
 
+// ... FriendsSkeleton си остава същият
 function FriendsSkeleton() {
     return (
         <div className="bg-background rounded-xl border p-4 shadow-sm space-y-4">

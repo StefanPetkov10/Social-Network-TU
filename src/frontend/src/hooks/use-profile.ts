@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-import { ProfileDto } from "@frontend/lib/types/profile";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { ProfileDto, UpdateProfileDto } from "@frontend/lib/types/profile";
 import { profileService } from "@frontend/services/profile-service";
 
 
@@ -17,9 +17,33 @@ export const useProfileById = (userId: string) => {
     return useQuery({
         queryKey: ["user-profile-by-id", userId],
         queryFn: () => profileService.getProfileById(userId),
-        // Хукът се активира само ако имаме ID
         enabled: !!userId && userId !== "", 
-        // Запазваме данните свежи за малко, за да не правим излишни заявки при бързо връщане
-        staleTime: 1000 * 60 * 5, // 5 минути
+        //staleTime: 1000 * 60 * 5, // 5 минути
     });
 };
+
+export const useEditProfile = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (data: Partial<UpdateProfileDto>) => profileService.editMyProfile(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["user"] });
+            queryClient.invalidateQueries({ queryKey: ["user-profile-by-id"] });
+        },
+    });
+};
+
+export const useUpdateBio = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (bio: string) => profileService.updateBio(bio),
+        onSuccess: () => {
+            console.log("Bio updated successfully");
+            queryClient.invalidateQueries({ queryKey: ["user"] });
+            queryClient.invalidateQueries({ queryKey: ["user-profile-by-id"] });
+        },
+    });
+};
+

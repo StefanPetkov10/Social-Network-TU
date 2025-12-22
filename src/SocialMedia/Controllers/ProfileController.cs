@@ -26,7 +26,7 @@ namespace SocialMedia.Controllers
         public async Task<IActionResult> GetProfileById([FromRoute] Guid profileId) =>
             Ok(await _profileService.GetProfileByIdAsync(User, profileId));
 
-        [HttpPut]
+        [HttpPut("edit-profile")]
         public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateProfileDto dto)
         {
             if (!ModelState.IsValid)
@@ -39,6 +39,21 @@ namespace SocialMedia.Controllers
             }
 
             var response = await _profileService.UpdateProfileAsync(User, dto);
+            return Ok(response);
+        }
+
+        [HttpPost("update-bio")]
+        public async Task<IActionResult> UpdateBio([FromBody] string bio)
+        {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToArray();
+                return BadRequest(ApiResponse<object>.ErrorResponse("Validation failed", errors));
+            }
+            var response = await _profileService.UpdateBioAsync(User, bio);
             return Ok(response);
         }
 

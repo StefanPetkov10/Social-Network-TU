@@ -10,6 +10,7 @@
         public DateTime DateOfBirth { get; set; }
         public string Sex { get; set; } = null!;
         public string? AuthorAvatar { get; set; } //AuthorAvatar
+        public string? Bio { get; set; }
 
         public int FollowersCount { get; set; }
         public int FollowingCount { get; set; }

@@ -1,31 +1,28 @@
-import { Gender } from "./auth";
-
+import { Gender } from "./auth"; 
 export interface ProfileDto {
   id: string;
   firstName: string;
-  lastName?: string;
-  fullName?: string;
+  lastName: string;
+  fullName: string;
   userName: string;
-  photo?: string; 
+  authorAvatar?: string; 
   dateOfBirth: string; 
-  sex: Gender;
-  
+  sex: string; 
   bio?: string;
-
   
-  friendsCount?: number;
-  followersCount?: number;
-  followingCount?: number;
-
+  friendsCount: number;
+  followersCount: number;
+  followingCount: number;
 }
 
 export interface UpdateProfileDto {
-  FirstName: string;
-  LastName: string;
-  BirthDate?: string;
-  Sex: Gender;
+  firstName: string;
+  lastName: string;
+  userName: string;
+  sex: Gender; 
+  bio?: string;
+  photoBase64?: string | null;
 }
-
 export interface ChangePasswordDto {
   CurrentPassword: string;
   NewPassword: string;

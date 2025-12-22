@@ -2,111 +2,37 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query"; 
-import { useIntersection } from "@mantine/hooks";
-import { Edit, Users, Loader2 } from "lucide-react";
-
 import { Button } from "@frontend/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
-import { Skeleton } from "@frontend/components/ui/skeleton"; 
+import { Edit, Users, Loader2, Save, X } from "lucide-react";
 import { MainLayout } from "@frontend/components/main-layout";
+import ProtectedRoute from "@frontend/components/protected-route";
 import { LoadingScreen } from "@frontend/components/common/loading-screen";
 import { ErrorScreen } from "@frontend/components/common/error-screen";
-import ProtectedRoute from "@frontend/components/protected-route";
-
+import { useProfile, useUpdateBio } from "@frontend/hooks/use-profile"; 
+import { useUserPosts } from "@frontend/hooks/use-post";
 import { CreatePost } from "@frontend/components/post-forms/create-post-form"; 
 import { PostCard } from "@frontend/components/post-forms/post-card"; 
 import { ProfileMediaCard } from "@frontend/components/profile-form/profile-media-card"; 
+import { ProfileFriendsCard } from "@frontend/components/profile-form/profile-friends-card";
+import { useIntersection } from "@mantine/hooks";
+import { Input } from "@frontend/components/ui/input"; 
+import { EditProfileDialog } from "@frontend/components/profile-form/profile-edit-dialog";
+import { getInitials, getUserDisplayName } from "@frontend/lib/utils";
+import { get } from "http";
 
-import { useProfile } from "@frontend/hooks/use-profile";
-import { useUserPosts } from "@frontend/hooks/use-post";
-import { friendsService } from "@frontend/services/friends-service"; 
-
-import { getInitials, getUserUsername, getUserDisplayName } from "@frontend/lib/utils";
-
-
-function ProfileFriendsCard({ profileId }: { profileId: string }) {
-  const { data: response, isLoading } = useQuery({
-    queryKey: ["profile-friends-widget", profileId],
-    queryFn: () => friendsService.getFriendsList(null, 9), 
-    enabled: !!profileId,
-  });
-
-  const friends = response?.data || [];
-
-  return (
-    <div className="bg-background rounded-xl border p-4 shadow-sm h-fit">
-      <div className="flex justify-between items-center mb-4">
-        <div>
-           <h3 className="font-bold text-lg leading-none">Приятели</h3>
-           {friends.length > 0 && (
-             <span className="text-xs text-muted-foreground">{friends.length} (общо)</span>
-           )}
-        </div>
-        {friends.length > 0 && (
-            <Button variant="link" className="text-primary p-0 h-auto font-semibold">Виж всички</Button>
-        )}
-      </div>
-
-      {friends.length === 0 ? (
-         <div className="py-8 flex flex-col items-center justify-center text-center text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
-            <Users className="h-8 w-8 mb-2 opacity-20" />
-            <p className="text-sm font-medium">Няма добавени приятели</p>
-         </div>
-      ) : (
-        <div className="grid grid-cols-3 gap-3">
-            {friends.map((friend: any) => {
-                const name = getUserDisplayName(friend);
-                const username = getUserUsername(friend);
-                const initials = getInitials(name);
-                const avatarSrc = friend.authorAvatar || friend.avatarUrl || friend.photo || "";
-
-                return (
-                    <div key={friend.profileId || Math.random()} className="flex flex-col items-center gap-1 cursor-pointer group">
-                        
-                        <div className="w-full aspect-square rounded-lg overflow-hidden relative border border-border/50 bg-gray-100">
-                            <Avatar className="h-full w-full rounded-none">
-                                <AvatarImage 
-                                    src={avatarSrc} 
-                                    className="object-cover transition-transform group-hover:scale-105 duration-300" 
-                                />
-                                <AvatarFallback className="rounded-none bg-primary/10 text-primary font-bold text-sm flex items-center justify-center h-full w-full">
-                                    {initials}
-                                </AvatarFallback>
-                            </Avatar>
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
-                        </div>
-
-                        <div className="w-full text-center">
-                            <p className="text-xs font-semibold text-foreground/90 truncate w-full px-0.5 group-hover:text-primary transition-colors leading-tight">
-                                {name}
-                            </p>
-                            {username && (
-                                <p className="text-[10px] text-muted-foreground truncate w-full px-0.5 leading-tight">
-                                    {username}
-                                </p>
-                            )}
-                        </div>
-                    </div>
-                );
-            })}
-        </div>
-      )}
-
-      {friends.length > 0 && (
-        <Button variant="secondary" className="w-full mt-4 text-sm bg-muted/50 hover:bg-muted text-foreground font-medium transition-colors">
-            Виж всички приятели
-        </Button>
-      )}
-    </div>
-  );
-}
 
 export default function ProfilePage() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState("Публикации");
+    
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    
+    const [isAddingBio, setIsAddingBio] = useState(false);
+    const [bioInput, setBioInput] = useState("");
 
     const { data: profile, isLoading, isError, error } = useProfile();
+    const { mutate: updateBio, isPending: isUpdatingBio } = useUpdateBio();
 
     const {
         data: postsData,
@@ -137,6 +63,15 @@ export default function ProfilePage() {
         }
     }, [isError, error, router]);
 
+    const handleSaveBio = () => {
+        if (!bioInput.trim()) return;
+        updateBio(bioInput, {
+            onSuccess: () => {
+                setIsAddingBio(false);
+            }
+        });
+    };
+
     if (isLoading) return <LoadingScreen />;
 
     if (isError || !profile) {
@@ -145,19 +80,20 @@ export default function ProfilePage() {
         return <ErrorScreen message={(error as any)?.message} />;
     }
 
-    const displayName = profile.fullName || profile.firstName || "";
+    const displayName = getUserDisplayName(profile);
     const initials = getInitials(displayName);
+    
     const bio = profile.bio || "";
 
     const userDataForPost = {
         firstName: profile.firstName,
         lastName: profile.lastName ?? "",
-        photo: profile.photo ?? null
+        photo: profile.authorAvatar ?? null
     };
 
     const userForLayout = {
         name: displayName,
-        avatar: profile.photo || ""
+        avatar: profile.authorAvatar || ""
     };
 
     return (
@@ -172,7 +108,7 @@ export default function ProfilePage() {
                                 <div className="flex flex-col md:flex-row items-center md:items-start gap-5">
                                     <div className="relative group">
                                         <Avatar className="h-28 w-28 md:h-36 md:w-36 border-4 border-background shadow-lg ring-2 ring-muted">
-                                            <AvatarImage src={profile.photo || ""} className="object-cover" />
+                                            <AvatarImage src={profile.authorAvatar || ""} className="object-cover" />
                                             <AvatarFallback className="bg-primary text-white text-3xl font-bold">
                                                 {initials}
                                             </AvatarFallback>
@@ -183,13 +119,43 @@ export default function ProfilePage() {
                                         <h1 className="text-2xl md:text-3xl font-bold text-foreground">{displayName}</h1>
                                         <p className="text-muted-foreground font-medium">@{profile.userName}</p>
 
-                                        <div className="max-w-lg mx-auto md:mx-0 mt-2">
+                                        <div className="max-w-lg mx-auto md:mx-0 mt-2 min-h-[40px]">
                                             {bio ? (
-                                                <p className="text-sm text-foreground/90 leading-relaxed">
+                                                <p className="text-sm text-foreground/90 leading-relaxed break-words">
                                                     {bio}
                                                 </p>
+                                            ) : isAddingBio ? (
+                                                <div className="flex items-center gap-2">
+                                                    <Input 
+                                                        value={bioInput}
+                                                        onChange={(e) => setBioInput(e.target.value)}
+                                                        placeholder="Напишете нещо за себе си..."
+                                                        className="h-8 text-sm"
+                                                        maxLength={500}
+                                                        autoFocus
+                                                    />
+                                                    <Button 
+                                                        size="icon" 
+                                                        className="h-8 w-8 bg-green-600 hover:bg-green-700"
+                                                        onClick={handleSaveBio}
+                                                        disabled={isUpdatingBio}
+                                                    >
+                                                        {isUpdatingBio ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4" />}
+                                                    </Button>
+                                                    <Button 
+                                                        size="icon" 
+                                                        variant="ghost" 
+                                                        className="h-8 w-8 text-muted-foreground"
+                                                        onClick={() => setIsAddingBio(false)}
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
                                             ) : (
-                                                <div className="cursor-pointer group flex items-center justify-center md:justify-start gap-2">
+                                                <div 
+                                                    onClick={() => setIsAddingBio(true)}
+                                                    className="cursor-pointer group flex items-center justify-center md:justify-start gap-2"
+                                                >
                                                     <p className="text-sm text-muted-foreground/60 italic border-b border-transparent group-hover:border-muted-foreground/60 transition-all">
                                                         Добавете кратко описание за себе си...
                                                     </p>
@@ -212,12 +178,15 @@ export default function ProfilePage() {
                                         </div>
                                     </div>
 
-                                    <Button className="w-full md:w-auto gap-2 bg-primary hover:bg-primary/90 h-9 px-4">
+                                    <Button 
+                                        className="w-full md:w-auto gap-2 bg-primary hover:bg-primary/90 h-9 px-4"
+                                        onClick={() => setIsEditModalOpen(true)}
+                                    >
                                         <Edit className="h-4 w-4" /> Редактиране
                                     </Button>
                                 </div>
                             </div>
-
+                            
                             <div className="px-5 border-t flex gap-6 overflow-x-auto scrollbar-hide">
                                 {["Публикации", "Информация", "Приятели", "Медия & Документи"].map((tab) => (
                                     <button
@@ -233,17 +202,20 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+                        <EditProfileDialog 
+                            isOpen={isEditModalOpen} 
+                            onClose={() => setIsEditModalOpen(false)} 
+                            profile={profile} 
+                        />
 
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
                             <div className="lg:col-span-1 space-y-5 sticky top-20 h-fit">
                                 <ProfileFriendsCard profileId={profile.id} />
                                 <ProfileMediaCard profileId={profile.id} />
                             </div>
 
                             <div className="lg:col-span-2 space-y-4">
-
                                 {userDataForPost && <CreatePost user={userDataForPost} />}
-
                                 {postsLoading ? (
                                     <div className="flex justify-center p-4">
                                         <Loader2 className="animate-spin text-primary" />
@@ -263,13 +235,11 @@ export default function ProfilePage() {
                                         </div>
                                     ))
                                 )}
-
                                 {isFetchingNextPage && (
                                     <div className="flex justify-center p-4">
                                         <Loader2 className="animate-spin text-muted-foreground" />
                                     </div>
                                 )}
-
                                 <div ref={ref} className="h-10" />
                             </div>
                         </div>
