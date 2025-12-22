@@ -32,12 +32,12 @@ export const friendsService = {
         return data;
     },
 
-    getFriendsList: async (cursor: string | null = null, take: number = 10) => {
+    getFriendsList: async (profileId: string, cursor: string | null = null, take: number = 10) => {
         const params = new URLSearchParams();
         if (cursor) params.append("lastFriendshipDate", cursor);
         params.append("take", take.toString());
 
-        const { data } = await api.get<ApiResponse<FriendSuggestion[]>>(`/api/Friendship/friends?${params.toString()}`);
+        const { data } = await api.get<ApiResponse<FriendSuggestion[]>>(`/api/Friendship/friends/${profileId}?${params.toString()}`);
         return data;
     },
 

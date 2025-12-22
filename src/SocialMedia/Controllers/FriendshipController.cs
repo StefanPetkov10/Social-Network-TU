@@ -58,11 +58,10 @@ namespace SocialMedia.Controllers
             return Ok(response);
         }
 
-        [HttpGet("friends")]
-        public async Task<IActionResult> GetFriends([FromQuery] DateTime? lastFriendshipDate, [FromQuery] int take = 10)
+        [HttpGet("friends/{profileId:guid}")]
+        public async Task<IActionResult> GetFriends(Guid profileId, [FromQuery] DateTime? lastFriendshipDate, [FromQuery] int take = 10)
         {
-            var userClaims = User;
-            var response = await _friendshipService.GetFriendsListAsync(userClaims, lastFriendshipDate, take);
+            var response = await _friendshipService.GetFriendsListAsync(profileId, lastFriendshipDate, take);
             if (!response.Success)
                 return BadRequest(response);
             return Ok(response);

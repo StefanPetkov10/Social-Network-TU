@@ -7,7 +7,6 @@ using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database.Models;
 using SocialMedia.Database.Models.Enums;
 using SocialMedia.DTOs.Friendship;
-using SocialMedia.DTOs.Post;
 using SocialMedia.Services.Interfaces;
 
 namespace SocialMedia.Services
@@ -243,13 +242,10 @@ namespace SocialMedia.Services
             );
         }
 
-        public async Task<ApiResponse<IEnumerable<FriendDto>>> GetFriendsListAsync(ClaimsPrincipal userClaims, DateTime? lastFriendshipDate = null, int take = 10)
+        public async Task<ApiResponse<IEnumerable<FriendDto>>> GetFriendsListAsync(Guid profileId, DateTime? lastFriendshipDate = null, int take = 10)
         {
-            var invalidUserResponse = GetUserIdOrUnauthorized<PostDto>(userClaims, out var userId);
-            if (invalidUserResponse != null)
-                return ApiResponse<IEnumerable<FriendDto>>.ErrorResponse("Unauthorized.", new[] { "Invalid user claim." });
 
-            var userProfile = await _profileRepository.GetByApplicationIdAsync(userId);
+            var userProfile = await _profileRepository.GetByIdAsync(profileId);
             if (userProfile == null)
                 return ApiResponse<IEnumerable<FriendDto>>.ErrorResponse("Profile not found.", new[] { "User profile does not exist." });
 

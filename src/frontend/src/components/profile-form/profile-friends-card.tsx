@@ -3,7 +3,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { friendsService } from "@frontend/services/friends-service"; 
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
-import { Button } from "@frontend/components/ui/button";
 import { Skeleton } from "@frontend/components/ui/skeleton";
 import { Users } from "lucide-react";
 import { getInitials, getUserUsername, getUserDisplayName } from "@frontend/lib/utils";
@@ -14,10 +13,11 @@ interface ProfileFriendsCardProps {
 }
 
 export function ProfileFriendsCard({ profileId }: ProfileFriendsCardProps) {
+  // Използваме profileId като част от queryKey, за да се кешира отделно за всеки потребител
   const { data: response, isLoading } = useQuery({
     queryKey: ["profile-friends-widget", profileId],
-    queryFn: () => friendsService.getFriendsList(null, 9), 
-    enabled: !!profileId,
+    queryFn: () => friendsService.getFriendsList(profileId, null, 9), 
+    enabled: !!profileId, // Заявката се прави само ако имаме валидно ID
   });
 
   const friends = response?.data || [];
@@ -32,11 +32,10 @@ export function ProfileFriendsCard({ profileId }: ProfileFriendsCardProps) {
         <div>
            <h3 className="font-bold text-lg leading-none">Приятели</h3>
            {friends.length > 0 && (
-             <span className="text-xs text-muted-foreground">{friends.length} (общо)</span>
+             <span className="text-xs text-muted-foreground">{friends.length} (показани)</span>
            )}
         </div>
         {friends.length > 0 && (
-            // ВАЖНО: Провери дали този път съществува в структурата ти (src/app/profile/[id]/friends)
             <Link href={`/profile/${profileId}/friends`} className="text-primary text-sm font-semibold hover:underline">
                 Виж всички
             </Link>
@@ -54,27 +53,23 @@ export function ProfileFriendsCard({ profileId }: ProfileFriendsCardProps) {
                 const name = getUserDisplayName(friend);
                 const username = getUserUsername(friend);
                 const initials = getInitials(name);
-                const avatarSrc = friend.authorAvatar || friend.avatarUrl || friend.photo || "";
+                const authorAvatar = friend.authorAvatar || friend.avatarUrl || friend.photo || "";
                 
-                // Взимаме ID-то
-                const targetProfileId = friend.profileId || friend.id;
+                const friendTargetId = friend.profileId || friend.id;
 
-                // Ако няма ID, не рендираме линк, за да не счупим UI-а
-                if (!targetProfileId) return null;
+                if (!friendTargetId) return null;
 
                 return (
                     <Link 
-                        key={targetProfileId} 
-                        // ВАЖНО: Промених пътя от /public-profile/ на /profile/
-                        // Защото твоята папка [id] се намира вътре в папка profile
-                        href={`/profile/${targetProfileId}`} 
+                        key={friendTargetId} 
+                        href={`/profile/${friendTargetId}`} 
                         className="flex flex-col items-center gap-1 cursor-pointer group"
                     >
-                        
                         <div className="w-full aspect-square rounded-lg overflow-hidden relative border border-border/50 bg-gray-100">
                             <Avatar className="h-full w-full rounded-none">
                                 <AvatarImage 
-                                    src={avatarSrc} 
+                                    src={authorAvatar} 
+                                    alt={name}
                                     className="object-cover transition-transform group-hover:scale-105 duration-300" 
                                 />
                                 <AvatarFallback className="rounded-none bg-primary/10 text-primary font-bold text-sm flex items-center justify-center h-full w-full">
@@ -88,11 +83,6 @@ export function ProfileFriendsCard({ profileId }: ProfileFriendsCardProps) {
                             <p className="text-xs font-semibold text-foreground/90 truncate w-full px-0.5 group-hover:text-primary transition-colors leading-tight">
                                 {name}
                             </p>
-                            {username && (
-                                <p className="text-[10px] text-muted-foreground truncate w-full px-0.5 leading-tight">
-                                    {username}
-                                </p>
-                            )}
                         </div>
                     </Link>
                 );
@@ -101,16 +91,14 @@ export function ProfileFriendsCard({ profileId }: ProfileFriendsCardProps) {
       )}
 
       {friends.length > 0 && (
-        // ВАЖНО: Тук също промених пътя на /profile/
-        <Link href={`/profile/${profileId}/friends`} className="w-full mt-4 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-muted/50 hover:bg-muted text-foreground h-10 px-4 py-2">
-            Виж всички приятели
+        <Link href={`/profile/${profileId}/friends`} className="w-full mt-4 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors bg-muted/50 hover:bg-muted text-foreground h-10 px-4 py-2">
+            Виж всички
         </Link>
       )}
     </div>
   );
 }
 
-// ... FriendsSkeleton си остава същият
 function FriendsSkeleton() {
     return (
         <div className="bg-background rounded-xl border p-4 shadow-sm space-y-4">

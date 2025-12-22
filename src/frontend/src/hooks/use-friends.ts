@@ -31,10 +31,12 @@ export const useInfiniteSuggestions = () => {
   });
 };
 
-export const useInfiniteFriends = () => {
+export const useInfiniteFriends = (profileId: string) => {
   return useInfiniteQuery({
-    queryKey: ["my-friends-infinite"],
-    queryFn: ({ pageParam = null }) => friendsService.getFriendsList(pageParam as string | null, 10),
+    queryKey: ["my-friends-infinite", profileId],
+    queryFn: ({ pageParam = null }) => {
+      return friendsService.getFriendsList(profileId, pageParam as string | null, 10);
+    },
     initialPageParam: null,
     getNextPageParam: (lastPage) => {
       return lastPage.meta?.nextCursor ?? undefined;
