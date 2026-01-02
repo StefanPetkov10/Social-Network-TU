@@ -54,7 +54,6 @@ type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
 
 export function AppSidebar({ user, ...props }: AppSidebarProps) {
   const initials = getInitials(user.name);
-  const displayName = getUserDisplayName(user);
 
   return (
     <Sidebar 
@@ -77,7 +76,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
            </Avatar>
            
            <div className="grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
-              <span className="truncate font-bold text-lg text-foreground">{displayName}</span>
+              <span className="truncate font-bold text-lg text-foreground">{user.name}</span>
               <span className="truncate text-sm text-muted-foreground">Студент @ ТУ-София</span>
            </div>
         </a>

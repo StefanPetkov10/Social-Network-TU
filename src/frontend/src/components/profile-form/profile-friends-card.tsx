@@ -51,18 +51,13 @@ export function ProfileFriendsCard({ profileId }: ProfileFriendsCardProps) {
         <div className="grid grid-cols-3 gap-3">
             {friends.map((friend: any) => {
                 const name = getUserDisplayName(friend);
-                const username = getUserUsername(friend);
                 const initials = getInitials(name);
                 const authorAvatar = friend.authorAvatar || friend.avatarUrl || friend.photo || "";
-                
-                const friendTargetId = friend.profileId || friend.id;
-
-                if (!friendTargetId) return null;
 
                 return (
                     <Link 
-                        key={friendTargetId} 
-                        href={`/profile/${friendTargetId}`} 
+                        key={friend.userName} 
+                        href={`/profile/${friend.userName}`} 
                         className="flex flex-col items-center gap-1 cursor-pointer group"
                     >
                         <div className="w-full aspect-square rounded-lg overflow-hidden relative border border-border/50 bg-gray-100">

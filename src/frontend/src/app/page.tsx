@@ -64,13 +64,13 @@ export default function Home() {
   
   const userForLayout = {
     name: displayName,
-    avatar: profile.photo || ""
+    avatar: profile.authorAvatar || ""
   };
 
   const userDataForPost = {
     firstName: profile.firstName,
     lastName: profile.lastName ?? "",
-    photo: profile.photo ?? null
+    photo: profile.authorAvatar ?? null
   };
     
   return (

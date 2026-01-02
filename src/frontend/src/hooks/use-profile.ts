@@ -22,6 +22,15 @@ export const useProfileById = (userId: string) => {
     });
 };
 
+export const useProfileByUsername = (username: string) => {
+    return useQuery({
+        queryKey: ["user-profile-by-username", username],
+        queryFn: () => profileService.getProfileByUsername(username),
+        enabled: !!username && username !== "", 
+        staleTime: 1000 * 60 * 5, // 5 минути
+    });
+}
+
 export const useEditProfile = () => {
     const queryClient = useQueryClient();
 

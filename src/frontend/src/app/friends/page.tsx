@@ -95,7 +95,7 @@ export default function FriendsPage() {
 
   const userForLayout = useMemo(() => ({
     name: profile ? `${profile.fullName || ""}` : "Потребител",
-    avatar: profile?.photo || ""
+    avatar: profile?.authorAvatar || ""
   }), [profile]);
 
   const handleViewProfile = (person: any, type: 'request' | 'suggestion', e: React.MouseEvent) => {
@@ -281,6 +281,5 @@ export default function FriendsPage() {
         </div>
       </div>
      </SidebarProvider>
-   
   );
 }

@@ -1,4 +1,6 @@
 import { Gender } from "./auth"; 
+import { FriendshipStatus } from "./friends"; 
+
 export interface ProfileDto {
   id: string;
   firstName: string;
@@ -13,6 +15,9 @@ export interface ProfileDto {
   friendsCount: number;
   followersCount: number;
   followingCount: number;
+
+  friendshipStatus?: FriendshipStatus; 
+  isFriendRequestSender?: boolean;
 }
 
 export interface UpdateProfileDto {

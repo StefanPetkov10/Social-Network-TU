@@ -1,12 +1,19 @@
 import api from "../lib/axios";
 import { ProfileDto, UpdateProfileDto } from "@frontend/lib/types/profile";
 import { ApiResponse } from "@frontend/lib/types/api";
+import { get } from "http";
 
 export const profileService = {
     getProfileById: async (profileId: string) => {
         const { data } = await api.get<ApiResponse<ProfileDto>>(`/api/Profile/${profileId}`);
         return data;
     },
+
+    getProfileByUsername: async (username: string) => {
+        const { data } = await api.get<ApiResponse<ProfileDto>>(`/api/Profile/${username}`);
+        return data;
+    },
+
     getMyProfile: async () => {
         const { data } = await api.get<ApiResponse<ProfileDto>>(`/api/Profile/me`);
         return data;

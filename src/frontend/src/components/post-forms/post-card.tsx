@@ -29,7 +29,6 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@frontend/components/ui/carousel";
-// 1. ОБЕДИНЕН IMPORT (cn + новите функции)
 import { cn, getInitials, getUserDisplayName } from "@frontend/lib/utils";
 import { PostDto, ReactionType } from "@frontend/lib/types/posts";
 import { reactionService } from "@frontend/services/reaction-service";
@@ -44,31 +43,31 @@ const REACTION_CONFIG = {
 
 interface PostCardProps {
     post: PostDto;
+    authorProfile?: any; 
 }
 
-export function PostCard({ post }: PostCardProps) {
+export function PostCard({ post, authorProfile }: PostCardProps) {
   const [currentReaction, setCurrentReaction] = useState<ReactionType | null>(post.userReaction ?? null);
   const [likesCount, setLikesCount] = useState(post.likesCount);
   const [isReactionMenuOpen, setIsReactionMenuOpen] = useState(false);
 
-  // 2. ИЗПОЛЗВАМЕ ГЛОБАЛНИТЕ ФУНКЦИИ
-  // Това гарантира, че името ще се покаже, независимо дали идва като authorName, firstName или друго
-  // Тъй като PostDto може да има различни полета, подаваме целия обект или мапваме полетата,
-  // но обикновено post.authorName е достатъчно. Ако искаш да си 100% сигурен, може да подадеш обект с нужните полета.
-  // За PostDto обикновено authorName е попълнено, но нека ползваме логиката:
-  const authorName = post.authorName || getUserDisplayName({ 
-      displayFullName: post.authorName, // Mapping if needed
-      userName: "User" 
-  }); 
+  let authorName = "Потребител";
+  let avatarUrl = "";
+
+  if (authorProfile) {
+      authorName = getUserDisplayName(authorProfile);
+      avatarUrl = authorProfile.photo || authorProfile.authorAvatar || authorProfile.avatarUrl || "";
+  } else {
+      authorName = post.authorName || "Потребител";
+      avatarUrl = post.authorAvatar || "";
+  }
   
-  const avatarUrl = post.authorAvatar;
   const isOwner = post.isOwner || false;
+  const initials = getInitials(authorName);
 
   const documents = post.media?.filter(m => m.mediaType !== 0 && m.mediaType !== 1) || [];
   const visualMedia = post.media?.filter(m => m.mediaType === 0 || m.mediaType === 1) || [];
 
-  const initials = getInitials(authorName);
-  
   const getRelativeTime = (dateString: string) => {
     if (dateString.startsWith("0001")) return "Току-що";
     const date = new Date(dateString);
@@ -117,7 +116,7 @@ export function PostCard({ post }: PostCardProps) {
       <div className="flex justify-between items-start mb-3">
         <div className="flex gap-3">
           <Avatar className="cursor-pointer hover:opacity-80 transition-opacity">
-            <AvatarImage src={avatarUrl || ""} />
+            <AvatarImage src={avatarUrl} className="object-cover" />
             <AvatarFallback className="bg-primary text-white">
                 {initials}
             </AvatarFallback>

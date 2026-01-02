@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useInView } from 'react-intersection-observer';
-import { Search, Users, Ghost } from "lucide-react"; 
+import { Search, Users, UserX } from "lucide-react"; 
 
 import { SiteHeader } from '@frontend/components/site-header';
 import { SidebarProvider } from "@frontend/components/ui/sidebar";
@@ -30,7 +30,7 @@ export default function AllFriendsPage() {
     hasNextPage, 
     isFetchingNextPage,
     isLoading 
-  } = useInfiniteFriends(); 
+  } = useInfiniteFriends(profile?.id || ""); 
   
   const { ref, inView } = useInView();
   const removeFriendMutation = useRemoveFriend();
@@ -50,7 +50,7 @@ export default function AllFriendsPage() {
 
   const userForLayout = useMemo(() => ({
     name: profile ? `${profile.fullName || ""}` : "Потребител",
-    avatar: profile?.photo || ""
+    avatar: profile?.authorAvatar || ""
   }), [profile]);
 
   const handleViewProfile = (friend: any) => {
@@ -86,7 +86,6 @@ export default function AllFriendsPage() {
           <div className="flex-1 h-full overflow-y-auto p-4 md:p-8 scroll-smooth">
             
             {selectedProfile ? (
-                // --- ИЗГЛЕД: Профил ---
                 <div className="animate-in slide-in-from-right-4 duration-300">
                       <FriendProfileView 
                         profileId={selectedProfile.profileId || selectedProfile.id}
@@ -133,7 +132,7 @@ export default function AllFriendsPage() {
                     ) : filteredFriends.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-20 opacity-70">
                             <div className="bg-gray-100 p-6 rounded-full mb-4">
-                                <Ghost className="size-12 text-gray-400" />
+                                <UserX className="size-12 text-gray-400" />
                             </div>
                             <h3 className="text-xl font-semibold text-gray-700">Няма намерени приятели</h3>
                             <p className="text-gray-500 mt-2 text-center max-w-sm">

@@ -61,7 +61,7 @@ export default function FriendSuggestionsPage() {
 
   const userForLayout = useMemo(() => ({
     name: profile ? `${profile.fullName || ""}` : "Потребител",
-    avatar: profile?.photo || ""
+    avatar: profile?.authorAvatar || ""
   }), [profile]);
 
   const handleViewProfile = (person: any) => {

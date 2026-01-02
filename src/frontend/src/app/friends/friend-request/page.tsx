@@ -45,7 +45,7 @@ export default function FriendRequestsPage() {
 
   const userForLayout = useMemo(() => ({
     name: profile ? `${profile.firstName} ${profile.lastName || ""}` : "Потребител",
-    avatar: profile?.photo || ""
+    avatar: profile?.authorAvatar || ""
   }), [profile]);
 
   const handleViewProfile = (req: any) => {

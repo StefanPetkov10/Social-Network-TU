@@ -5,6 +5,7 @@
         Pending = 0,
         Accepted = 1,
         Declined = 2,
-        Blocked = 3
+        Blocked = 3,
+        None = -1
     }
 }
