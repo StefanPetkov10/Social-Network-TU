@@ -2,7 +2,7 @@ export interface FollowUser {
   profileId: string;
   displayFullName: string;
   userName?: string;
-  avatarUrl?: string;
+  authorAvatar?: string;
   bio?: string;       
   
   isFollowing: boolean; 
@@ -12,5 +12,5 @@ export interface FollowUser {
 
 export interface FollowSuggestion extends FollowUser {
   reason: string;       
-  mutualCount: number;  
+  mutualFollowersCount: number;  
 }

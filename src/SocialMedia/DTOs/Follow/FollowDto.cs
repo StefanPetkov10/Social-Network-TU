@@ -5,7 +5,7 @@
         public Guid ProfileId { get; set; }
         public string DisplayFullName { get; set; } = null!;
         public string? UserName { get; set; }
-        public string? AvatarUrl { get; set; }
+        public string? AuthorAvatar { get; set; }
         public string? Bio { get; set; }
 
         public bool IsFollowing { get; set; }

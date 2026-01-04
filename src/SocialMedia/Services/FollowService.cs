@@ -309,6 +309,27 @@ namespace SocialMedia.Services
                 suggestions.AddRange(trendingDtos);
             }
 
+            //this is for test when there is not enough data in the database
+            if (suggestions.Count < take)
+            {
+                int needed = take - suggestions.Count;
+
+                var randomProfiles = await _profileRepository.QueryNoTracking()
+                    .Where(p => !excludeIds.Contains(p.Id))
+                    .OrderByDescending(p => p.CreatedDate)
+                    .Take(needed)
+                    .Include(p => p.User)
+                    .ToListAsync();
+
+                if (randomProfiles.Any())
+                {
+                    var randomDtos = _mapper.Map<List<FollowSuggestionDto>>(randomProfiles);
+                    randomDtos.ForEach(d => d.Reason = "New on TU Social");
+
+                    suggestions.AddRange(randomDtos);
+                }
+            }
+
             return ApiResponse<IEnumerable<FollowSuggestionDto>>.SuccessResponse(
                 suggestions,
                 "Suggestions retrieved.",

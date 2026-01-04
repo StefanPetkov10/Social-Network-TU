@@ -48,7 +48,7 @@ export function FollowingCard({ person, onViewProfile, onUnfollow }: FollowingCa
       </div>
 
       <Avatar className="h-20 w-20 shadow-sm rounded-full mb-3 border-2 border-gray-50 mt-4">
-        <AvatarImage src={person.avatarUrl || person.avatarUrl || ""} className="object-cover" />
+        <AvatarImage src={person.authorAvatar || ""} className="object-cover" />
         <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-cyan-500 text-white text-xl font-bold">
             {initials}
         </AvatarFallback>

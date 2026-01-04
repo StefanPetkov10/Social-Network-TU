@@ -11,7 +11,7 @@ namespace SocialMedia.AutoMapper
                 .ForMember(dest => dest.ProfileId, opt => opt.MapFrom(src => src.Id))
                 .ForMember(dest => dest.DisplayFullName, opt => opt.MapFrom(src => src.FullName))
                 .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.UserName))
-                .ForMember(dest => dest.AvatarUrl, opt => opt.MapFrom(src => src.Photo))
+                .ForMember(dest => dest.AuthorAvatar, opt => opt.MapFrom(src => src.Photo))
                 .ForMember(dest => dest.Bio, opt => opt.MapFrom(src => src.Bio))
 
                 .ForMember(dest => dest.IsFollowing, opt => opt.Ignore())

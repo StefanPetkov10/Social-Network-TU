@@ -11,7 +11,7 @@ export interface FriendRequest {
   profileId: string;       
   displayFullName: string;
   userName: string;
-  avatarUrl: string | null;
+  authorAvatar: string | null;
   mutualFriendsCount: number;
 }
 
