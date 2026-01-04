@@ -49,10 +49,10 @@ namespace SocialMedia.Controllers
             return BadRequest(response);
         }
 
-        [HttpGet("followers")]
-        public async Task<IActionResult> Followers()
+        [HttpGet("my-followers")]
+        public async Task<IActionResult> Followers([FromQuery] DateTime? lastFollowerDate, [FromQuery] int take)
         {
-            var response = await _followService.GetFollowersAsync(User);
+            var response = await _followService.GetFollowersAsync(User, lastFollowerDate, take);
             if (response.Success)
             {
                 return Ok(response);
@@ -61,9 +61,20 @@ namespace SocialMedia.Controllers
         }
 
         [HttpGet("following")]
-        public async Task<IActionResult> Following()
+        public async Task<IActionResult> Following([FromQuery] DateTime? lastFollowingDate, [FromQuery] int take)
         {
-            var response = await _followService.GetFollowingAsync(User);
+            var response = await _followService.GetFollowingAsync(User, lastFollowingDate, take);
+            if (response.Success)
+            {
+                return Ok(response);
+            }
+            return BadRequest(response);
+        }
+
+        [HttpGet("suggestions")]
+        public async Task<IActionResult> FollowSuggestions([FromQuery] int skip, [FromQuery] int take)
+        {
+            var response = await _followService.GetFollowSuggestionsAsync(User);
             if (response.Success)
             {
                 return Ok(response);

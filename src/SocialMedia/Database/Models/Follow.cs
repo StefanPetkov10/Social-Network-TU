@@ -20,5 +20,8 @@ namespace SocialMedia.Database.Models
         [InverseProperty("Followers")]
         public Profile Following { get; set; } = null!;
 
+        [Required]
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
     }
 }

@@ -11,7 +11,9 @@ namespace SocialMedia.Services.Interfaces
 
         Task<ApiResponse<bool>> IsFollowingAsync(ClaimsPrincipal userClaims, Guid followingId);
 
-        Task<ApiResponse<IEnumerable<FollowDto>>> GetFollowersAsync(ClaimsPrincipal userClaims);
-        Task<ApiResponse<IEnumerable<FollowDto>>> GetFollowingAsync(ClaimsPrincipal userClaims);
+        Task<ApiResponse<IEnumerable<FollowDto>>> GetFollowersAsync(ClaimsPrincipal userClaims, DateTime? lastFollowerDate = null, int take = 20);
+        Task<ApiResponse<IEnumerable<FollowDto>>> GetFollowingAsync(ClaimsPrincipal userClaims, DateTime? lastFollowingDate = null, int take = 20);
+
+        Task<ApiResponse<IEnumerable<FollowSuggestionDto>>> GetFollowSuggestionsAsync(ClaimsPrincipal userClaims, int skip = 0, int take = 10);
     }
 }
