@@ -16,7 +16,7 @@ interface FollowerCardProps {
   isFollowingBack: boolean; 
   onViewProfile: (follower: any) => void;
   onFollowBack: (id: string) => void;
-  onRemove: (id: string) => void; // Force unfollow (махни го от последователи)
+  onRemove: (id: string) => void; 
 }
 
 export function FollowerCard({ 
@@ -36,7 +36,6 @@ export function FollowerCard({
         onClick={() => onViewProfile(follower)}
         className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col items-center text-center h-full cursor-pointer group hover:shadow-md transition-all hover:-translate-y-1 relative"
     >
-      {/* Опции горе вдясно */}
       <div className="absolute top-3 right-3" onClick={(e) => e.stopPropagation()}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -68,7 +67,7 @@ export function FollowerCard({
                 {displayName}
             </h3>
             {username && (
-                <p className="text-xs text-gray-500 truncate">@{username}</p>
+                <p className="text-xs text-gray-500 truncate">{username}</p>
             )}
         </div>
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, UserCheck, UserPlus } from "lucide-react";
+import { Users, UserCheck, UserSearch} from "lucide-react";
 
 export function FollowersSidebar() {
   const pathname = usePathname();
@@ -23,7 +23,7 @@ export function FollowersSidebar() {
     { 
       id: 'suggestions', 
       label: 'Предложения', 
-      icon: UserPlus, 
+      icon: UserSearch, 
       href: '/followers/suggestions' 
     },
   ];
