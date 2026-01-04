@@ -6,7 +6,6 @@ using SocialMedia.Common;
 using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database.Models;
 using SocialMedia.DTOs.Follow;
-using SocialMedia.DTOs.Post;
 using SocialMedia.Services.Interfaces;
 
 namespace SocialMedia.Services
@@ -49,8 +48,7 @@ namespace SocialMedia.Services
                 .FirstOrDefaultAsync(f => f.FollowerId == follower.Id && f.FollowingId == followingId);
 
             if (existing != null)
-                return ApiResponse<bool>.ErrorResponse("Already following.");
-
+                return ApiResponse<bool>.SuccessResponse(true, "Already following.");
             var follow = new Follow
             {
                 Id = Guid.NewGuid(),
@@ -88,6 +86,7 @@ namespace SocialMedia.Services
 
             return ApiResponse<bool>.SuccessResponse(true, "Unfollowed successfully.");
         }
+
         public async Task<ApiResponse<bool>> IsFollowingAsync(ClaimsPrincipal userClaims, Guid followingId)
         {
             var invalidUserResponse = GetUserIdOrUnauthorized<bool>(userClaims, out var appUserId);
@@ -98,22 +97,20 @@ namespace SocialMedia.Services
             if (follower == null)
                 return NotFoundResponse<bool>("Your profile");
 
-            var followerId = follower.Id;
             var exists = await _followRepository
-               .AnyAsync(f => f.FollowerId == followerId && f.FollowingId == followingId);
+               .AnyAsync(f => f.FollowerId == follower.Id && f.FollowingId == followingId);
 
             return ApiResponse<bool>.SuccessResponse(exists);
         }
 
         public async Task<ApiResponse<IEnumerable<FollowDto>>> GetFollowersAsync(ClaimsPrincipal userClaims)
         {
-            var invalidUserResponse = GetUserIdOrUnauthorized<PostDto>(userClaims, out var userId);
-            if (invalidUserResponse != null)
-                return ApiResponse<IEnumerable<FollowDto>>.ErrorResponse("Unauthorized.", new[] { "Invalid user claim." });
+            var invalidUserResponse = GetUserIdOrUnauthorized<IEnumerable<FollowDto>>(userClaims, out var userId);
+            if (invalidUserResponse != null) return invalidUserResponse;
 
             var userProfile = await _profileRepository.GetByApplicationIdAsync(userId);
             if (userProfile == null)
-                return ApiResponse<IEnumerable<FollowDto>>.ErrorResponse("Profile not found.", new[] { "User profile does not exist." });
+                return ApiResponse<IEnumerable<FollowDto>>.ErrorResponse("Profile not found.");
 
             var followers = await _followRepository.QueryNoTracking()
                 .Where(f => f.FollowingId == userProfile.Id)
@@ -129,13 +126,12 @@ namespace SocialMedia.Services
 
         public async Task<ApiResponse<IEnumerable<FollowDto>>> GetFollowingAsync(ClaimsPrincipal userClaims)
         {
-            var invalidUserResponse = GetUserIdOrUnauthorized<PostDto>(userClaims, out var userId);
-            if (invalidUserResponse != null)
-                return ApiResponse<IEnumerable<FollowDto>>.ErrorResponse("Unauthorized.", new[] { "Invalid user claim." });
+            var invalidUserResponse = GetUserIdOrUnauthorized<IEnumerable<FollowDto>>(userClaims, out var userId);
+            if (invalidUserResponse != null) return invalidUserResponse;
 
             var userProfile = await _profileRepository.GetByApplicationIdAsync(userId);
             if (userProfile == null)
-                return ApiResponse<IEnumerable<FollowDto>>.ErrorResponse("Profile not found.", new[] { "User profile does not exist." });
+                return ApiResponse<IEnumerable<FollowDto>>.ErrorResponse("Profile not found.");
 
             var followers = await _followRepository.QueryNoTracking()
                 .Where(f => f.FollowerId == userProfile.Id)
