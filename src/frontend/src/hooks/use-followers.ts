@@ -59,7 +59,7 @@ export const useFollowUser = () => {
     });
 }
 
-export const useRemoveFollower = () => {
+export const useUnfollowUser = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (profileId: string) => followersService.unfollowUser(profileId),

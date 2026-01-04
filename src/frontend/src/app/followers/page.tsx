@@ -13,7 +13,7 @@ import { FollowerCard } from "@frontend/components/followers-forms/follower-card
 import { FriendProfileView } from "@frontend/components/friends-forms/friend-profile-view";
 
 import { useProfile } from "@frontend/hooks/use-profile";
-import { useInfiniteFollowers, useFollowUser, useRemoveFollower } from "@frontend/hooks/use-followers"; 
+import { useInfiniteFollowers, useFollowUser, useUnfollowUser } from "@frontend/hooks/use-followers"; 
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function MyFollowersPage() {
@@ -34,7 +34,7 @@ export default function MyFollowersPage() {
   const { ref, inView } = useInView();
   
   const followUserMutation = useFollowUser();
-  const removeFollowerMutation = useRemoveFollower();
+  const unfollowUserMutation = useUnfollowUser();
 
   const filteredFollowers = useMemo(() => {
     if (!searchQuery) return followersList;
@@ -68,7 +68,7 @@ export default function MyFollowersPage() {
 
   const handleRemoveFollower = (id: string) => {
     if(confirm("Сигурни ли сте, че искате да премахнете този последовател? Той вече няма да вижда вашите постове във фийда си.")) {
-        removeFollowerMutation.mutate(id, {
+        unfollowUserMutation.mutate(id, {
             onSuccess: () => {
                 if (selectedProfile?.id === id) setSelectedProfile(null);
                 queryClient.invalidateQueries({ queryKey: ["followers-list"] });
