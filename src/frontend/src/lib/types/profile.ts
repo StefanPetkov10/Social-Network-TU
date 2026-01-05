@@ -1,5 +1,4 @@
-import { Gender } from "./auth"; 
-import { FriendshipStatus } from "./friends"; 
+import { Gender, FriendshipStatus } from "./enums"; 
 
 export interface ProfileDto {
   id: string;
@@ -9,15 +8,17 @@ export interface ProfileDto {
   userName: string;
   authorAvatar?: string; 
   dateOfBirth: string; 
-  sex: string; 
+  sex: Gender; 
   bio?: string;
   
   friendsCount: number;
   followersCount: number;
   followingCount: number;
 
+  isFollowed?: boolean;              
   friendshipStatus?: FriendshipStatus; 
-  isFriendRequestSender?: boolean;
+  isFriendRequestSender?: boolean;   
+  friendshipRequestId?: string;      
 }
 
 export interface UpdateProfileDto {
@@ -28,6 +29,7 @@ export interface UpdateProfileDto {
   bio?: string;
   photoBase64?: string | null;
 }
+
 export interface ChangePasswordDto {
   CurrentPassword: string;
   NewPassword: string;

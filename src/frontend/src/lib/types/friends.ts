@@ -1,10 +1,4 @@
-export enum FriendshipStatus {
-    Pending = 0,
-    Accepted = 1,
-    Declined = 2,
-    Blocked = 3,
-    None = -1 
-}
+import { FriendshipStatus } from "./enums";
 
 export interface FriendRequest {
   pendingRequestId: string; 
@@ -12,7 +6,6 @@ export interface FriendRequest {
   displayFullName: string;
   userName: string;
   authorAvatar: string | null;
-  mutualFriendsCount: number;
 }
 
 export interface FriendSuggestion {
@@ -20,5 +13,14 @@ export interface FriendSuggestion {
   displayFullName: string;
   authorAvatar?: string;
   mutualFriendsCount: number;
+
+  friendshipStatus?: FriendshipStatus; 
+  isFriendRequestSender?: boolean;
 }
 
+export interface FriendDto {
+    profileId: string;
+    displayFullName: string;
+    userName: string;
+    authorAvatar?: string;
+}

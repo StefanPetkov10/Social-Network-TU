@@ -6,12 +6,12 @@ namespace SocialMedia.Services.Interfaces
 {
     public interface IProfileService
     {
-        Task<ApiResponse<ProfileDto>> GetProfileAsync(ClaimsPrincipal user);
-        Task<ApiResponse<ProfileDto>> GetProfileByIdAsync(Guid profileId);
-        Task<ApiResponse<ProfileDto>> GetProfileByUsernameAsync(string username);
+        Task<ApiResponse<ProfileDto>> GetProfileAsync(ClaimsPrincipal userClaims);
+        Task<ApiResponse<ProfileDto>> GetProfileByUsernameAsync(ClaimsPrincipal userClaims, string username);
+        Task<ApiResponse<ProfileDto>> GetProfileByIdAsync(ClaimsPrincipal userClaims, Guid profileId);
 
-        Task<ApiResponse<object>> UpdateProfileAsync(ClaimsPrincipal user, UpdateProfileDto dto);
-        Task<ApiResponse<string>> UpdateBioAsync(ClaimsPrincipal user, string bio);
-        Task<ApiResponse<object>> ChangePasswordAsync(ClaimsPrincipal user, ChangePasswordDto dto);
+        Task<ApiResponse<object>> UpdateProfileAsync(ClaimsPrincipal userClaims, UpdateProfileDto dto);
+        Task<ApiResponse<string>> UpdateBioAsync(ClaimsPrincipal userClaims, string bio);
+        Task<ApiResponse<object>> ChangePasswordAsync(ClaimsPrincipal userClaims, ChangePasswordDto dto);
     }
 }

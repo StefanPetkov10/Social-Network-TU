@@ -35,7 +35,7 @@ export function FollowSuggestionCard({ person, onFollow, onRemove }: FollowSugge
         <div className="relative mb-3">
             <Avatar className="h-24 w-24 border-4 border-white shadow-sm">
             <AvatarImage src={avatarUrl} className="object-cover" />
-            <AvatarFallback className="bg-indigo-100 text-indigo-600 text-xl font-bold">
+            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xl font-bold">
                 {initials}
             </AvatarFallback>
             </Avatar>

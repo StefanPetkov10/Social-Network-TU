@@ -27,7 +27,7 @@ import { useUserPosts } from "@frontend/hooks/use-post";
 import { useIntersection } from "@mantine/hooks";
 
 import { cn, getInitials, getUserDisplayName, getUserUsername } from "@frontend/lib/utils";
-import { FriendshipStatus } from "@frontend/lib/types/friends"; 
+import { FriendshipStatus } from "@frontend/lib/types/enums"; 
 
 interface PageProps {
   params: Promise<{

@@ -7,7 +7,7 @@ import { Textarea } from "@frontend/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@frontend/components/ui/select";
 import { Loader2, Upload, AlertCircle } from "lucide-react"; 
 import { ProfileDto, UpdateProfileDto } from "@frontend/lib/types/profile";
-import { Gender } from "@frontend/lib/types/auth";
+import { Gender } from "@frontend/lib/types/enums";
 import { useEditProfile } from "@frontend/hooks/use-profile";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 
@@ -41,7 +41,7 @@ export function EditProfileDialog({ isOpen, onClose, profile }: EditProfileDialo
                 lastName: profile.lastName || "",
                 userName: profile.userName || "", 
                 bio: profile.bio || "",
-                sex: profile.sex === "Female" ? Gender.Female : Gender.Male, 
+                sex: profile.sex === Gender.Female ? Gender.Female : Gender.Male, 
                 photoBase64: null
             });
             setPreviewImage(profile.authorAvatar || null);

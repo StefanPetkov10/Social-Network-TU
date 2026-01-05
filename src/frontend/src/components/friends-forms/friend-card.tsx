@@ -35,7 +35,7 @@ export function FriendCard({ friend, onViewProfile, onRemove }: FriendCardProps)
     >
       <Avatar className="h-24 w-24 shadow-sm rounded-full mb-4 border-2 border-gray-50">
         <AvatarImage src={friend.avatarUrl || friend.photo || ""} className="object-cover" />
-        <AvatarFallback className="bg-primary text-white text-2xl font-bold">
+        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-2xl font-bold rounded-none">
             {initials}
         </AvatarFallback>
       </Avatar>

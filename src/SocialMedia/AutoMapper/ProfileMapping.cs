@@ -9,7 +9,12 @@ namespace AutoMapper
             CreateMap<SocialMedia.Database.Models.Profile, ProfileDto>()
                 .ForMember(dest => dest.UserName, opt => opt.Ignore())
                 .ForMember(dest => dest.Sex, opt => opt.MapFrom(src => src.Sex.ToString()))
-                .ForMember(dest => dest.AuthorAvatar, opt => opt.MapFrom(src => src.Photo));
+                .ForMember(dest => dest.AuthorAvatar, opt => opt.MapFrom(src => src.Photo))
+
+                .ForMember(dest => dest.IsFollowed, opt => opt.Ignore())
+                .ForMember(dest => dest.FriendshipStatus, opt => opt.Ignore())
+                .ForMember(dest => dest.IsFriendRequestSender, opt => opt.Ignore())
+                .ForMember(dest => dest.FriendshipRequestId, opt => opt.Ignore());
 
             CreateMap<UpdateProfileDto, SocialMedia.Database.Models.Profile>()
                 .ForMember(dest => dest.Photo, opt => opt.MapFrom(src => src.PhotoBase64))

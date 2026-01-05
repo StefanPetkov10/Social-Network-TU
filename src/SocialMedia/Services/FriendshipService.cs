@@ -190,10 +190,10 @@ namespace SocialMedia.Services
             return ApiResponse<bool>.SuccessResponse(true, "Friend removed and mutual following stopped.");
         }
 
+        // Фаза 4 (Бъдеще): Когато интегрирам pgVector и OpenAI/Embeddings, ще заменя (или допълня)
+        // тази стъпка. Вместо да връщам "случайни непознати", ще връщам "непознати със сходни интереси".
         public async Task<ApiResponse<IEnumerable<FriendSuggestionDto>>> GetFriendSuggestionsAsync(ClaimsPrincipal userClaims, int skip = 0, int take = 20)
         {
-            // Фаза 4 (Бъдеще): Когато интегрирам pgVector и OpenAI/Embeddings, ще заменя (или допълня)
-            // тази стъпка. Вместо да връщам "случайни непознати", ще връщам "непознати със сходни интереси".
 
             if (skip >= 100) return ApiResponse<IEnumerable<FriendSuggestionDto>>.SuccessResponse(new List<FriendSuggestionDto>(), "Limit reached.");
             if (skip + take > 100) take = 100 - skip;
@@ -230,7 +230,13 @@ namespace SocialMedia.Services
 
                 allPotentialPool = rawSuggestions
                     .GroupBy(x => x.CandidateId)
-                    .Select(g => new FriendSuggestionDto { ProfileId = g.Key, MutualFriendsCount = g.Count() })
+                    .Select(g => new FriendSuggestionDto
+                    {
+                        ProfileId = g.Key,
+                        MutualFriendsCount = g.Count(),
+                        FriendshipStatus = -1,
+                        IsFriendRequestSender = false
+                    })
                     .OrderByDescending(x => x.MutualFriendsCount)
                     .Take(100)
                     .ToList();
@@ -251,7 +257,9 @@ namespace SocialMedia.Services
                         ProfileId = p.Id,
                         DisplayFullName = p.FullName,
                         AuthorAvatar = p.Photo,
-                        MutualFriendsCount = 0
+                        MutualFriendsCount = 0,
+                        FriendshipStatus = -1,
+                        IsFriendRequestSender = false
                     })
                     .ToListAsync();
 
@@ -271,6 +279,8 @@ namespace SocialMedia.Services
                     {
                         s.DisplayFullName = p.FullName;
                         s.AuthorAvatar = p.Photo;
+                        s.FriendshipStatus = -1;
+                        s.IsFriendRequestSender = false;
                     }
                 }
             }

@@ -13,7 +13,6 @@ import { FollowingCard } from "@frontend/components/followers-forms/following-ca
 import { FriendProfileView } from "@frontend/components/friends-forms/friend-profile-view";
 
 import { useProfile } from "@frontend/hooks/use-profile";
-// Трябва да имаш тези хукове в use-followers.ts
 import { useInfiniteFollowing, useUnfollowUser } from "@frontend/hooks/use-followers"; 
 import { useQueryClient } from "@tanstack/react-query";
 import { FollowUser } from "@frontend/lib/types/followers";
@@ -25,7 +24,6 @@ export default function FollowingPage() {
   const queryClient = useQueryClient();
   const { data: profile } = useProfile();
   
-  // Hook за взимане на хората, които АЗ следвам
   const { 
     data: followingList = [], 
     fetchNextPage, 
@@ -60,14 +58,10 @@ export default function FollowingPage() {
   const handleBackToList = () => setSelectedProfile(null);
 
   const handleUnfollow = (id: string) => {
-      // Тук не питаме пак confirm, защото картата вече има диалог.
-      // Директно викаме мутацията.
       unfollowMutation.mutate(id, {
           onSuccess: () => {
               if (selectedProfile?.profileId === id) setSelectedProfile(null);
-              // Инвалидираме кеша, за да изчезне човекът от списъка
               queryClient.invalidateQueries({ queryKey: ["following-list"] });
-              // Обновяваме и followers листа (ако има връзка) и feed-a
               queryClient.invalidateQueries({ queryKey: ["feed"] });
           }
       });
@@ -93,7 +87,6 @@ export default function FollowingPage() {
                         profileId={selectedProfile.profileId}
                         initialData={selectedProfile}
                         onBack={handleBackToList}
-                        // Щом е в този списък, значи го следваме
                         isFollowing={true} 
                         requestStatus={selectedProfile.isFriend ? "friend" : "none"}
                     />

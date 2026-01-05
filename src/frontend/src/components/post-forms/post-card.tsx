@@ -30,7 +30,8 @@ import {
   CarouselPrevious,
 } from "@frontend/components/ui/carousel";
 import { cn, getInitials, getUserDisplayName } from "@frontend/lib/utils";
-import { PostDto, ReactionType } from "@frontend/lib/types/posts";
+import { PostDto } from "@frontend/lib/types/posts";
+import { ReactionType } from "@frontend/lib/types/enums";
 import { reactionService } from "@frontend/services/reaction-service";
 
 const REACTION_CONFIG = {

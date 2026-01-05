@@ -24,11 +24,11 @@ namespace SocialMedia.Controllers
 
         [HttpGet("{username}")]
         public async Task<IActionResult> GetProfileByUsername([FromRoute] string username) =>
-            Ok(await _profileService.GetProfileByUsernameAsync(username));
+            Ok(await _profileService.GetProfileByUsernameAsync(User, username));
 
         [HttpGet("{profileId:guid}")]
         public async Task<IActionResult> GetProfileById([FromRoute] Guid profileId) =>
-            Ok(await _profileService.GetProfileByIdAsync(profileId));
+            Ok(await _profileService.GetProfileByIdAsync(User, profileId));
 
         [HttpPut("edit-profile")]
         public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateProfileDto dto)
