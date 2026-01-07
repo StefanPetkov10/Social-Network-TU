@@ -1,5 +1,5 @@
 import api from "../lib/axios";
-import { FriendRequest, FriendSuggestion } from "@frontend/lib/types/friends";
+import { FriendDto, FriendRequest, FriendSuggestion } from "@frontend/lib/types/friends";
 import { ApiResponse } from "@frontend/lib/types/api";
 
 export const friendsService = {
@@ -37,7 +37,7 @@ export const friendsService = {
         if (cursor) params.append("lastFriendshipDate", cursor);
         params.append("take", take.toString());
 
-        const { data } = await api.get<ApiResponse<FriendSuggestion[]>>(`/api/Friendship/friends/${profileId}?${params.toString()}`);
+        const { data } = await api.get<ApiResponse<FriendDto[]>>(`/api/Friendship/friends/${profileId}?${params.toString()}`);
         return data;
     },
 

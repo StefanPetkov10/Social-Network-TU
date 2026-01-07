@@ -7,7 +7,6 @@ import { Search, Users, UserX } from "lucide-react";
 import { SiteHeader } from '@frontend/components/site-header';
 import { SidebarProvider } from "@frontend/components/ui/sidebar";
 import { Input } from "@frontend/components/ui/input";
-import { Button } from "@frontend/components/ui/button";
 
 import { FriendCard } from "@frontend/components/friends-forms/friend-card";
 import { FriendsSidebar } from "@frontend/components/friends-forms/friends-sidebar";
@@ -17,15 +16,18 @@ import { useProfile } from "@frontend/hooks/use-profile";
 import { useInfiniteFriends, useRemoveFriend } from "@frontend/hooks/use-friends"; 
 import { useQueryClient } from "@tanstack/react-query";
 
+import { FriendDto } from "@frontend/lib/types/friends";
+import ProtectedRoute from '@frontend/components/protected-route';
+
 export default function AllFriendsPage() {
-  const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<FriendDto | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   
   const queryClient = useQueryClient();
   const { data: profile } = useProfile();
   
   const { 
-    data: friendsList = [], 
+    data: rawFriends,
     fetchNextPage, 
     hasNextPage, 
     isFetchingNextPage,
@@ -35,10 +37,16 @@ export default function AllFriendsPage() {
   const { ref, inView } = useInView();
   const removeFriendMutation = useRemoveFriend();
 
+  const friendsList = useMemo(() => {
+      const list = rawFriends as unknown as FriendDto[]; 
+      return list?.filter((f): f is FriendDto => !!f) || [];
+  }, [rawFriends]);
+
   const filteredFriends = useMemo(() => {
     if (!searchQuery) return friendsList;
-    return friendsList.filter((friend: any) => 
-       (friend.displayFullName || friend.fullName || "").toLowerCase().includes(searchQuery.toLowerCase())
+    return friendsList.filter((friend) => 
+        (friend.displayFullName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (friend.userName || "").toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [friendsList, searchQuery]);
 
@@ -53,7 +61,7 @@ export default function AllFriendsPage() {
     avatar: profile?.authorAvatar || ""
   }), [profile]);
 
-  const handleViewProfile = (friend: any) => {
+  const handleViewProfile = (friend: FriendDto) => {
     setSelectedProfile(friend);
   };
 
@@ -64,14 +72,18 @@ export default function AllFriendsPage() {
   const handleRemoveFriend = (id: string) => {
     removeFriendMutation.mutate(id, {
         onSuccess: () => {
-            if (selectedProfile?.id === id || selectedProfile?.profileId === id) {
+            const currentId = (selectedProfile as any)?.profileId || (selectedProfile as any)?.id;
+            
+            if (currentId === id) {
                 setSelectedProfile(null);
             }
+            queryClient.invalidateQueries({ queryKey: ["friends-list"] });
         }
     });
   };
 
   return (
+    <ProtectedRoute>
      <SidebarProvider>
       <div className="h-screen w-full bg-[#f0f2f5] overflow-hidden flex flex-col text-foreground">
         
@@ -88,11 +100,11 @@ export default function AllFriendsPage() {
             {selectedProfile ? (
                 <div className="animate-in slide-in-from-right-4 duration-300">
                       <FriendProfileView 
-                        profileId={selectedProfile.profileId || selectedProfile.id}
+                        profileId={(selectedProfile as FriendDto).profileId || (selectedProfile as any).id}
                         initialData={selectedProfile}
                         onBack={handleBackToList}
                         requestStatus="friend" 
-                        isFollowing={true}
+                        isFollowing={true} 
                     />
                 </div>
             ) : (
@@ -143,9 +155,9 @@ export default function AllFriendsPage() {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                            {filteredFriends.map((friend: any) => (
+                            {filteredFriends.map((friend) => (
                                 <FriendCard 
-                                    key={friend.profileId || friend.id || Math.random()} 
+                                    key={friend?.profileId} 
                                     friend={friend} 
                                     onViewProfile={handleViewProfile}
                                     onRemove={handleRemoveFriend}
@@ -165,5 +177,6 @@ export default function AllFriendsPage() {
         </div>
       </div>
      </SidebarProvider>
+    </ProtectedRoute>
   );
 }

@@ -27,8 +27,13 @@ import { useProfile } from "@frontend/hooks/use-profile";
 import { useQueryClient } from "@tanstack/react-query";
 import ProtectedRoute from '@frontend/components/protected-route';
 
+import { FriendRequest, FriendSuggestion } from "@frontend/lib/types/friends";
+import { ProfilePreviewData } from "@frontend/lib/types/profile-view";
+
+type SelectedProfileState = ProfilePreviewData & { _viewType?: 'request' | 'suggestion' };
+
 export default function FriendsPage() {
-  const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<SelectedProfileState | null>(null);
 
   const queryClient = useQueryClient();
   const { data: profile } = useProfile();
@@ -36,17 +41,27 @@ export default function FriendsPage() {
   const { ref: suggestionsRef, inView: suggestionsInView } = useInView();
 
   const { 
-      data: requests = [], 
+      data: rawRequests = [], 
       isLoading: isLoadingRequests 
   } = useInfiniteFriendRequests();
   
   const { 
-    data: suggestions, 
+    data: rawSuggestions = [], 
     fetchNextPage: fetchNextSuggestions, 
     hasNextPage: hasNextSuggestions, 
     isFetchingNextPage: isFetchingNextSuggestions 
   } = useInfiniteSuggestions();
   
+  const requests = useMemo(() => {
+      const list = rawRequests as unknown as FriendRequest[];
+      return list?.filter((r): r is FriendRequest => !!r) || [];
+  }, [rawRequests]);
+
+  const suggestions = useMemo(() => {
+      const list = rawSuggestions as unknown as FriendSuggestion[];
+      return list?.filter((s): s is FriendSuggestion => !!s) || [];
+  }, [rawSuggestions]);
+
   const sendFriendRequestMutation = useSendFriendRequest();
   const acceptFriendRequestMutation = useAcceptFriendRequest();
   const declineFriendRequestMutation = useDeclineFriendRequest();
@@ -57,7 +72,7 @@ export default function FriendsPage() {
         
         let found = false;
         for (const page of oldData.pages) {
-            if (page.data.some((p: any) => p.profileId === profileId)) {
+            if (page.data.some((p: FriendSuggestion) => p.profileId === profileId)) {
                 found = true;
                 break;
             }
@@ -68,7 +83,7 @@ export default function FriendsPage() {
           ...oldData,
           pages: oldData.pages.map((page: any) => ({
             ...page,
-            data: page.data.filter((person: any) => person.profileId !== profileId),
+            data: page.data.filter((person: FriendSuggestion) => person.profileId !== profileId),
           })),
         };
       });
@@ -77,9 +92,8 @@ export default function FriendsPage() {
   
   useEffect(() => {
     if (requests && requests.length > 0) {
-        requests.filter((req) => req !== undefined).forEach((req) => {
+        requests.forEach((req) => {
             const senderId = req.profileId; 
-            
             if (senderId) {
                 removePersonFromSuggestions(senderId);
             }
@@ -98,7 +112,7 @@ export default function FriendsPage() {
     avatar: profile?.authorAvatar || ""
   }), [profile]);
 
-  const handleViewProfile = (person: any, type: 'request' | 'suggestion', e: React.MouseEvent) => {
+  const handleViewProfile = (person: ProfilePreviewData, type: 'request' | 'suggestion', e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     if (target.closest('button')) return;
     setSelectedProfile({ ...person, _viewType: type });
@@ -120,7 +134,7 @@ export default function FriendsPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["friend-requests-infinite"] });
             queryClient.invalidateQueries({ queryKey: ["friends-list"] });
-            if (selectedProfile?.pendingRequestId === id) setSelectedProfile(null);
+            if ((selectedProfile as any)?.pendingRequestId === id) setSelectedProfile(null);
         }
     });
   }
@@ -129,7 +143,7 @@ export default function FriendsPage() {
     declineFriendRequestMutation.mutate(id, {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["friend-requests-infinite"] });
-            if (selectedProfile?.pendingRequestId === id) setSelectedProfile(null);
+            if ((selectedProfile as any)?.pendingRequestId === id) setSelectedProfile(null);
         }
     });
   }
@@ -171,7 +185,7 @@ export default function FriendsPage() {
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {requests.filter((req) => req !== undefined).map((req) => (
+            {requests.map((req) => (
                 <div 
                     key={req.pendingRequestId} 
                     onClick={(e) => handleViewProfile(req, 'request', e)}
@@ -190,7 +204,7 @@ export default function FriendsPage() {
 
   const renderSuggestionsSection = () => (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {suggestions?.filter((person) => person !== undefined).map((person) => (
+        {suggestions.map((person) => (
             <div 
                 key={person.profileId || `sug-${Math.random()}`}
                 onClick={(e) => handleViewProfile(person, 'suggestion', e)}
@@ -211,7 +225,7 @@ export default function FriendsPage() {
   );
 
   return (
- 
+     <ProtectedRoute>
      <SidebarProvider>
 
       <div className="h-screen w-full bg-[#f0f2f5] overflow-hidden flex flex-col text-foreground">
@@ -228,11 +242,12 @@ export default function FriendsPage() {
             
             {selectedProfile ? (
                 <div className="animate-in slide-in-from-right-4 duration-300">
-                      <FriendProfileView 
-                        profileId={selectedProfile.profileId || selectedProfile.id}
+                      <FriendProfileView          
+                        profileId={(selectedProfile as any).profileId || (selectedProfile as any).id}
                         initialData={selectedProfile}
                         onBack={handleBackToList}
-                        requestId={selectedProfile.pendingRequestId}
+                        requestStatus={selectedProfile._viewType === 'request' ? 'pending_received' : 'none'}
+                        requestId={(selectedProfile as any).pendingRequestId}
                     />
                 </div>
             ) : (
@@ -281,5 +296,6 @@ export default function FriendsPage() {
         </div>
       </div>
      </SidebarProvider>
+    </ProtectedRoute>
   );
 }

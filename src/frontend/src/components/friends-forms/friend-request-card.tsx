@@ -2,21 +2,24 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { getInitials } from "@frontend/lib/utils";
+import { FriendRequest } from "@frontend/lib/types/friends"; 
 
 interface FriendRequestCardProps {
-  request: any; 
+  request: FriendRequest; 
   onConfirm: (id: string) => void;
   onDelete: (id: string) => void;
 }
 
 export function FriendRequestCard({ request, onConfirm, onDelete }: FriendRequestCardProps) {
-  const initials = getInitials(request.displayFullName);
+  const displayName = request.displayFullName || "Unknown";
+  const initials = getInitials(displayName);
+  const avatarUrl = request.authorAvatar;
   
- return (
+  return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200 flex flex-col h-full">
       <div className="h-48 w-full relative bg-gray-50 cursor-pointer group">
         <Avatar className="h-full w-full rounded-none">
-          <AvatarImage src={request.avatarUrl || ""} className="object-cover group-hover:opacity-95 transition" />
+          <AvatarImage src={avatarUrl || ""} className="object-cover group-hover:opacity-95 transition" />
           <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-3xl font-bold rounded-none">
             {initials}
           </AvatarFallback>
@@ -25,7 +28,7 @@ export function FriendRequestCard({ request, onConfirm, onDelete }: FriendReques
       
       <div className="p-3 flex flex-col flex-1">
         <h3 className="font-semibold text-gray-900 truncate cursor-pointer hover:underline hover:text-primary transition">
-          {request.displayFullName}
+          {displayName}
         </h3>
         
         <p className="text-sm text-gray-500 mb-3">

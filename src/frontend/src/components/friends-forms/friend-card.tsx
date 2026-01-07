@@ -15,18 +15,19 @@ import {
   AlertDialogTrigger,
 } from "@frontend/components/ui/alert-dialog";
 import { getInitials, getUserDisplayName, getUserUsername } from "@frontend/lib/utils";
+import { FriendDto } from "@frontend/lib/types/friends";
 
 interface FriendCardProps {
-  friend: any;
-  onViewProfile: (friend: any) => void;
+  friend: FriendDto;
+  onViewProfile: (friend: FriendDto) => void;
   onRemove: (id: string) => void;
 }
 
 export function FriendCard({ friend, onViewProfile, onRemove }: FriendCardProps) {
-  const initials = getInitials(friend.displayFullName || friend.fullName);
+  const initials = getInitials(friend.displayFullName);
   const displayName = getUserDisplayName(friend);
   const username = getUserUsername(friend);
-  const profileId = friend.profileId || friend.id;
+  const profileId = friend.profileId;
 
   return (
     <div 
@@ -34,7 +35,7 @@ export function FriendCard({ friend, onViewProfile, onRemove }: FriendCardProps)
         className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col items-center text-center h-full cursor-pointer group hover:shadow-md transition-all hover:-translate-y-1"
     >
       <Avatar className="h-24 w-24 shadow-sm rounded-full mb-4 border-2 border-gray-50">
-        <AvatarImage src={friend.avatarUrl || friend.photo || ""} className="object-cover" />
+        <AvatarImage src={friend.authorAvatar || ""} className="object-cover" />
         <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-2xl font-bold rounded-none">
             {initials}
         </AvatarFallback>

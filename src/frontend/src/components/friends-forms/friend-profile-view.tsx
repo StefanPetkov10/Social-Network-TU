@@ -27,12 +27,13 @@ import { friendsService } from "@frontend/services/friends-service";
 import { followersService } from "@frontend/services/followers-servise";
 import { toast } from "sonner";
 import { FriendshipStatus } from "@frontend/lib/types/enums";
+import { ProfilePreviewData } from "@frontend/lib/types/profile-view";
 
 type RequestStatusUI = "pending_received" | "pending_sent" | "friend" | "none";
 
 interface FriendProfileViewProps {
     profileId: string;
-    initialData?: any; 
+    initialData?: ProfilePreviewData; 
     onBack: () => void;
     
     requestStatus?: RequestStatusUI;
@@ -129,13 +130,14 @@ export function FriendProfileView({
     });
 
     const { mutate: acceptRequest, isPending: isAcceptPending } = useMutation({
-        mutationFn: () => {
-            const idToUse = activeRequestId || profileId; 
-            return friendsService.acceptFriendRequest(idToUse);
-        },
+    mutationFn: () => {
+        if (!activeRequestId) throw new Error("Липсва ID на заявката!"); // По-добре грешка тук, отколкото грешна заявка
+        return friendsService.acceptFriendRequest(activeRequestId);
+    },
+    // ...
         onMutate: () => {
             setUiStatus("friend");
-            setUiFollowing(true); //
+            setUiFollowing(true); 
         },
         onSuccess: () => {
             toast.success("Вече сте приятели!");
@@ -204,10 +206,13 @@ export function FriendProfileView({
     const displayFollowersCount = profile.followersCount ?? followersCount ?? 0;
     const displayFollowingCount = profile.followingCount ?? followingCount ?? 0;
 
-    const displayName = getUserDisplayName(profile);
+    const displayName = 
+    (profile as any).fullName || 
+    (profile as any).displayFullName || 
+    getUserDisplayName(profile) || "Потребител";
     const initials = getInitials(displayName);
     const userName = getUserUsername(profile);
-    const profileImage = profile.authorAvatar || profile.avatarUrl || profile.photo || null;
+    const profileImage = profile.authorAvatar || undefined;
     const bio = profile.bio || "";
 
     const { data: postsData, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading: postsLoading } = useUserPosts(profileId);
@@ -257,10 +262,13 @@ export function FriendProfileView({
                                 
                                 {uiStatus === 'pending_received' && (
                                     <>
-                                       <Button className="w-full bg-primary hover:bg-primary/90 shadow-sm" onClick={() => acceptRequest()} disabled={isAcceptPending}>
-                                          {isAcceptPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Потвърди"}
+                                      <Button className="w-full bg-primary hover:bg-primary/90 shadow-sm"
+                                            onClick={() => acceptRequest()}
+                                            disabled={isAcceptPending || !activeRequestId} >
+                                            {isAcceptPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Потвърди"}
                                        </Button>
-                                       <Button variant="secondary" className="w-full bg-muted hover:bg-muted/80" onClick={() => declineRequest()} disabled={isDeclinePending}>
+                                      <Button variant="secondary" className="w-full bg-muted hover:bg-muted/80" onClick={() => declineRequest()} 
+                                            disabled={isDeclinePending}>
                                           {isDeclinePending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Изтрий"}
                                        </Button>
                                     </>

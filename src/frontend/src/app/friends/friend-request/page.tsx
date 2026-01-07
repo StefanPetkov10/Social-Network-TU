@@ -19,20 +19,27 @@ import {
 import { useProfile } from "@frontend/hooks/use-profile";
 import ProtectedRoute from '@frontend/components/protected-route';
 
+import { FriendRequest } from "@frontend/lib/types/friends";
+import { ProfilePreviewData } from "@frontend/lib/types/profile-view";
+
 export default function FriendRequestsPage() {
-  const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<ProfilePreviewData | null>(null);
 
   const { ref, inView } = useInView();
-
   const { data: profile } = useProfile();
   
   const { 
-    data: requests = [], 
+    data: rawRequests = [], 
     isLoading: isLoadingRequests,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage
   } = useInfiniteFriendRequests();
+
+  const requests = useMemo(() => {
+      const list = rawRequests as unknown as FriendRequest[];
+      return list?.filter((r): r is FriendRequest => !!r) || [];
+  }, [rawRequests]);
 
   const acceptRequest = useAcceptFriendRequest();
   const declineRequest = useDeclineFriendRequest();
@@ -44,11 +51,11 @@ export default function FriendRequestsPage() {
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage, selectedProfile]);
 
   const userForLayout = useMemo(() => ({
-    name: profile ? `${profile.firstName} ${profile.lastName || ""}` : "Потребител",
+    name: profile ? `${profile.fullName || ""}` : "Потребител",
     avatar: profile?.authorAvatar || ""
   }), [profile]);
 
-  const handleViewProfile = (req: any) => {
+  const handleViewProfile = (req: FriendRequest) => {
     setSelectedProfile(req);
   };
 
@@ -62,16 +69,16 @@ export default function FriendRequestsPage() {
     }
   };
 
-  const handleConfirm = (id: string, e?: React.MouseEvent) => {
-    e?.stopPropagation();
+  const handleConfirm = (id: string) => {
     acceptRequest.mutate(id);
-    if (selectedProfile?.pendingRequestId === id) setSelectedProfile(null);
+    const currentId = (selectedProfile as any)?.pendingRequestId;
+    if (currentId === id) setSelectedProfile(null);
   };
 
-  const handleDelete = (id: string, e?: React.MouseEvent) => {
-    e?.stopPropagation();
+  const handleDelete = (id: string) => {
     declineRequest.mutate(id);
-    if (selectedProfile?.pendingRequestId === id) setSelectedProfile(null);
+    const currentId = (selectedProfile as any)?.pendingRequestId;
+    if (currentId === id) setSelectedProfile(null);
   };
 
   const NotificationBadge = ({ count }: { count: number }) => {
@@ -113,7 +120,7 @@ export default function FriendRequestsPage() {
     return (
         <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-4">
-                {requests.filter((req) => req !== undefined).map((req) => (
+                {requests.map((req) => (
                     <div 
                         key={req.pendingRequestId} 
                         onClick={() => handleViewProfile(req)} 
@@ -121,8 +128,8 @@ export default function FriendRequestsPage() {
                     >
                         <FriendRequestCard 
                             request={req} 
-                            onConfirm={(pendingRequestId) => handleConfirm(pendingRequestId)} 
-                            onDelete={(pendingRequestId) => handleDelete(pendingRequestId)} 
+                            onConfirm={handleConfirm} 
+                            onDelete={handleDelete} 
                         />
                     </div>
                 ))}
@@ -153,10 +160,11 @@ export default function FriendRequestsPage() {
             {selectedProfile ? (
                 <div className="animate-in slide-in-from-right-4 duration-300 ease-out">
                     <FriendProfileView 
-                        profileId={selectedProfile.profileId}
+                        profileId={(selectedProfile as FriendRequest).profileId || (selectedProfile as any).id}
                         initialData={selectedProfile}
                         onBack={handleBackToList}
-                        requestId={selectedProfile.pendingRequestId}
+                        requestStatus="pending_received"
+                        requestId={(selectedProfile as FriendRequest).pendingRequestId}
                     />
                 </div>
             ) : (
@@ -188,7 +196,7 @@ export default function FriendRequestsPage() {
           </div>
         </div>
       </div>
-     </SidebarProvider>
+      </SidebarProvider>
     </ProtectedRoute>
   );
 }

@@ -18,11 +18,12 @@ import {
 
 import { useProfile } from "@frontend/hooks/use-profile";
 import { useQueryClient } from "@tanstack/react-query";
-import { getInitials } from '@frontend/lib/utils';
 import ProtectedRoute from '@frontend/components/protected-route';
 
+import { FriendSuggestion } from "@frontend/lib/types/friends";
+
 export default function FriendSuggestionsPage() {
-  const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<FriendSuggestion | null>(null);
 
   const queryClient = useQueryClient();
   const { data: profile } = useProfile();
@@ -64,8 +65,8 @@ export default function FriendSuggestionsPage() {
     avatar: profile?.authorAvatar || ""
   }), [profile]);
 
-  const handleViewProfile = (person: any) => {
-    setSelectedProfile({ ...person, _viewType: 'suggestion' });
+  const handleViewProfile = (person: FriendSuggestion) => {
+    setSelectedProfile(person);
   };
 
   const handleBackToList = () => {
@@ -121,7 +122,7 @@ export default function FriendSuggestionsPage() {
 
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-4">
-        {suggestions.filter(Boolean).map((person: any) => (
+        {suggestions.filter((p): p is FriendSuggestion => p !== undefined).map((person: FriendSuggestion) => (
           <div
             key={person.profileId}
             onClick={() => handleViewProfile(person)}
