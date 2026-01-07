@@ -21,8 +21,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import ProtectedRoute from '@frontend/components/protected-route';
 import { getUserDisplayName } from "@frontend/lib/utils";
 
+import { FollowSuggestion } from "@frontend/lib/types/followers";
+import { ProfilePreviewData } from "@frontend/lib/types/profile-view";
+
 export default function FollowSuggestionsPage() {
-  const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<ProfilePreviewData | null>(null);
 
   const queryClient = useQueryClient();
   const { data: profile } = useProfile();
@@ -30,7 +33,7 @@ export default function FollowSuggestionsPage() {
   const { ref, inView } = useInView();
 
   const { 
-    data: suggestions, 
+    data: rawSuggestions = [], 
     fetchNextPage, 
     hasNextPage, 
     isFetchingNextPage,
@@ -40,11 +43,12 @@ export default function FollowSuggestionsPage() {
   const followUserMutation = useFollowUser();
 
   const uniqueSuggestions = useMemo(() => {
-    if (!suggestions) return [];
-    
+    const list = rawSuggestions as unknown as FollowSuggestion[];
+    const validList = list?.filter((s): s is FollowSuggestion => !!s) || [];
+
     const seen = new Set<string>();
-    return suggestions.filter((person: any) => {
-      const id = person.profileId || person.id;
+    return validList.filter((person) => {
+      const id = person.profileId;
       if (!id) return false;
       
       if (seen.has(id)) {
@@ -53,7 +57,7 @@ export default function FollowSuggestionsPage() {
       seen.add(id);
       return true;
     });
-  }, [suggestions]);
+  }, [rawSuggestions]);
 
   const removePersonFromSuggestions = (profileId: string) => {
     queryClient.setQueryData(["follower-suggestions"], (oldData: any) => {
@@ -63,8 +67,8 @@ export default function FollowSuggestionsPage() {
         ...oldData,
         pages: oldData.pages.map((page: any) => ({
           ...page,
-          data: page.data.filter((p: any) => {
-              const pId = p.profileId || p.id;
+          data: page.data.filter((p: FollowSuggestion) => {
+              const pId = p.profileId;
               return pId !== profileId;
           }),
         })),
@@ -83,12 +87,8 @@ export default function FollowSuggestionsPage() {
     avatar: profile?.authorAvatar || ""
   }), [profile]);
 
-  const handleViewProfile = (person: any) => {
-    const normalizedProfile = {
-        ...person,
-        profileId: person.profileId || person.id
-    };
-    setSelectedProfile({ ...normalizedProfile, _viewType: 'follow_suggestion' });
+  const handleViewProfile = (person: FollowSuggestion) => {
+    setSelectedProfile(person);
   };
 
   const handleBackToList = () => {
@@ -146,8 +146,8 @@ export default function FollowSuggestionsPage() {
 
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-4">
-        {uniqueSuggestions.map((person: any) => {
-          const id = person.profileId || person.id;
+        {uniqueSuggestions.map((person) => {
+          const id = person.profileId;
           return (
             <div
               key={id}
@@ -188,7 +188,7 @@ export default function FollowSuggestionsPage() {
           <div className="flex-1 h-full overflow-y-auto p-4 md:p-8 scroll-smooth">
             {selectedProfile ? (
               <FriendProfileView
-                profileId={selectedProfile.profileId}
+                profileId={(selectedProfile as FollowSuggestion).profileId || (selectedProfile as any).id}
                 initialData={selectedProfile}
                 onBack={handleBackToList}
                 isFollowing={false} 

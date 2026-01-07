@@ -15,6 +15,7 @@ import { FriendProfileView } from "@frontend/components/friends-forms/friend-pro
 import { useProfile } from "@frontend/hooks/use-profile";
 import { useInfiniteFollowing, useUnfollowUser } from "@frontend/hooks/use-followers"; 
 import { useQueryClient } from "@tanstack/react-query";
+import ProtectedRoute from '@frontend/components/protected-route';
 import { FollowUser } from "@frontend/lib/types/followers";
 
 export default function FollowingPage() {
@@ -25,7 +26,7 @@ export default function FollowingPage() {
   const { data: profile } = useProfile();
   
   const { 
-    data: followingList = [], 
+    data: rawFollowing = [], 
     fetchNextPage, 
     hasNextPage, 
     isFetchingNextPage,
@@ -36,10 +37,16 @@ export default function FollowingPage() {
   
   const unfollowMutation = useUnfollowUser();
 
+  const followingList = useMemo(() => {
+    const list = rawFollowing as unknown as FollowUser[];
+    return list?.filter((f): f is FollowUser => !!f) || [];
+  }, [rawFollowing]);
+
   const filteredFollowing = useMemo(() => {
-    if (!searchQuery) return followingList.filter((person): person is FollowUser => person !== undefined);
-    return followingList.filter((person): person is FollowUser => 
-      person !== undefined && (person.displayFullName || "").toLowerCase().includes(searchQuery.toLowerCase())
+    if (!searchQuery) return followingList;
+    return followingList.filter((person) => 
+      (person.displayFullName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (person.userName || "").toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [followingList, searchQuery]);
 
@@ -68,6 +75,7 @@ export default function FollowingPage() {
   };
 
   return (
+    <ProtectedRoute>
      <SidebarProvider>
       <div className="h-screen w-full bg-[#f0f2f5] overflow-hidden flex flex-col text-foreground">
         
@@ -161,5 +169,6 @@ export default function FollowingPage() {
         </div>
       </div>
      </SidebarProvider>
+    </ProtectedRoute>
   );
 }

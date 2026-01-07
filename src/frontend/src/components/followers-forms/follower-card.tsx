@@ -9,12 +9,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@frontend/components/ui/dropdown-menu";
-import { getInitials, getUserDisplayName, getUserUsername } from "@frontend/lib/utils";
+import { getInitials } from "@frontend/lib/utils";
+import { FollowUser } from "@frontend/lib/types/followers";
 
 interface FollowerCardProps {
-  follower: any;
+  follower: FollowUser;
   isFollowingBack: boolean; 
-  onViewProfile: (follower: any) => void;
+  onViewProfile: (follower: FollowUser) => void;
   onFollowBack: (id: string) => void;
   onRemove: (id: string) => void; 
 }
@@ -26,10 +27,11 @@ export function FollowerCard({
   onFollowBack, 
   onRemove 
 }: FollowerCardProps) {
-  const initials = getInitials(follower.displayFullName || follower.fullName);
-  const displayName = getUserDisplayName(follower);
-  const username = getUserUsername(follower);
-  const profileId = follower.profileId || follower.id;
+  const displayName = follower.displayFullName || "Unknown";
+  const initials = getInitials(displayName);
+  const username = follower.userName;
+  const profileId = follower.profileId;
+  const avatarUrl = follower.authorAvatar;
 
   return (
     <div 
@@ -55,7 +57,7 @@ export function FollowerCard({
       </div>
 
       <Avatar className="h-20 w-20 shadow-sm rounded-full mb-3 border-2 border-gray-50 mt-2">
-        <AvatarImage src={follower.avatarUrl || follower.photo || ""} className="object-cover" />
+        <AvatarImage src={avatarUrl || ""} className="object-cover" />
         <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xl font-bold">
             {initials}
         </AvatarFallback>
@@ -67,7 +69,7 @@ export function FollowerCard({
                 {displayName}
             </h3>
             {username && (
-                <p className="text-xs text-gray-500 truncate">{username}</p>
+                <p className="text-xs text-gray-500 truncate">@{username}</p>
             )}
         </div>
 

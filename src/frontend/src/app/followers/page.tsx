@@ -15,16 +15,20 @@ import { FriendProfileView } from "@frontend/components/friends-forms/friend-pro
 import { useProfile } from "@frontend/hooks/use-profile";
 import { useInfiniteFollowers, useFollowUser, useUnfollowUser } from "@frontend/hooks/use-followers"; 
 import { useQueryClient } from "@tanstack/react-query";
+import ProtectedRoute from '@frontend/components/protected-route';
+
+import { FollowUser } from "@frontend/lib/types/followers";
+import { ProfilePreviewData } from "@frontend/lib/types/profile-view";
 
 export default function MyFollowersPage() {
-  const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<ProfilePreviewData | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   
   const queryClient = useQueryClient();
   const { data: profile } = useProfile();
   
   const { 
-    data: followersList = [], 
+    data: rawFollowers = [], 
     fetchNextPage, 
     hasNextPage, 
     isFetchingNextPage,
@@ -36,10 +40,16 @@ export default function MyFollowersPage() {
   const followUserMutation = useFollowUser();
   const unfollowUserMutation = useUnfollowUser();
 
+  const followersList = useMemo(() => {
+      const list = rawFollowers as unknown as FollowUser[];
+      return list?.filter((f): f is FollowUser => !!f) || [];
+  }, [rawFollowers]);
+
   const filteredFollowers = useMemo(() => {
     if (!searchQuery) return followersList;
-    return followersList.filter((follower: any) => 
-       (follower.displayFullName || follower.fullName || "").toLowerCase().includes(searchQuery.toLowerCase())
+    return followersList.filter((follower) => 
+       (follower.displayFullName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+       (follower.userName || "").toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [followersList, searchQuery]);
 
@@ -54,7 +64,7 @@ export default function MyFollowersPage() {
     avatar: profile?.authorAvatar || ""
   }), [profile]);
 
-  const handleViewProfile = (follower: any) => setSelectedProfile(follower);
+  const handleViewProfile = (follower: FollowUser) => setSelectedProfile(follower);
   const handleBackToList = () => setSelectedProfile(null);
 
   const handleFollowBack = (id: string) => {
@@ -70,7 +80,8 @@ export default function MyFollowersPage() {
     if(confirm("Сигурни ли сте, че искате да премахнете този последовател? Той вече няма да вижда вашите постове във фийда си.")) {
         unfollowUserMutation.mutate(id, {
             onSuccess: () => {
-                if (selectedProfile?.id === id) setSelectedProfile(null);
+                const currentId = (selectedProfile as any)?.profileId || (selectedProfile as any)?.id;
+                if (currentId === id) setSelectedProfile(null);
                 queryClient.invalidateQueries({ queryKey: ["followers-list"] });
             }
         });
@@ -78,6 +89,7 @@ export default function MyFollowersPage() {
   };
 
   return (
+    <ProtectedRoute>
      <SidebarProvider>
       <div className="h-screen w-full bg-[#f0f2f5] overflow-hidden flex flex-col text-foreground">
         
@@ -94,11 +106,11 @@ export default function MyFollowersPage() {
             {selectedProfile ? (
                 <div className="animate-in slide-in-from-right-4 duration-300">
                       <FriendProfileView 
-                        profileId={selectedProfile.profileId || selectedProfile.id}
+                        profileId={(selectedProfile as FollowUser).profileId || (selectedProfile as any).id}
                         initialData={selectedProfile}
                         onBack={handleBackToList}
-                        isFollowing={selectedProfile.isFollowingBack} 
-                        requestStatus={selectedProfile.isFriend ? "friend" : "none"}
+                        isFollowing={(selectedProfile as FollowUser).isFollowing} 
+                        requestStatus={(selectedProfile as FollowUser).isFriend ? "friend" : "none"}
                     />
                 </div>
             ) : (
@@ -149,11 +161,11 @@ export default function MyFollowersPage() {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                            {filteredFollowers.map((follower: any) => (
+                            {filteredFollowers.map((follower) => (
                                 <FollowerCard 
-                                    key={follower.profileId || follower.id || Math.random()} 
+                                    key={follower.profileId} 
                                     follower={follower}
-                                    isFollowingBack={follower.isFollowing || false} 
+                                    isFollowingBack={follower.isFollowing} 
                                     onViewProfile={handleViewProfile}
                                     onFollowBack={handleFollowBack}
                                     onRemove={handleRemoveFollower}
@@ -173,5 +185,6 @@ export default function MyFollowersPage() {
         </div>
       </div>
      </SidebarProvider>
+    </ProtectedRoute>
   );
 }
