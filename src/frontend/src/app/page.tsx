@@ -10,6 +10,8 @@ import { useProfile } from "@frontend/hooks/use-profile";
 import { useFeedPosts } from "@frontend/hooks/use-post";
 import { useIntersection } from "@mantine/hooks";
 import { Loader2 } from "lucide-react";
+// Добавяме тези помощни функции, за да е еднакво с профила
+import { getUserDisplayName } from "@frontend/lib/utils";
 
 import { LoadingScreen } from "@frontend/components/common/loading-screen";
 import { ErrorScreen } from "@frontend/components/common/error-screen";
@@ -60,7 +62,8 @@ export default function Home() {
     return <ErrorScreen message={(error as any)?.message} />;
   }
 
-  const displayName = profile.fullName || profile.firstName;
+  // ПОПРАВКА: Използваме унифицираната функция за името
+  const displayName = getUserDisplayName(profile);
   
   const userForLayout = {
     name: displayName,
@@ -78,17 +81,18 @@ export default function Home() {
       <MainLayout user={userForLayout}>
           <div className="min-h-screen bg-gray-100">
               
-                  <div className="max-w-7xl ml-18 mx-auto flex justify-center gap-8 pt-6 px-4 pb-10">
+                  {/* ПОПРАВКА: Променено от ml-18 на ml-36 (или подходящото за твоя sidebar) */}
+                  <div className="max-w-7xl ml-36 mx-auto flex justify-center gap-8 pt-6 px-4 pb-10">
 
                   <main className="w-full max-w-2xl flex flex-col gap-5">
 
-                     <CreatePost user={userDataForPost} />
+                      <CreatePost user={userDataForPost} />
 
-                     {isPostsLoading ? (
+                      {isPostsLoading ? (
                         <div className="flex justify-center p-8">
                             <Loader2 className="animate-spin text-primary h-8 w-8" />
                         </div>
-                     ) : (
+                      ) : (
                         postsData?.pages.map((page, i) => (
                             <div key={i} className="space-y-5">
                                 {page.data && page.data.length === 0 && i === 0 ? (
@@ -102,20 +106,20 @@ export default function Home() {
                                 )}
                             </div>
                         ))
-                     )}
+                      )}
 
-                     {isFetchingNextPage && (
+                      {isFetchingNextPage && (
                         <div className="flex justify-center p-4">
                             <Loader2 className="animate-spin text-muted-foreground" />
                         </div>
-                     )}
+                      )}
 
-                     <div ref={ref} className="h-4" />
+                      <div ref={ref} className="h-4" />
                   </main>
 
                   <aside className="hidden xl:block w-80 h-fit sticky top-24">
-                     
-                     <div className="bg-white rounded-xl border shadow-sm p-5 overflow-hidden">
+                      
+                      <div className="bg-white rounded-xl border shadow-sm p-5 overflow-hidden">
                           <h3 className="font-semibold mb-3 text-sm text-foreground">Спонсорирано</h3>
                           
            
@@ -131,11 +135,11 @@ export default function Home() {
                           <p className="text-xs text-muted-foreground mt-4 pt-4 border-t">
                               Рекламно съдържание, базирано на вашите интереси.
                           </p>
-                     </div>
+                      </div>
 
-                     <div className="mt-4 text-xs text-muted-foreground px-2 text-center">
+                      <div className="mt-4 text-xs text-muted-foreground px-2 text-center">
                         © 2024 TU Social Inc.
-                     </div>
+                      </div>
                   </aside>
 
               </div>

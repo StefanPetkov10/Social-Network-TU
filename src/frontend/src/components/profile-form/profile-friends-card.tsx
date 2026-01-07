@@ -5,19 +5,19 @@ import { friendsService } from "@frontend/services/friends-service";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { Skeleton } from "@frontend/components/ui/skeleton";
 import { Users } from "lucide-react";
-import { getInitials, getUserUsername, getUserDisplayName } from "@frontend/lib/utils";
+import { getInitials, getUserDisplayName } from "@frontend/lib/utils";
 import Link from "next/link"; 
 
 interface ProfileFriendsCardProps {
   profileId: string;
+  currentUsername?: string; 
 }
 
-export function ProfileFriendsCard({ profileId }: ProfileFriendsCardProps) {
-  // Използваме profileId като част от queryKey, за да се кешира отделно за всеки потребител
+export function ProfileFriendsCard({ profileId, currentUsername }: ProfileFriendsCardProps) {
   const { data: response, isLoading } = useQuery({
     queryKey: ["profile-friends-widget", profileId],
     queryFn: () => friendsService.getFriendsList(profileId, null, 9), 
-    enabled: !!profileId, // Заявката се прави само ако имаме валидно ID
+    enabled: !!profileId,
   });
 
   const friends = response?.data || [];
@@ -25,6 +25,11 @@ export function ProfileFriendsCard({ profileId }: ProfileFriendsCardProps) {
   if (isLoading) {
     return <FriendsSkeleton />;
   }
+
+  
+  const seeAllLink = currentUsername 
+    ? `/${currentUsername}/friends` 
+    : `/friends`; 
 
   return (
     <div className="bg-background rounded-xl border p-4 shadow-sm h-fit">
@@ -35,11 +40,12 @@ export function ProfileFriendsCard({ profileId }: ProfileFriendsCardProps) {
              <span className="text-xs text-muted-foreground">{friends.length} (показани)</span>
            )}
         </div>
-        {friends.length > 0 && (
-            <Link href={`/profile/${profileId}/friends`} className="text-primary text-sm font-semibold hover:underline">
+        {/* {friends.length > 0 && (
+            <Link href={seeAllLink} className="text-primary text-sm font-semibold hover:underline">
                 Виж всички
             </Link>
-        )}
+        )} 
+        */}
       </div>
 
       {friends.length === 0 ? (
@@ -53,11 +59,13 @@ export function ProfileFriendsCard({ profileId }: ProfileFriendsCardProps) {
                 const name = getUserDisplayName(friend);
                 const initials = getInitials(name);
                 const authorAvatar = friend.authorAvatar || friend.avatarUrl || friend.photo || "";
+                
+                const profileLink = `/${friend.userName}`;
 
                 return (
                     <Link 
-                        key={friend.userName} 
-                        href={`/profile/${friend.userName}`} 
+                        key={friend.profileId || friend.userName} 
+                        href={profileLink} 
                         className="flex flex-col items-center gap-1 cursor-pointer group"
                     >
                         <div className="w-full aspect-square rounded-lg overflow-hidden relative border border-border/50 bg-gray-100">
@@ -85,11 +93,12 @@ export function ProfileFriendsCard({ profileId }: ProfileFriendsCardProps) {
         </div>
       )}
 
-      {friends.length > 0 && (
-        <Link href={`/profile/${profileId}/friends`} className="w-full mt-4 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors bg-muted/50 hover:bg-muted text-foreground h-10 px-4 py-2">
+      {/* {friends.length > 0 && (
+        <Link href={seeAllLink} className="w-full mt-4 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors bg-muted/50 hover:bg-muted text-foreground h-10 px-4 py-2">
             Виж всички
         </Link>
-      )}
+      )} 
+      */}
     </div>
   );
 }
