@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { Gender,  RegisterDto } from "@frontend/lib/types/auth";  
+import {RegisterDto } from "@frontend/lib/types/auth";  
+import { Gender } from "@frontend/lib/types/enums";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 export type SignupState = RegisterDto & {

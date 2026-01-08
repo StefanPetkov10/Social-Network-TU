@@ -34,7 +34,8 @@ import { cn, getInitials, getUserDisplayName, getUserUsername } from "@frontend/
 import { PostDto } from "@frontend/lib/types/posts";
 import { ReactionType } from "@frontend/lib/types/enums";
 import { reactionService } from "@frontend/services/reaction-service";
-import { get } from "http";
+import { ProfileDto } from "@frontend/lib/types/profile";
+import { profile } from "console";
 
 const REACTION_CONFIG = {
   [ReactionType.Like]: { icon: "👍", label: "Харесва ми", color: "text-blue-600" },
@@ -46,7 +47,7 @@ const REACTION_CONFIG = {
 
 interface PostCardProps {
     post: PostDto;
-    authorProfile?: any; 
+    authorProfile?: ProfileDto; 
 }
 
 export function PostCard({ post, authorProfile }: PostCardProps) {
@@ -57,20 +58,16 @@ export function PostCard({ post, authorProfile }: PostCardProps) {
   let authorName = "Потребител";
   let avatarUrl = "";
 
-  if (authorProfile) {
-      authorName = getUserDisplayName(authorProfile);
-      avatarUrl = authorProfile.authorAvatar || "";
-  } else {
-      authorName = post.authorName || "Потребител";
-      avatarUrl = post.authorAvatar || "";
-  }
+  authorName = post.authorName || "Потребител";
+  avatarUrl = post.authorAvatar || "";
+  
   
   const isOwner = post.isOwner || false;
   const initials = getInitials(authorName);
 
-  const username = post.username
-  const profileUrl = `/${username}`;
-
+  const username = post.username;
+  const profileUrl = username === authorProfile?.userName ? `/profile` : `/${username}`;
+ 
   const documents = post.media?.filter(m => m.mediaType !== 0 && m.mediaType !== 1) || [];
   const visualMedia = post.media?.filter(m => m.mediaType === 0 || m.mediaType === 1) || [];
 

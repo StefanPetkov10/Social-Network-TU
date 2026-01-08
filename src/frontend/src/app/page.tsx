@@ -164,7 +164,7 @@ export default function Home() {
                         postsData?.pages.map((page, i) => (
                             <div key={i} className="space-y-5">
                                 {page.data?.map((post) => (
-                                    <PostCard key={post.id} post={post} />
+                                    <PostCard key={post.id} post={post}  authorProfile={profile}/>
                                 ))}
                             </div>
                         ))

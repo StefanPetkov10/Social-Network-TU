@@ -77,6 +77,7 @@ namespace SocialMedia.Services
         private async Task<ProfileDto> MapProfileToDto(Database.Models.Profile profile)
         {
             var dto = _mapper.Map<ProfileDto>(profile);
+            dto.AuthorAvatar = profile.Photo;
 
             if (profile.User == null && profile.ApplicationId != null)
             {

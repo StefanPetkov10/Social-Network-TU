@@ -18,7 +18,7 @@ import { ProfileFriendsCard } from "@frontend/components/profile-form/profile-fr
 import { useIntersection } from "@mantine/hooks";
 import { Input } from "@frontend/components/ui/input"; 
 import { EditProfileDialog } from "@frontend/components/profile-form/profile-edit-dialog";
-import { getInitials, getUserDisplayName } from "@frontend/lib/utils";
+import { getInitials, getUserDisplayName, getUserUsername } from "@frontend/lib/utils";
 import { get } from "http";
 
 
@@ -82,6 +82,7 @@ export default function ProfilePage() {
 
     const displayName = getUserDisplayName(profile);
     const initials = getInitials(displayName);
+    const username = getUserUsername(profile);
     
     const bio = profile.bio || "";
 
@@ -117,7 +118,7 @@ export default function ProfilePage() {
 
                                     <div className="flex-1 text-center md:text-left space-y-1.5 mt-2">
                                         <h1 className="text-2xl md:text-3xl font-bold text-foreground">{displayName}</h1>
-                                        <p className="text-muted-foreground font-medium">@{profile.userName}</p>
+                                        <p className="text-muted-foreground font-medium">{username}</p>
 
                                         <div className="max-w-lg mx-auto md:mx-0 mt-2 min-h-[40px]">
                                             {bio ? (
@@ -229,7 +230,9 @@ export default function ProfilePage() {
                                                 </div>
                                             ) : (
                                                 page.data?.map((post) => (
-                                                    <PostCard key={post.id} post={post} />
+                                                    <PostCard key={post.id}
+                                                     post={post}
+                                                     authorProfile={profile} />
                                                 ))
                                             )}
                                         </div>
