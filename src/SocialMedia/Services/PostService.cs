@@ -172,6 +172,7 @@ namespace SocialMedia.Services
 
             var query = _postRepository.QueryNoTracking()
                 .Include(p => p.Media).Include(p => p.Profile)
+                .ThenInclude(p => p.User)
                 .Where(p => !p.IsDeleted)
                 .Where(p =>
                     (p.GroupId.HasValue && myGroupIds.Contains(p.GroupId.Value))
@@ -215,6 +216,7 @@ namespace SocialMedia.Services
 
             var query = _postRepository.QueryNoTracking()
                 .Include(p => p.Media).Include(p => p.Profile)
+                .ThenInclude(p => p.User)
                 .Where(p => !p.IsDeleted && p.ProfileId == profileId)
                 .Where(p =>
                     p.Visibility == PostVisibility.Public ||
@@ -371,6 +373,7 @@ namespace SocialMedia.Services
             dto.CreatedAt = post.CreatedDate;
             dto.AuthorName = profile.FullName ?? "Unknown Author";
             dto.AuthorAvatar = profile.Photo;
+            dto.Username = profile.User.UserName;
             var baseUrl = $"{_httpContextAccessor.HttpContext!.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}";
             dto.Media = post.Media.Select(m => new PostMediaDto
             {

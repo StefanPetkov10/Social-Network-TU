@@ -29,10 +29,12 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@frontend/components/ui/carousel";
-import { cn, getInitials, getUserDisplayName } from "@frontend/lib/utils";
+import Link from "next/link";
+import { cn, getInitials, getUserDisplayName, getUserUsername } from "@frontend/lib/utils";
 import { PostDto } from "@frontend/lib/types/posts";
 import { ReactionType } from "@frontend/lib/types/enums";
 import { reactionService } from "@frontend/services/reaction-service";
+import { get } from "http";
 
 const REACTION_CONFIG = {
   [ReactionType.Like]: { icon: "👍", label: "Харесва ми", color: "text-blue-600" },
@@ -57,7 +59,7 @@ export function PostCard({ post, authorProfile }: PostCardProps) {
 
   if (authorProfile) {
       authorName = getUserDisplayName(authorProfile);
-      avatarUrl = authorProfile.photo || authorProfile.authorAvatar || authorProfile.avatarUrl || "";
+      avatarUrl = authorProfile.authorAvatar || "";
   } else {
       authorName = post.authorName || "Потребител";
       avatarUrl = post.authorAvatar || "";
@@ -65,6 +67,9 @@ export function PostCard({ post, authorProfile }: PostCardProps) {
   
   const isOwner = post.isOwner || false;
   const initials = getInitials(authorName);
+
+  const username = post.username
+  const profileUrl = `/${username}`;
 
   const documents = post.media?.filter(m => m.mediaType !== 0 && m.mediaType !== 1) || [];
   const visualMedia = post.media?.filter(m => m.mediaType === 0 || m.mediaType === 1) || [];
@@ -116,16 +121,22 @@ export function PostCard({ post, authorProfile }: PostCardProps) {
     <div className="bg-background rounded-xl border p-4 shadow-sm animate-in fade-in zoom-in duration-300">
       <div className="flex justify-between items-start mb-3">
         <div className="flex gap-3">
-          <Avatar className="cursor-pointer hover:opacity-80 transition-opacity">
-            <AvatarImage src={avatarUrl} className="object-cover" />
-            <AvatarFallback className="bg-primary text-white">
-                {initials}
-            </AvatarFallback>
-          </Avatar>
+          <Link href={profileUrl}>
+            <Avatar className="cursor-pointer hover:opacity-80 transition-opacity">
+              <AvatarImage src={avatarUrl} className="object-cover" />
+              <AvatarFallback className="bg-primary text-white">
+                  {initials}
+              </AvatarFallback>
+            </Avatar>
+          </Link>
+
           <div>
-            <h4 className="font-semibold text-sm cursor-pointer hover:underline">
-                {authorName}
-            </h4>
+            <Link href={profileUrl} className="hover:underline">
+                <h4 className="font-semibold text-sm cursor-pointer">
+                    {authorName}
+                </h4>
+            </Link>
+            
             <p className="text-xs text-muted-foreground">
               {getRelativeTime(post.createdAt)}
             </p>

@@ -17,6 +17,7 @@ export interface PostDto {
   profileId: string;
   authorName: string;       
   authorAvatar: string | null;
+  username: string;
   
   visibility: number;
   likesCount: number;

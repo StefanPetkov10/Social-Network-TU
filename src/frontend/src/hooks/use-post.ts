@@ -14,6 +14,7 @@ export const useFeedPosts = () => {
     },
     
     initialPageParam: undefined,
+    staleTime: 1000 * 60 * 5,
   });
 }
 

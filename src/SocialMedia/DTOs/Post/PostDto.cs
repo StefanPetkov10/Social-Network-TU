@@ -12,6 +12,7 @@ namespace SocialMedia.DTOs.Post
         public Guid ProfileId { get; set; }
         public string AuthorName { get; set; } = null!;
         public string? AuthorAvatar { get; set; }
+        public string Username { get; set; } = null!;
 
         public PostVisibility Visibility { get; set; }
 

@@ -41,6 +41,12 @@ export function SiteHeader({ user }: SiteHeaderProps) {
       router.replace("/auth/login");
   };
 
+  const handleHomeClick = (e: React.MouseEvent) => {
+    if (pathname === '/') {
+        e.preventDefault();
+        window.dispatchEvent(new Event("force-home-refresh"));
+    }
+  };
 
   const getNavButtonClass = (isActive: boolean) => {
     return isActive
@@ -54,7 +60,7 @@ export function SiteHeader({ user }: SiteHeaderProps) {
       <div className="flex items-center gap-4">
         <SidebarTrigger className="md:hidden [&_svg]:!size-6" /> 
         
-        <Link href="/" className="flex items-center gap-2 cursor-pointer">
+        <Link href="/" onClick={handleHomeClick} className="flex items-center gap-2 cursor-pointer">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white font-bold shadow-sm overflow-hidden">
             {!localError ? (
               <div className="bg-muted relative w-full h-full">
@@ -87,11 +93,12 @@ export function SiteHeader({ user }: SiteHeaderProps) {
       </div>
 
       <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-2 md:flex">
-        <Link href="/">
+        <Link href="/" onClick={handleHomeClick}>
             <Button variant="ghost" size="icon" className={getNavButtonClass(pathname === "/")}>
               <Home className="!size-5" />
             </Button>
         </Link>
+        
         <Link href="/groups-feed">
             <Button variant="ghost" size="icon" className={getNavButtonClass(pathname === "/groups-feed")}>
               <Users className="!size-5" />
