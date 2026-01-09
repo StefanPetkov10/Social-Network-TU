@@ -4,13 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
   Newspaper, 
-  Compass,   
-  Users,     
-  PlusCircle,
+  Compass,    
+  Users,    
   Settings,   
   Loader2
 } from "lucide-react";
 import { useMyGroups } from "@frontend/hooks/use-groups";
+import { CreateGroupDialog } from "@frontend/components/groups-forms/create-group-dialog";
 
 export function GroupsSidebar() {
 
@@ -80,7 +80,7 @@ export function GroupsSidebar() {
                       : 'bg-gray-100 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'
                     }`}
                 >
-                   <item.icon className="size-5" />
+                    <item.icon className="size-5" />
                 </div>
                 
                 <span>{item.label}</span>
@@ -89,13 +89,9 @@ export function GroupsSidebar() {
           })}
         </div>
 
-        <Link 
-            href="/groups/create"
-            className="flex items-center justify-center w-full gap-2 bg-primary/10 text-primary hover:bg-primary/20 font-semibold py-3 rounded-xl transition-colors mb-6"
-        >
-            <PlusCircle className="size-5" />
-            <span>Създаване на нова група</span>
-        </Link>
+        <div className="mb-6">
+            <CreateGroupDialog />
+        </div>
 
         <div className="px-2 border-t pt-4">
             <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Групи, в които участвате</h3>
@@ -128,4 +124,4 @@ export function GroupsSidebar() {
       </div>
     </div>
   );
-}
+} 
