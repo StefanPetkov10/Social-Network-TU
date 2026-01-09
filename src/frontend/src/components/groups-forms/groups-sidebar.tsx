@@ -7,10 +7,15 @@ import {
   Compass,   
   Users,     
   PlusCircle,
-  Settings   
+  Settings,   
+  Loader2
 } from "lucide-react";
+import { useMyGroups } from "@frontend/hooks/use-groups";
 
 export function GroupsSidebar() {
+
+  const { data: myGroupsData, isLoading: isMyGroupsLoading } = useMyGroups();
+
   const pathname = usePathname();
 
   const menuItems = [
@@ -94,11 +99,31 @@ export function GroupsSidebar() {
 
         <div className="px-2 border-t pt-4">
             <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Групи, в които участвате</h3>
-            <div className="space-y-1 opacity-60 hover:opacity-100 transition-opacity">
-                 <p className="text-sm px-2 py-1 cursor-pointer hover:bg-gray-50 rounded-lg truncate">Софтуерно Инженерство '24</p>
-                 <p className="text-sm px-2 py-1 cursor-pointer hover:bg-gray-50 rounded-lg truncate">Спортен клуб ТУ</p>
-            </div>
-             <Link href="/groups/my-groups" className="text-xs text-primary mt-2 block px-2 hover:underline">Виж всички</Link>
+            {isMyGroupsLoading ? (
+              <div className="flex justify-center p-4">
+                <Loader2 className="animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <>
+                {!myGroupsData?.data || myGroupsData.data.length === 0 ? (
+                  <p className="text-sm text-gray-500">Все още не сте член на групи.</p>
+                ) : (
+                  <ul className="space-y-2 max-h-60 overflow-y-auto">
+                    {myGroupsData.data.slice(0, 5).map((group) => (
+                      <li key={group.id}>
+                        <Link
+                          href={`/groups/${group.id}`}
+                          className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          {group.name}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
+            <Link href="/groups/my-groups" className="text-xs text-primary mt-2 block px-2 hover:underline">Виж всички</Link>
         </div>
       </div>
     </div>

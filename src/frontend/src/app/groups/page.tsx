@@ -7,7 +7,7 @@ import ProtectedRoute from "@frontend/components/protected-route";
 import { CreatePost } from "@frontend/components/post-forms/create-post-form";
 import { PostCard } from "@frontend/components/post-forms/post-card";
 import { useProfile } from "@frontend/hooks/use-profile";
-import { useFeedGroups } from "@frontend/hooks/use-groups"; 
+import { useFeedGroups, useMyGroups } from "@frontend/hooks/use-groups"; 
 import { useIntersection } from "@mantine/hooks";
 import { Loader2, Newspaper } from "lucide-react";
 import { getUserDisplayName } from "@frontend/lib/utils";

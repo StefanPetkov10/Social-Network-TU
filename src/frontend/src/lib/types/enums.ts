@@ -26,3 +26,14 @@ export enum MediaType {
   Gif = 3,
   Other = 4
 }
+
+export enum GroupPrivacy {
+  Public = 0,
+  Private = 1,
+}
+
+export enum GroupRole {
+  Member = 0,
+  Admin = 1,
+  Owner = 2,
+}
