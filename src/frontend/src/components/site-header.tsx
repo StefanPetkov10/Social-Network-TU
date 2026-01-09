@@ -99,8 +99,8 @@ export function SiteHeader({ user }: SiteHeaderProps) {
             </Button>
         </Link>
         
-        <Link href="/groups-feed">
-            <Button variant="ghost" size="icon" className={getNavButtonClass(pathname === "/groups-feed")}>
+        <Link href="/groups">
+            <Button variant="ghost" size="icon" className={getNavButtonClass(pathname === "/groups")}>
               <Users className="!size-5" />
             </Button>
         </Link>
