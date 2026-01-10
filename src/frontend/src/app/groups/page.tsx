@@ -61,7 +61,7 @@ export default function GroupsPage() {
 
             <div className="flex-1 overflow-y-auto">
               <div className="flex justify-center pt-6 px-4 pb-10">
-                <main className="w-full max-w-2xl flex flex-col gap-5">
+                <main className="w-full max-w-3xl flex flex-col gap-5">
                   <div className="mb-2">
                     <h1 className="text-xl font-bold text-gray-800">Скорошна дейност</h1>
                     <p className="text-sm text-gray-500">Публикации от групите, в които членувате</p>

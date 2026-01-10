@@ -125,16 +125,13 @@ namespace SocialMedia.Services
         }
         public async Task<ApiResponse<IEnumerable<PostDto>>> GetMyGroupsFeedAsync(ClaimsPrincipal userClaims, Guid? lastPostId = null, int take = 20)
         {
-            if (take <= 0 || take > 50)
-                take = 20;
+            if (take <= 0 || take > 50) take = 20;
 
-            var invlaidUserResponse = GetUserIdOrUnauthorized<IEnumerable<PostDto>>(userClaims, out var userId);
-            if (invlaidUserResponse != null)
-                return invlaidUserResponse;
+            var invalidUserResponse = GetUserIdOrUnauthorized<IEnumerable<PostDto>>(userClaims, out var userId);
+            if (invalidUserResponse != null) return invalidUserResponse;
 
             var profile = await _profileRepository.GetByApplicationIdAsync(userId);
-            if (profile == null)
-                return NotFoundResponse<IEnumerable<PostDto>>("Profile");
+            if (profile == null) return NotFoundResponse<IEnumerable<PostDto>>("Profile not found");
 
             var myMembership = await _membershipRepository.QueryNoTracking()
                 .Where(m => m.ProfileId == profile.Id && m.Status == MembershipStatus.Approved)
@@ -148,10 +145,11 @@ namespace SocialMedia.Services
                 .Where(p => p.GroupId != null && !p.IsDeleted
                     && myMembership.Contains(p.GroupId.Value))
                 .Include(p => p.Profile)
+                .Include(p => p.Group)
                 .OrderByDescending(p => p.CreatedDate)
                 .AsQueryable();
 
-            if (lastPostId != null && lastPostId != Guid.Empty)
+            if (lastPostId.HasValue && lastPostId.Value != Guid.Empty)
             {
                 var lastPost = await _postRepository.GetByIdAsync(lastPostId.Value);
                 if (lastPost != null)
@@ -161,24 +159,24 @@ namespace SocialMedia.Services
             }
 
             var posts = await queryPosts.Take(take).ToListAsync();
-            var dtos = _mapper.Map<IEnumerable<PostDto>>(posts);
 
+            var dtos = _mapper.Map<IEnumerable<PostDto>>(posts);
             foreach (var dto in dtos)
             {
+                dto.GroupName = posts.FirstOrDefault(p => p.Id == dto.Id)?.Group?.Name;
                 if (string.IsNullOrEmpty(dto.AuthorName))
                 {
-                    dto.AuthorName = profile?.FullName ?? "Unknown";
-                    dto.AuthorAvatar = profile?.Photo;
+                    dto.AuthorAvatar = posts.FirstOrDefault(p => p.Id == dto.Id)?.Profile?.Photo;
+                    dto.AuthorName = posts.FirstOrDefault(p => p.Id == dto.Id)?.Profile?.FullName ?? "Unknown";
                 }
             }
 
-            var last = posts.LastOrDefault()?.Id;
+            var lastId = posts.LastOrDefault()?.Id;
 
             return ApiResponse<IEnumerable<PostDto>>.SuccessResponse(dtos,
                 "Feed retrieved successfully.",
-                new { lastPostId = last });
+                new { lastPostId = lastId });
         }
-
         public async Task<ApiResponse<IEnumerable<PostDto>>> GetGroupsPostsAsync(ClaimsPrincipal userClaims, Guid groupId, Guid? lastPostId = null, int take = 20)
         {
             if (take <= 0 || take > 50)

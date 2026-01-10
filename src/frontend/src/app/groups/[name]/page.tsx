@@ -253,6 +253,7 @@ export default function GroupPage() {
                                                                         key={post.id}
                                                                         post={post}
                                                                         authorProfile={currentUser || undefined}
+                                                                        hideGroupInfo={true} 
                                                                     />
                                                                 ))
                                                             )}

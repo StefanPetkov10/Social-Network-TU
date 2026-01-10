@@ -108,6 +108,8 @@ namespace SocialMedia.Services
             if (viewerProfile == null) return ApiResponse<PostDto>.ErrorResponse("Invalid user profile.");
 
             var post = await _postRepository.QueryNoTracking()
+                .Include(p => p.Group)
+                .Include(p => p.Profile)
                 .Include(p => p.Media)
                 .FirstOrDefaultAsync(p => p.Id == postId);
 
@@ -171,7 +173,9 @@ namespace SocialMedia.Services
                 .ToListAsync();
 
             var query = _postRepository.QueryNoTracking()
-                .Include(p => p.Media).Include(p => p.Profile)
+                .Include(p => p.Media)
+                .Include(p => p.Group)
+                .Include(p => p.Profile)
                 .ThenInclude(p => p.User)
                 .Where(p => !p.IsDeleted)
                 .Where(p =>
@@ -215,7 +219,9 @@ namespace SocialMedia.Services
                  (f.AddresseeId == viewerProfile.Id && f.RequesterId == profileId)));
 
             var query = _postRepository.QueryNoTracking()
-                .Include(p => p.Media).Include(p => p.Profile)
+                .Include(p => p.Media)
+                .Include(p => p.Group)
+                .Include(p => p.Profile)
                 .ThenInclude(p => p.User)
                 .Where(p => !p.IsDeleted && p.ProfileId == profileId)
                 .Where(p =>
@@ -374,6 +380,8 @@ namespace SocialMedia.Services
             dto.AuthorName = profile.FullName ?? "Unknown Author";
             dto.AuthorAvatar = profile.Photo;
             dto.Username = profile.User.UserName;
+            dto.GroupId = post.GroupId;
+            dto.GroupName = post.Group != null ? post.Group.Name : null;
             var baseUrl = $"{_httpContextAccessor.HttpContext!.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}";
             dto.Media = post.Media.Select(m => new PostMediaDto
             {

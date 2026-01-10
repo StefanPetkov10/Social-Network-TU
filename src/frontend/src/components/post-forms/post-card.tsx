@@ -10,7 +10,8 @@ import {
   Trash2,
   Edit2,
   FileText,
-  Download
+  Download,
+  Users 
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { Button } from "@frontend/components/ui/button";
@@ -30,12 +31,11 @@ import {
   CarouselPrevious,
 } from "@frontend/components/ui/carousel";
 import Link from "next/link";
-import { cn, getInitials, getUserDisplayName, getUserUsername } from "@frontend/lib/utils";
+import { cn, getInitials } from "@frontend/lib/utils";
 import { PostDto } from "@frontend/lib/types/posts";
 import { ReactionType } from "@frontend/lib/types/enums";
 import { reactionService } from "@frontend/services/reaction-service";
 import { ProfileDto } from "@frontend/lib/types/profile";
-import { profile } from "console";
 
 const REACTION_CONFIG = {
   [ReactionType.Like]: { icon: "👍", label: "Харесва ми", color: "text-blue-600" },
@@ -48,42 +48,48 @@ const REACTION_CONFIG = {
 interface PostCardProps {
     post: PostDto;
     authorProfile?: ProfileDto; 
+    hideGroupInfo?: boolean; 
 }
 
-export function PostCard({ post, authorProfile }: PostCardProps) {
+export function PostCard({ post, authorProfile, hideGroupInfo }: PostCardProps) {
   const [currentReaction, setCurrentReaction] = useState<ReactionType | null>(post.userReaction ?? null);
   const [likesCount, setLikesCount] = useState(post.likesCount);
   const [isReactionMenuOpen, setIsReactionMenuOpen] = useState(false);
 
-  let authorName = "Потребител";
-  let avatarUrl = "";
+  const authorName = post.authorName || "Потребител";
+  const authorAvatarUrl = post.authorAvatar || "";
+  const authorInitials = getInitials(authorName);
+  const authorUsername = post.username;
+  const authorProfileUrl = authorUsername ? `/${authorUsername}` : "#";
 
-  authorName = post.authorName || "Потребител";
-  avatarUrl = post.authorAvatar || "";
-  
-  
+  const isGroupPost = !hideGroupInfo && !!post.groupId && post.groupId !== "00000000-0000-0000-0000-000000000000";
+  const groupName = post.groupName || "Unknown Group";
+  const groupUrl = `/groups/${encodeURIComponent(groupName)}`; 
+  const groupInitials = getInitials(groupName);
+
   const isOwner = post.isOwner || false;
-  const initials = getInitials(authorName);
-
-  const username = post.username;
-  const profileUrl = username === authorProfile?.userName ? `/profile` : `/${username}`;
  
   const documents = post.media?.filter(m => m.mediaType !== 0 && m.mediaType !== 1) || [];
   const visualMedia = post.media?.filter(m => m.mediaType === 0 || m.mediaType === 1) || [];
 
   const getRelativeTime = (dateString: string) => {
-    if (dateString.startsWith("0001")) return "Току-що";
+    if (!dateString || dateString.startsWith("0001")) return "Току-що";
     const date = new Date(dateString);
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
     if (diffInSeconds < 5) return "Току-що";
     if (diffInSeconds < 60) return `преди ${diffInSeconds} сек.`;
+    
     const minutes = Math.floor(diffInSeconds / 60);
     if (minutes < 60) return `преди ${minutes} мин.`;
+    
     const hours = Math.floor(minutes / 60);
     if (hours < 24) return `преди ${hours} ч.`;
+    
     const days = Math.floor(hours / 24);
     if (days < 7) return `преди ${days} дни`;
+    
     return date.toLocaleDateString("bg-BG", { day: "numeric", month: "long" });
   };
 
@@ -118,31 +124,71 @@ export function PostCard({ post, authorProfile }: PostCardProps) {
     <div className="bg-background rounded-xl border p-4 shadow-sm animate-in fade-in zoom-in duration-300">
       <div className="flex justify-between items-start mb-3">
         <div className="flex gap-3">
-          <Link href={profileUrl}>
-            <Avatar className="cursor-pointer hover:opacity-80 transition-opacity">
-              <AvatarImage src={avatarUrl} className="object-cover" />
-              <AvatarFallback className="bg-primary text-white">
-                  {initials}
-              </AvatarFallback>
-            </Avatar>
-          </Link>
+          
+          {isGroupPost ? (
+            <div className="relative w-10 h-10"> 
+               <Link href={groupUrl}>
+                 <Avatar className="w-10 h-10 border border-border shadow-sm cursor-pointer hover:opacity-90 rounded-xl">
+                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-xs rounded-xl">
+                        {groupInitials}
+                    </AvatarFallback>
+                 </Avatar>
+               </Link>
 
-          <div>
-            <Link href={profileUrl} className="hover:underline">
-                <h4 className="font-semibold text-sm cursor-pointer">
-                    {authorName}
-                </h4>
+               <Link href={authorProfileUrl}>
+                 <Avatar className="absolute -bottom-1.5 -right-1.5 w-6 h-6 border-2 border-background cursor-pointer hover:scale-110 transition-transform ring-1 ring-white">
+                    <AvatarImage src={authorAvatarUrl} className="object-cover" />
+                    <AvatarFallback className="bg-primary text-white text-[8px]">
+                        {authorInitials}
+                    </AvatarFallback>
+                 </Avatar>
+               </Link>
+            </div>
+          ) : (
+            <Link href={authorProfileUrl}>
+                <Avatar className="cursor-pointer hover:opacity-80 transition-opacity">
+                  <AvatarImage src={authorAvatarUrl} className="object-cover" />
+                  <AvatarFallback className="bg-primary text-white">
+                      {authorInitials}
+                  </AvatarFallback>
+                </Avatar>
             </Link>
-            
-            <p className="text-xs text-muted-foreground">
-              {getRelativeTime(post.createdAt)}
-            </p>
+          )}
+
+          <div className="flex flex-col justify-center">
+            {isGroupPost ? (
+                <div className="leading-tight">
+                    <Link href={groupUrl} className="hover:underline block">
+                        <h4 className="font-bold text-sm cursor-pointer text-foreground line-clamp-1">
+                            {groupName}
+                        </h4>
+                    </Link>
+                    <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                        <Link href={authorProfileUrl} className="hover:underline font-semibold text-foreground/70">
+                            {authorName}
+                        </Link>
+                        <span>•</span>
+                        <span>{getRelativeTime(post.createdAt)}</span>
+                    </div>
+                </div>
+            ) : (
+                <>
+                    <Link href={authorProfileUrl} className="hover:underline">
+                        <h4 className="font-semibold text-sm cursor-pointer">
+                            {authorName}
+                        </h4>
+                    </Link>
+                    <p className="text-xs text-muted-foreground">
+                      {getRelativeTime(post.createdAt)}
+                    </p>
+                </>
+            )}
           </div>
         </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Button variant="ghost" size="icon" className="h-8 w-8 -mt-1 -mr-1">
               <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
@@ -165,24 +211,24 @@ export function PostCard({ post, authorProfile }: PostCardProps) {
             
             <DropdownMenuSeparator />
             <DropdownMenuItem className="cursor-pointer text-destructive">
-               Докладвай
+                Докладвай
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
-      <p className="text-sm mb-4 whitespace-pre-wrap text-foreground/90">
+      <p className="text-sm mb-4 whitespace-pre-wrap text-foreground/90 leading-relaxed">
         {post.content}
       </p>
 
       {documents.length > 0 && (
         <div className="flex flex-col gap-2 mb-4">
             {documents.map((doc, idx) => (
-                <div key={idx} className="flex items-center p-3 border rounded-lg bg-muted/50 hover:bg-muted transition-colors group/file">
-                    <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 mr-3">
+                <div key={idx} className="flex items-center p-3 border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group/file">
+                    <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 mr-3 shrink-0">
                         <FileText className="h-5 w-5" />
                     </div>
-                    <div className="flex-1 overflow-hidden">
+                    <div className="flex-1 overflow-hidden min-w-0">
                         <p className="text-sm font-medium truncate text-foreground">
                             {doc.fileName || `Document-${idx + 1}`} 
                         </p>
@@ -196,7 +242,7 @@ export function PostCard({ post, authorProfile }: PostCardProps) {
                         download={doc.fileName || "document"} 
                         target="_blank" 
                         rel="noreferrer" 
-                        className="p-2 hover:bg-background rounded-full text-muted-foreground hover:text-foreground cursor-pointer"
+                        className="p-2 hover:bg-background rounded-full text-muted-foreground hover:text-foreground cursor-pointer shrink-0"
                         title="Свали файл"
                     >
                         <Download className="h-4 w-4" />
@@ -209,7 +255,7 @@ export function PostCard({ post, authorProfile }: PostCardProps) {
       {visualMedia.length > 0 && (
         <div className="mb-4 -mx-4 md:mx-0">
             {visualMedia.length === 1 ? (
-                <div className="overflow-hidden md:rounded-lg border bg-muted">
+                <div className="overflow-hidden md:rounded-lg border bg-muted/20">
                     {visualMedia[0].mediaType === 1 ? (
                         <video controls src={visualMedia[0].url} className="w-full h-auto max-h-[500px]" />
                     ) : (
@@ -217,7 +263,7 @@ export function PostCard({ post, authorProfile }: PostCardProps) {
                     )}
                 </div>
             ) : (
-                <Carousel className="w-full md:rounded-lg overflow-hidden border bg-muted">
+                <Carousel className="w-full md:rounded-lg overflow-hidden border bg-muted/20">
                     <CarouselContent>
                         {visualMedia.map((item, index) => (
                             <CarouselItem key={index} className="basis-full">
@@ -243,10 +289,10 @@ export function PostCard({ post, authorProfile }: PostCardProps) {
             {likesCount > 0 && (
                <>
                  {activeReactionConfig 
-                    ? <span>{activeReactionConfig.icon}</span>
-                    : <span>👍</span>
+                    ? <span className="text-sm">{activeReactionConfig.icon}</span>
+                    : <span className="text-sm">👍</span>
                  }
-                 <span>{likesCount}</span>
+                 <span className="ml-1">{likesCount}</span>
                </>
             )}
           </div>
@@ -255,14 +301,14 @@ export function PostCard({ post, authorProfile }: PostCardProps) {
 
       <Separator />
 
-      <div className="flex justify-between pt-2 relative">
+      <div className="flex justify-between pt-1 relative">
          <div 
             className="flex-1 group relative"
             onMouseEnter={() => setIsReactionMenuOpen(true)}
             onMouseLeave={() => setIsReactionMenuOpen(false)}
          >
             {isReactionMenuOpen && (
-                <div className="absolute bottom-full left-0 flex bg-background border shadow-lg rounded-full p-1 gap-1 animate-in slide-in-from-bottom-2 z-50"> 
+                <div className="absolute bottom-full left-0 flex bg-background border shadow-lg rounded-full p-1 gap-1 animate-in slide-in-from-bottom-2 z-50 mb-2"> 
                     {(Object.keys(REACTION_CONFIG) as unknown as ReactionType[]).map((type) => (
                         <button
                             key={type}
@@ -281,7 +327,7 @@ export function PostCard({ post, authorProfile }: PostCardProps) {
             <Button 
                 variant="ghost" 
                 className={cn(
-                    "w-full flex gap-2 items-center hover:bg-transparent transition-colors", 
+                    "w-full flex gap-2 items-center hover:bg-muted/50 transition-colors py-6", 
                     activeReactionConfig ? activeReactionConfig.color : "text-muted-foreground"
                 )}
                 onClick={() => {
@@ -306,10 +352,10 @@ export function PostCard({ post, authorProfile }: PostCardProps) {
             </Button>
          </div>
 
-         <Button variant="ghost" className="flex-1 gap-2 text-muted-foreground">
+         <Button variant="ghost" className="flex-1 gap-2 text-muted-foreground hover:bg-muted/50 py-6">
             <MessageCircle className="h-4 w-4" /> Коментар
          </Button>
-         <Button variant="ghost" className="flex-1 gap-2 text-muted-foreground">
+         <Button variant="ghost" className="flex-1 gap-2 text-muted-foreground hover:bg-muted/50 py-6">
             <Share2 className="h-4 w-4" /> Споделяне
          </Button>
       </div>
