@@ -5,6 +5,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { PlusCircle, Loader2 } from "lucide-react"; 
+import { toast } from "sonner";
+
 
 import { useCreateGroup } from "@frontend/hooks/use-groups";
 import { GroupPrivacy } from "@frontend/lib/types/enums";
@@ -40,7 +42,7 @@ import {
 const createGroupSchema = z.object({
   name: z.string().min(3, "Името трябва да е поне 3 символа").max(50),
   description: z.string().max(200).optional(),
-  groupPrivacy: z.coerce.number().pipe(z.nativeEnum(GroupPrivacy)),
+  groupPrivacy: z.enum(GroupPrivacy),
 });
 
 type CreateGroupFormValues = z.infer<typeof createGroupSchema>;
@@ -58,14 +60,26 @@ export function CreateGroupDialog() {
     },
   });
 
-  const onSubmit = (data: CreateGroupFormValues) => {
-    createGroup(data, {
-      onSuccess: () => {
-        setOpen(false);
-        form.reset();
-      },
-    });
-  };
+ const onSubmit = (data: CreateGroupFormValues) => {
+  createGroup(data, {
+    onSuccess: () => {
+      setOpen(false);
+      form.reset();
+    },
+    onError: (error: any) => {
+      const validationErrors = error.response?.data?.errors;
+      if (validationErrors && validationErrors["Name"]) {
+        form.setError("name", { 
+          type: "manual", 
+          message: "Това име вече е заето. Моля, изберете друго." 
+        });
+
+      } else {
+        toast.error("Възникна грешка при създаването на групата.");
+      }
+    }
+  });
+};
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -128,7 +142,7 @@ export function CreateGroupDialog() {
                 <FormItem>
                   <FormLabel>Поверителност</FormLabel>
                   <Select 
-                    onValueChange={field.onChange} 
+                    onValueChange={(value) => field.onChange(Number(value))} 
                     defaultValue={field.value.toString()}
                   >
                     <FormControl>

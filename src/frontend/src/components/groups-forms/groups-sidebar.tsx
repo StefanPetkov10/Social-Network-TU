@@ -108,7 +108,7 @@ export function GroupsSidebar() {
                     {myGroupsData.data.slice(0, 5).map((group) => (
                       <li key={group.id}>
                         <Link
-                          href={`/groups/${group.id}`}
+                          href={`/groups/${group.name}`}
                           className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
                         >
                           {group.name}

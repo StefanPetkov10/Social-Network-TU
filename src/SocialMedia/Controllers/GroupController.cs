@@ -34,10 +34,10 @@ namespace SocialMedia.Controllers
             return Ok(response);
         }
 
-        [HttpGet("{groupId}")]
-        public async Task<IActionResult> GetGroupById(Guid groupId)
+        [HttpGet("{name}")]
+        public async Task<IActionResult> GetGroupByName(string name)
         {
-            var response = await _groupService.GetGroupByIdAsync(User, groupId);
+            var response = await _groupService.GetGroupByNameAsync(User, name);
             return Ok(response);
         }
 
@@ -45,6 +45,13 @@ namespace SocialMedia.Controllers
         public async Task<IActionResult> GetMyGroupsFeed([FromQuery] Guid? lastPostId = null, [FromQuery] int take = 20)
         {
             var response = await _groupService.GetMyGroupsFeedAsync(User, lastPostId, take);
+            return Ok(response);
+        }
+
+        [HttpGet("{groupId}/posts")]
+        public async Task<IActionResult> GetGroupsPosts([FromRoute] Guid groupId, [FromQuery] Guid? lastPostId = null, [FromQuery] int take = 20)
+        {
+            var response = await _groupService.GetGroupsPostsAsync(User, groupId, lastPostId, take);
             return Ok(response);
         }
 

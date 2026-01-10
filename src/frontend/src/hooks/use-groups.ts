@@ -27,13 +27,6 @@ export const useCreateGroup = () => {
         mutationFn: ( data: CreateGroupDto ) => {
              return groupsService.createGroup(data);
         },
-        onSuccess: () => {
-            toast.success("Групата е създадена успешно!");  
-            queryClient.invalidateQueries({ queryKey: ["my-groups"] });
-        },
-        onError: () => {    
-            toast.error("Възникна грешка при създаването на групата.");
-        }
     });
 }
 
@@ -44,4 +37,26 @@ export const useMyGroups = () => {
     staleTime: 1000 * 60 * 5,
   });
 }
+
+export const useGroupByName = (name: string) => {
+  return useQuery({
+    queryKey: ["group-by-name", name],
+    queryFn: () => groupsService.getGroupByNmae(name),
+    enabled: !!name,
+    staleTime: 1000 * 60 * 5,});
+}
+
+export const useGroupPosts = (groupId: string) => {
+  return useInfiniteQuery({
+    queryKey: ["group-posts", groupId],
+    queryFn: ({ pageParam = undefined }) => {
+        return groupsService.getGroupPosts(groupId, pageParam as string | undefined);
+    },
+    getNextPageParam: (lastPageResponse) => {
+      return lastPageResponse.meta?.lastPostId || undefined;
+    },
+    initialPageParam: undefined,
+    enabled: !!groupId, 
+  });
+};
 

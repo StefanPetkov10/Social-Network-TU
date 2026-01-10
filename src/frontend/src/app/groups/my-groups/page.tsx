@@ -1,4 +1,3 @@
-// src/app/groups/my-groups/page.tsx
 "use client";
 
 import { SidebarProvider } from "@frontend/components/ui/sidebar";

@@ -13,13 +13,21 @@ export const groupsService = {
         return data;
     },
 
+    getGroupPosts: async (groupId: string, lastPostId?: string) => {
+        const params = new URLSearchParams();
+        if (lastPostId) params.append("lastPostId", lastPostId);
+        params.append("take", "10");
+        const { data } = await api.get<ApiResponse<PostDto[]>>(`/api/Group/${groupId}/posts`, { params });
+        return data;
+    },
+    
     getMyGroups: async () => {
         const { data } = await api.get<ApiResponse<GroupDto[]>>("/api/Group/my-groups");
         return data;
     },
 
-    getGroupById: async (groupId: string) => {
-        const { data } = await api.get<ApiResponse<GroupDto>>(`/api/Group/${groupId}`);
+    getGroupByNmae: async (name: string) => {
+        const { data } = await api.get<ApiResponse<GroupDto>>(`/api/Group/${name}`);
         return data;
     },
     

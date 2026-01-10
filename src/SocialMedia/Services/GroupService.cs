@@ -75,11 +75,11 @@ namespace SocialMedia.Services
             return ApiResponse<GroupDto>.SuccessResponse(resultDto, "Group created successfully.");
         }
 
-        public async Task<ApiResponse<GroupDto>> GetGroupByIdAsync(ClaimsPrincipal userClaims, Guid groupId)
+        public async Task<ApiResponse<GroupDto>> GetGroupByNameAsync(ClaimsPrincipal userClaims, string name)
         {
             var group = _groupRepository.QueryNoTracking()
                 .Include(g => g.Members)
-                .FirstOrDefault(g => g.Id == groupId);
+                .FirstOrDefault(g => g.Name == name);
 
             if (group == null)
                 return NotFoundResponse<GroupDto>("Group");
@@ -101,6 +101,7 @@ namespace SocialMedia.Services
                   : null;
 
             dto = _mapper.Map<GroupDto>(group);
+            dto.IsPrivate = group.Privacy == GroupPrivacy.Private;
             dto.MembersCount = group.Members.Count;
 
             if (membership != null)
@@ -116,7 +117,7 @@ namespace SocialMedia.Services
                 dto.IsMember = false;
                 dto.IsAdmin = false;
                 dto.IsOwner = false;
-                //dto.CanViewPosts = !group.IsPrivate;
+                dto.CanViewPosts = group.Privacy != GroupPrivacy.Private;
                 dto.CanCreatePost = false;
             }
 
@@ -178,6 +179,72 @@ namespace SocialMedia.Services
                 new { lastPostId = last });
         }
 
+        public async Task<ApiResponse<IEnumerable<PostDto>>> GetGroupsPostsAsync(ClaimsPrincipal userClaims, Guid groupId, Guid? lastPostId = null, int take = 20)
+        {
+            if (take <= 0 || take > 50)
+                take = 20;
+
+            var invalidUserResponse = GetUserIdOrUnauthorized<IEnumerable<PostDto>>(userClaims, out var userId);
+            if (invalidUserResponse != null)
+                return invalidUserResponse;
+
+            var profile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (profile == null)
+                return NotFoundResponse<IEnumerable<PostDto>>("Profile");
+
+            var group = await _groupRepository.GetByIdAsync(groupId);
+
+            if (group == null)
+                return NotFoundResponse<IEnumerable<PostDto>>("Group not found.");
+
+            if (group.Privacy == GroupPrivacy.Private)
+            {
+                var isMember = await _membershipRepository.QueryNoTracking()
+                    .AnyAsync(m => m.GroupId == groupId
+                                   && m.ProfileId == profile.Id
+                                   && m.Status == MembershipStatus.Approved);
+
+                if (!isMember)
+                {
+                    return ApiResponse<IEnumerable<PostDto>>.ErrorResponse("This group is private. Join to see posts.", new[] { "Forbidden" });
+                }
+            }
+
+            var queryPosts = _postRepository.QueryNoTracking()
+                .Where(p => p.GroupId == groupId && !p.IsDeleted)
+                .Include(p => p.Profile)
+                .OrderByDescending(p => p.CreatedDate)
+                .AsQueryable();
+
+            if (lastPostId != null && lastPostId != Guid.Empty)
+            {
+                var lastPost = await _postRepository.GetByIdAsync(lastPostId.Value);
+                if (lastPost != null)
+                {
+                    queryPosts = queryPosts.Where(p => p.CreatedDate < lastPost.CreatedDate);
+                }
+            }
+
+            var posts = await queryPosts.Take(take).ToListAsync();
+
+            var dtos = _mapper.Map<IEnumerable<PostDto>>(posts);
+
+            foreach (var dto in dtos)
+            {
+                if (string.IsNullOrEmpty(dto.AuthorName))
+                {
+                    dto.AuthorName = profile?.FullName ?? "Unknown";
+                    dto.AuthorAvatar = profile?.Photo;
+                }
+            }
+
+            var lastId = posts.LastOrDefault()?.Id;
+
+            return ApiResponse<IEnumerable<PostDto>>.SuccessResponse(dtos,
+                "Group posts retrieved successfully.",
+                new { lastPostId = lastId });
+        }
+
         public async Task<ApiResponse<IEnumerable<GroupDto>>> GetMyGroupsAsync(ClaimsPrincipal userClaims)
         {
             var invlaidUserResponse = GetUserIdOrUnauthorized<IEnumerable<GroupDto>>(userClaims, out var userId);
@@ -205,6 +272,7 @@ namespace SocialMedia.Services
             {
                 var membership = g.Members.FirstOrDefault(m => m.ProfileId == profile.Id);
                 var dto = _mapper.Map<GroupDto>(g);
+                dto.IsPrivate = g.Privacy == GroupPrivacy.Private;
                 dto.MembersCount = g.Members.Count(m => m.Status == MembershipStatus.Approved);
                 dto.IsMember = membership != null && membership.Status == MembershipStatus.Approved;
                 dto.HasRequestedJoin = membership != null && membership.Status == MembershipStatus.Pending;
