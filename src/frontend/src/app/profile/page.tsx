@@ -211,7 +211,11 @@ export default function ProfilePage() {
 
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
                             <div className="lg:col-span-1 space-y-5 sticky top-20 h-fit">
-                                <ProfileFriendsCard profileId={profile.id} />
+                               <ProfileFriendsCard 
+                                    profileId={profile.id} 
+                                    currentUsername={profile.userName} 
+                                    loggedInUsername={profile?.userName} 
+                                />
                                 <ProfileMediaCard profileId={profile.id} />
                             </div>
 

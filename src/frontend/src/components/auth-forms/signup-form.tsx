@@ -18,7 +18,7 @@ import { Input } from "@frontend/components/ui/input";
 
 import { useRegister } from "@frontend/hooks/use-auth";
 import { getAxiosErrorMessage } from "@frontend/lib/utils";
-import { Gender } from "@frontend/lib/types/auth";
+import { Gender } from "@frontend/lib/types/enums";
 
 import { useRegistrationStore } from "@frontend/stores/useRegistrationStore";
 

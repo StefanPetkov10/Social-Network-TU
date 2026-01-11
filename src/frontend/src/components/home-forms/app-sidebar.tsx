@@ -11,7 +11,7 @@ import {
 } from "lucide-react"
 
 import { NavMain } from "@frontend/components/home-forms/nav-main"
-import { NavSecondary } from "@frontend/components/home-forms/nav-secondary" 
+import { NavSecondary } from "@frontend/components/home-forms/nav-secondary"
 import {
   Sidebar,
   SidebarContent,
@@ -19,30 +19,8 @@ import {
   SidebarRail,
 } from "@frontend/components/ui/sidebar"
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar"
-import { getInitials, getUserDisplayName } from "@frontend/lib/utils";
-
-const data = {
-  navMain: [
-    { title: "Приятели", url: "/friends", icon: UserPlus },
-    { title: "Последователи", url: "/followers", icon: Users },
-    { title: "Запазени", url: "/saved", icon: Bookmark },
-    {
-      title: "Моите Групи",
-      url: "/groups",
-      icon: LayoutGrid,
-      isActive: true,
-      items: [
-        { title: "Софтуерно Инженерство '24", url: "/groups/ksi" },
-        { title: "Спортен клуб ТУ", url: "/groups/sport" },
-      ],
-    },
-  ],
-  navSecondary: [
-    { title: "Поддръжка (Support)", url: "/support", icon: LifeBuoy },
-    { title: "Обратна връзка (Feedback)", url: "/feedback", icon: Send },
-  ],
-}
-
+import { getInitials } from "@frontend/lib/utils";
+import { useMyGroups } from "@frontend/hooks/use-groups"
 
 type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
   user: {
@@ -51,9 +29,34 @@ type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
   };
 }
 
-
 export function AppSidebar({ user, ...props }: AppSidebarProps) {
+  const { data: myGroupsItems, isLoading } = useMyGroups();
   const initials = getInitials(user.name);
+
+   const navMainItems = [
+    { title: "Приятели", url: "/friends", icon: UserPlus },
+    { title: "Последователи", url: "/followers", icon: Users },
+    { title: "Запазени", url: "/saved", icon: Bookmark },
+    {
+      title: "Моите Групи",
+      url: "/groups",
+      icon: LayoutGrid,
+      isActive: true, 
+      items: isLoading 
+        ? [{ title: "Зареждане...", url: "#" }] 
+        : myGroupsItems?.data?.length 
+            ? myGroupsItems.data.map((group: any) => ({
+                title: group.name,
+                url: `/groups/${group.name}` 
+              }))
+            : [{ title: "Нямате групи", url: "/groups/discover" }], 
+    },
+  ];
+
+  const navSecondaryItems = [
+    { title: "Поддръжка (Support)", url: "/support", icon: LifeBuoy },
+    { title: "Обратна връзка (Feedback)", url: "/feedback", icon: Send },
+  ];
 
   return (
     <Sidebar 
@@ -83,9 +86,9 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
       </SidebarHeader>
 
       <SidebarContent className="px-3 flex flex-col h-full gap-6 [&_svg]:size-6 [&_span]:text-base [&_a]:py-3">
-        <NavMain items={data.navMain} />
+        <NavMain items={navMainItems} />
         
-        <NavSecondary items={data.navSecondary} className="mt-auto pb-4" />
+        <NavSecondary items={navSecondaryItems} className="mt-auto pb-4" />
       </SidebarContent>
       
       <SidebarRail />

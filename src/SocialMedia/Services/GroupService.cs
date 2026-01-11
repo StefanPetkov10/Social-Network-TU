@@ -264,6 +264,7 @@ namespace SocialMedia.Services
             var groups = await _groupRepository.QueryNoTracking()
                 .Where(g => myMembership.Contains(g.Id))
                 .Include(g => g.Members)
+                .OrderBy(g => g.CreatedDate)
                 .ToListAsync();
 
             var dtos = groups.Select(g =>

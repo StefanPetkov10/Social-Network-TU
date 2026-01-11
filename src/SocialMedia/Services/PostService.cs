@@ -57,9 +57,11 @@ namespace SocialMedia.Services
             var author = await _profileRepository.GetByApplicationIdAsync(userId);
             if (author == null) return NotFoundResponse<PostDto>("Post");
 
+            Group? group = null;
+
             if (dto.GroupId.HasValue)
             {
-                var group = await _groupRepository.GetByIdAsync(dto.GroupId.Value);
+                group = await _groupRepository.GetByIdAsync(dto.GroupId.Value);
                 if (group == null) return NotFoundResponse<PostDto>("Group");
 
                 var isMember = await _groupRepository.IsMemberAsync(group.Id, author.Id);
@@ -69,7 +71,7 @@ namespace SocialMedia.Services
             var post = _mapper.Map<Post>(dto);
             post.Id = Guid.NewGuid();
             post.ProfileId = author.Id;
-            post.Visibility = dto.GroupId.HasValue ? PostVisibility.Public : dto.Visibility;
+            post.Visibility = dto.GroupId.HasValue ? PostVisibility.Public : dto.Visibility ?? PostVisibility.Public;
             post.Media = new List<PostMedia>();
 
             if (dto.Files != null && dto.Files.Any())
@@ -95,8 +97,11 @@ namespace SocialMedia.Services
 
             await _postRepository.AddAsync(post);
             await _postRepository.SaveChangesAsync();
-            var profile = await _profileRepository.GetByIdAsync(post.ProfileId);
-            return SuccessPostDto(post, profile, "Post created successfully.");
+
+            post.Profile = author;
+            post.Group = group;
+
+            return SuccessPostDto(post, author, "Post created successfully.");
         }
 
         public async Task<ApiResponse<PostDto>> GetPostByIdAsync(ClaimsPrincipal userClaims, Guid postId)

@@ -11,9 +11,10 @@ import Link from "next/link";
 interface ProfileFriendsCardProps {
   profileId: string;
   currentUsername?: string; 
+  loggedInUsername?: string; 
 }
 
-export function ProfileFriendsCard({ profileId, currentUsername }: ProfileFriendsCardProps) {
+export function ProfileFriendsCard({ profileId, currentUsername, loggedInUsername }: ProfileFriendsCardProps) {
   const { data: response, isLoading } = useQuery({
     queryKey: ["profile-friends-widget", profileId],
     queryFn: () => friendsService.getFriendsList(profileId, null, 9), 
@@ -26,11 +27,6 @@ export function ProfileFriendsCard({ profileId, currentUsername }: ProfileFriend
     return <FriendsSkeleton />;
   }
 
-  
-  const seeAllLink = currentUsername 
-    ? `/${currentUsername}/friends` 
-    : `/friends`; 
-
   return (
     <div className="bg-background rounded-xl border p-4 shadow-sm h-fit">
       <div className="flex justify-between items-center mb-4">
@@ -40,12 +36,6 @@ export function ProfileFriendsCard({ profileId, currentUsername }: ProfileFriend
              <span className="text-xs text-muted-foreground">{friends.length} (показани)</span>
            )}
         </div>
-        {/* {friends.length > 0 && (
-            <Link href={seeAllLink} className="text-primary text-sm font-semibold hover:underline">
-                Виж всички
-            </Link>
-        )} 
-        */}
       </div>
 
       {friends.length === 0 ? (
@@ -60,7 +50,9 @@ export function ProfileFriendsCard({ profileId, currentUsername }: ProfileFriend
                 const initials = getInitials(name);
                 const authorAvatar = friend.authorAvatar || friend.avatarUrl || friend.photo || "";
                 
-                const profileLink = `/${friend.userName}`;
+                const isMe = loggedInUsername && friend.userName === loggedInUsername;
+                
+                const profileLink = isMe ? "/profile" : `/${friend.userName}`;
 
                 return (
                     <Link 
@@ -92,13 +84,6 @@ export function ProfileFriendsCard({ profileId, currentUsername }: ProfileFriend
             })}
         </div>
       )}
-
-      {/* {friends.length > 0 && (
-        <Link href={seeAllLink} className="w-full mt-4 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors bg-muted/50 hover:bg-muted text-foreground h-10 px-4 py-2">
-            Виж всички
-        </Link>
-      )} 
-      */}
     </div>
   );
 }

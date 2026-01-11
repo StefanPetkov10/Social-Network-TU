@@ -9,7 +9,7 @@ namespace SocialMedia.DTOs.Post
 
         public List<IFormFile>? Files { get; set; } // images, videos, docs
 
-        public PostVisibility Visibility { get; set; }
+        public PostVisibility? Visibility { get; set; }
 
         [AllowNull]
         public Guid? GroupId { get; set; }

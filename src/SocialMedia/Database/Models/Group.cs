@@ -5,7 +5,7 @@ using SocialMedia.Database.Models.Enums;
 
 namespace SocialMedia.Database.Models
 {
-    public class Group
+    public class Group : BaseModel
     {
         [Key]
         public Guid Id { get; set; }

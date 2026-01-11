@@ -47,8 +47,7 @@ namespace SocialMedia.Services
 
         public async Task<ApiResponse<ProfileDto>> GetProfileByUsernameAsync(ClaimsPrincipal userClaims, string username)
         {
-            var profile = await _profileRepo.QueryNoTracking()
-                .Include(p => p.User)
+            var profile = await _profileRepo
                 .FirstOrDefaultAsync(p => p.User.UserName != null && p.User.UserName.ToUpper() == username.ToUpper());
 
             if (profile == null)

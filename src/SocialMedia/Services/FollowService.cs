@@ -252,8 +252,8 @@ namespace SocialMedia.Services
                 if (candidateIds.Any())
                 {
                     var profiles = await _profileRepository.QueryNoTracking()
-                        .Where(p => candidateIds.Contains(p.Id))
                         .Include(p => p.User)
+                        .Where(p => candidateIds.Contains(p.Id))
                         .ToListAsync();
 
                     var friendIds = await _friendshipRepository.QueryNoTracking()

@@ -60,7 +60,10 @@ export function PostCard({ post, authorProfile, hideGroupInfo }: PostCardProps) 
   const authorAvatarUrl = post.authorAvatar || "";
   const authorInitials = getInitials(authorName);
   const authorUsername = post.username;
-  const authorProfileUrl = authorUsername ? `/${authorUsername}` : "#";
+  const isCurrentUser = authorProfile?.userName === authorUsername;
+  const authorProfileUrl = isCurrentUser 
+      ? "/profile" 
+      : (authorUsername ? `/${authorUsername}` : "#");
 
   const isGroupPost = !hideGroupInfo && !!post.groupId && post.groupId !== "00000000-0000-0000-0000-000000000000";
   const groupName = post.groupName || "Unknown Group";

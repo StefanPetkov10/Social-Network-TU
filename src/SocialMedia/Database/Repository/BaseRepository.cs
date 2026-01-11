@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database;
+using SocialMedia.Database.Models;
 using SocialMedia.Database.Models.Enums;
 
 namespace SocialMedia.Data.Repository
@@ -20,8 +21,19 @@ namespace SocialMedia.Data.Repository
         public async Task<TType> GetByIdAsync(TId id) =>
             await this.dbSet.FindAsync(id);
 
-        public async Task<TType> GetByApplicationIdAsync(TId id) =>
-            await this.dbSet.FirstOrDefaultAsync(u => EF.Property<TId>(u, "ApplicationId").Equals(id));
+        public async Task<TType?> GetByApplicationIdAsync(TId id)
+        {
+            if (typeof(TType) == typeof(Profile))
+            {
+                var profile = await this.dbContext.Profiles
+                    .Include(p => p.User)
+                    .FirstOrDefaultAsync(u => EF.Property<TId>(u, "ApplicationId").Equals(id));
+
+                return profile as TType;
+            }
+
+            throw new InvalidOperationException("GetByApplicationIdAsync is only supported for TType of type Profile.");
+        }
 
         public IQueryable<TType> Query() => dbSet.AsQueryable();
 

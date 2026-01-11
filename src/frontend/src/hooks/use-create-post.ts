@@ -8,7 +8,7 @@ export function useCreatePost() {
   return useMutation({
     mutationFn: (formData: FormData) => postService.createPost(formData),
 
-    onSuccess: (response) => {
+    onSuccess: (response, formData) => {
       if (!response.success) {
         toast.error("Грешка при качване", {
           description: response.message || "Невалиден тип файл.",
@@ -17,10 +17,21 @@ export function useCreatePost() {
       }
       toast.success("Успех!", { description: "Постът е публикуван успешно." });
       
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
+      const profileId = formData.get("ProfileId")?.toString();
+      const groupId = formData.get("GroupId")?.toString();
+console.log("Пост създаден успешно. Инвалидация на кеша...");
+      if (groupId) {
+          queryClient.invalidateQueries({ queryKey: ["group-posts", groupId] });
+          console.log("Инвалидация на груповите постове за група:", groupId);
+      } else {
+          queryClient.invalidateQueries({ queryKey: ["posts"] });
+          queryClient.invalidateQueries({ queryKey: ["posts", profileId] }); 
+      }
     },
     onError: (error: any) => {
-      const msg = error?.response?.data?.message || "Възникна неочаквана грешка.";
+      console.log("Грешка при създаване на пост:", error);
+      console.log("Отговор от сървъра:", error?.response?.data);
+      const msg = error?.response?.data?.message 
       toast.error("Грешка", { description: msg });
     },
   });

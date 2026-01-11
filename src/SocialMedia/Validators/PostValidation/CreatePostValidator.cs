@@ -19,13 +19,6 @@ namespace SocialMedia.Validators.PostValidation
                 .WithMessage("You can upload a maximum of 5 files.")
                 .Must(files => files == null || files.All(file => file.Length <= 10 * 1024 * 1024))
                 .WithMessage("Each file must be less than 10MB.");
-
-            When(x => x.GroupId.HasValue, () =>
-            {
-                RuleFor(x => x.Visibility)
-                    .Null()
-                    .WithMessage("Group posts cannot have visibility setting.");
-            });
         }
     }
 }

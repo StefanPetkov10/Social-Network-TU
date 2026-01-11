@@ -231,7 +231,10 @@ export default function GroupPage() {
                                     ) : (
                                         <>
                                             {isMember && userDataForPost && (
-                                                <CreatePost user={userDataForPost} /> 
+                                                <CreatePost 
+                                                    user={userDataForPost} 
+                                                    groupId={group.id} 
+                                                /> 
                                             )}
 
                                             {isPostsLoading ? (

@@ -105,16 +105,27 @@ export function GroupsSidebar() {
                   <p className="text-sm text-gray-500">Все още не сте член на групи.</p>
                 ) : (
                   <ul className="space-y-2 max-h-60 overflow-y-auto">
-                    {myGroupsData.data.slice(0, 5).map((group) => (
-                      <li key={group.id}>
-                        <Link
-                          href={`/groups/${group.name}`}
-                          className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
-                        >
-                          {group.name}
-                        </Link>
-                      </li>
-                    ))}
+                    {myGroupsData.data.slice(0, 5).map((group) => {
+                        const currentPath = decodeURIComponent(pathname || "");
+                        const groupPath = `/groups/${group.name}`;
+                        const isGroupActive = 
+                            currentPath === groupPath || 
+                            currentPath.startsWith(`${groupPath}/`);                                        
+                        return (
+                            <li key={group.id}>
+                                <Link
+                                    href={`/groups/${group.name}`} 
+                                    className={`flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors 
+                                        ${isGroupActive
+                                            ? 'bg-gray-100 text-primary'
+                                            : 'text-muted-foreground'
+                                        }`}
+                                >
+                                    {group.name}
+                                </Link>
+                            </li>
+                        );
+                    })}
                   </ul>
                 )}
               </>
