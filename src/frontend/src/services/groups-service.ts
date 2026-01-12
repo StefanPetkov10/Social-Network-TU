@@ -1,8 +1,7 @@
 import api from "../lib/axios";
-import { GroupDto, CreateGroupDto, UpdateGroupDto, MemberDto } from "@frontend/lib/types/groups";
+import { GroupDto, CreateGroupDto, UpdateGroupDto } from "@frontend/lib/types/groups";
 import { PostDto } from "@frontend/lib/types/posts";
 import { ApiResponse } from "@frontend/lib/types/api";
-import { getgroups } from "process";
 
 export const groupsService = {
     getGroupFeed: async (lastPostId?: string) => {

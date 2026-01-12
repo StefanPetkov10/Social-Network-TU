@@ -3,9 +3,14 @@ import { GroupPrivacy, GroupRole } from "./enums";
 export interface MemberDto {
   profileId: string;
   fullName: string;
-  photo?: string;
-  role: GroupRole;
-  joinedOn: string; 
+  username: string; 
+  authorAvatar: string | null;
+  role: GroupRole; 
+  joinedOn: string;
+  
+  isMe: boolean;
+  isFriend: boolean;
+  mutualFriendsCount: number;
 }
 
 export interface GroupDto {
