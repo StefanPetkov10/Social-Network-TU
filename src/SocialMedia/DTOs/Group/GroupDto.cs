@@ -16,5 +16,7 @@
 
         public bool CanViewPosts { get; set; }
         public bool CanCreatePost { get; set; }
+
+        public int MutualFriendsCount { get; set; }
     }
 }

@@ -19,12 +19,14 @@ namespace SocialMedia.Services
         private readonly IRepository<GroupMembership, Guid> _membershipRepository;
         private readonly IRepository<Post, Guid> _postRepository;
         private readonly IRepository<Profile, Guid> _profileRepository;
+        private readonly IRepository<Friendship, Guid> _friendshipRepository;
         private readonly IMapper _mapper;
 
         public GroupService(IRepository<Group, Guid> groupRepository,
             IRepository<GroupMembership, Guid> membershipRepository,
             IRepository<Post, Guid> postRepository,
             IRepository<Profile, Guid> profileRepository,
+            IRepository<Friendship, Guid> friendshipRepository,
             IMapper mapper, UserManager<ApplicationUser> userManager)
             : base(userManager)
         {
@@ -32,6 +34,7 @@ namespace SocialMedia.Services
             _profileRepository = profileRepository;
             _groupRepository = groupRepository;
             _postRepository = postRepository;
+            _friendshipRepository = friendshipRepository;
             _mapper = mapper;
         }
         public async Task<ApiResponse<GroupDto>> CreateGroupAsync(ClaimsPrincipal userClaims, CreateGroupDto dto)
@@ -122,6 +125,92 @@ namespace SocialMedia.Services
             }
 
             return ApiResponse<GroupDto>.SuccessResponse(dto);
+        }
+
+        public async Task<ApiResponse<IEnumerable<GroupDto>>> GetGroupsDiscoverAsync(ClaimsPrincipal userClaims, Guid? lastGroupId = null, int take = 20)
+        {
+            if (take <= 0 || take > 50)
+                take = 20;
+
+            var invalidUserResponse = GetUserIdOrUnauthorized<IEnumerable<GroupDto>>(userClaims, out var userId);
+            if (invalidUserResponse != null)
+                return invalidUserResponse;
+
+            var profile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (profile == null)
+                return NotFoundResponse<IEnumerable<GroupDto>>("Profile");
+
+            var myFriends = await _friendshipRepository.QueryNoTracking()
+                .Where(f => (f.RequesterId == profile.Id || f.AddresseeId == profile.Id)
+                            && f.Status == FriendshipStatus.Accepted)
+                .Select(f => f.RequesterId == profile.Id ? f.AddresseeId : f.RequesterId)
+                .ToListAsync();
+
+            var friendsHashSet = myFriends.ToHashSet();
+
+            var myGroupIds = await _membershipRepository.QueryNoTracking()
+                .Where(m => m.ProfileId == profile.Id
+                    && m.Status == MembershipStatus.Approved)
+                .Select(m => m.GroupId)
+                .ToListAsync();
+
+            var suggestedGroups = await _groupRepository.QueryNoTracking()
+                .Where(g => !myGroupIds.Contains(g.Id))
+                .Select(g => new
+                {
+                    Group = g,
+                    MutualFriendsCount = g.Members.Count(m =>
+                        m.Status == MembershipStatus.Approved &&
+                        friendsHashSet.Contains(m.ProfileId))
+                })
+                .Where(x => x.MutualFriendsCount > 0)
+                .OrderByDescending(x => x.MutualFriendsCount)
+                .Take(take)
+                .ToListAsync();
+
+            if (lastGroupId.HasValue && lastGroupId.Value != Guid.Empty)
+            {
+                var lastGroup = await _groupRepository.GetByIdAsync(lastGroupId.Value);
+                if (lastGroup != null)
+                {
+                    suggestedGroups = suggestedGroups
+                        .SkipWhile(x => x.Group.Id != lastGroup.Id)
+                        .Skip(1)
+                        .Take(take)
+                        .ToList();
+                }
+            }
+
+            var dtos = suggestedGroups.Select(x =>
+            {
+                var dto = _mapper.Map<GroupDto>(x.Group);
+
+                dto.MutualFriendsCount = x.MutualFriendsCount;
+                dto.MembersCount = x.Group.Members.Count;
+                dto.IsPrivate = x.Group.Privacy == GroupPrivacy.Private;
+
+                dto.IsMember = false;
+                dto.IsAdmin = false;
+                dto.IsOwner = false;
+                dto.HasRequestedJoin = false;
+                dto.CanCreatePost = false;
+                dto.CanViewPosts = x.Group.Privacy != GroupPrivacy.Private;
+
+                return dto;
+            }).ToList();
+
+            var lastItem = suggestedGroups.LastOrDefault();
+            if (lastItem != null)
+            {
+                var lastDto = dtos.LastOrDefault(d => d.Id == lastItem.Group.Id);
+            }
+
+            if (!dtos.Any())
+            {
+                return ApiResponse<IEnumerable<GroupDto>>.SuccessResponse(Enumerable.Empty<GroupDto>(), "No groups found.");
+            }
+
+            return ApiResponse<IEnumerable<GroupDto>>.SuccessResponse(dtos, "Discover groups retrieved.");
         }
         public async Task<ApiResponse<IEnumerable<PostDto>>> GetMyGroupsFeedAsync(ClaimsPrincipal userClaims, Guid? lastPostId = null, int take = 20)
         {
@@ -342,6 +431,5 @@ namespace SocialMedia.Services
 
             return ApiResponse<object>.SuccessResponse(null, "Group deleted successfully.");
         }
-
     }
 }
