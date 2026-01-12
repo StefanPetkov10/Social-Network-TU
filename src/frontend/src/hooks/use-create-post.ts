@@ -19,20 +19,12 @@ export function useCreatePost() {
       
       const profileId = formData.get("ProfileId")?.toString();
       const groupId = formData.get("GroupId")?.toString();
-console.log("Пост създаден успешно. Инвалидация на кеша...");
       if (groupId) {
           queryClient.invalidateQueries({ queryKey: ["group-posts", groupId] });
-          console.log("Инвалидация на груповите постове за група:", groupId);
       } else {
           queryClient.invalidateQueries({ queryKey: ["posts"] });
           queryClient.invalidateQueries({ queryKey: ["posts", profileId] }); 
       }
-    },
-    onError: (error: any) => {
-      console.log("Грешка при създаване на пост:", error);
-      console.log("Отговор от сървъра:", error?.response?.data);
-      const msg = error?.response?.data?.message 
-      toast.error("Грешка", { description: msg });
     },
   });
 }

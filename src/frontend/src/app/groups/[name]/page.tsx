@@ -37,6 +37,7 @@ import { SidebarProvider } from "@frontend/components/ui/sidebar";
 import { SiteHeader } from "@frontend/components/site-header";
 import { GroupsSidebar } from "@frontend/components/groups-forms/groups-sidebar";
 import { getUserDisplayName } from "@frontend/lib/utils";
+//import { GroupMembersView } from "@frontend/components/groups-forms/group-members-view";
 
 export default function GroupPage() {
     const params = useParams();
@@ -275,6 +276,13 @@ export default function GroupPage() {
                                     )}
                                 </>
                             )}
+                            {/*{activeTab === "Хора" && canViewContent && (
+                                <GroupMembersView 
+                                    groupId={group.id}
+                                    currentUserProfile={currentUser}
+                                    totalMembers={group.membersCount}
+                                />
+                            )}*/}
 
                              {activeTab === "Чакащи" && (isAdmin || isOwner) && (
                                 <div className="bg-white p-6 rounded-xl shadow-sm">

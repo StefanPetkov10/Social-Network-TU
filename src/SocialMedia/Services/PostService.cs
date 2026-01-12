@@ -349,7 +349,9 @@ namespace SocialMedia.Services
 
             var query = _postMediaRepository.QueryNoTracking()
                 .Include(m => m.Post)
-                .Where(m => !m.Post.IsDeleted && m.Post.ProfileId == profileId)
+                .Where(m => !m.Post.IsDeleted
+                    && m.Post.ProfileId == profileId
+                    && m.Post.GroupId == null)
                 .Where(m => m.Post.Visibility == PostVisibility.Public || isOwner ||
                            (m.Post.Visibility == PostVisibility.FriendsOnly && isFriend));
 

@@ -8,11 +8,26 @@ namespace SocialMedia.Services.Interfaces
     public interface IGroupMembershipService
     {
         Task<ApiResponse<object>> JoinGroupAsync(ClaimsPrincipal userClaims, Guid groupId);
-        Task<ApiResponse<object>> ApproveJoinRequestAsync(ClaimsPrincipal userClaims, Guid groupId, Guid profileId);
-        Task<ApiResponse<IEnumerable<MemberDto>>> GetGroupMembersAsync(ClaimsPrincipal userClaims, Guid groupId);
-        Task<ApiResponse<object>> RejectJoinRequestAsync(ClaimsPrincipal userClaims, Guid groupId, Guid profileId);
         Task<ApiResponse<object>> LeaveGroupAsync(ClaimsPrincipal userClaims, Guid groupId);
-        Task<ApiResponse<object>> ChangeMemberRoleAsync(ClaimsPrincipal userClaims, Guid groupId, Guid profileId, GroupRole newRole);
+
+        Task<ApiResponse<object>> ApproveJoinRequestAsync(ClaimsPrincipal userClaims, Guid groupId, Guid profileId);
+        Task<ApiResponse<object>> RejectJoinRequestAsync(ClaimsPrincipal userClaims, Guid groupId, Guid profileId);
         Task<ApiResponse<object>> RemoveMemberAsync(ClaimsPrincipal userClaims, Guid groupId, Guid profileId);
+        Task<ApiResponse<object>> ChangeMemberRoleAsync(ClaimsPrincipal userClaims, Guid groupId, Guid targetProfileId, GroupRole newRole);
+
+        Task<ApiResponse<IEnumerable<MemberDto>>> GetGroupMembersAsync(
+            ClaimsPrincipal userClaims,
+            Guid groupId,
+            DateTime? lastJoinedDate = null,
+            int take = 20);
+
+        Task<ApiResponse<IEnumerable<MemberDto>>> GetFriendsInGroupAsync(
+            ClaimsPrincipal userClaims,
+            Guid groupId,
+            int take = 3,
+            int skip = 0);
+        Task<ApiResponse<IEnumerable<MemberDto>>> GetOwnerAndAdminsAsync(ClaimsPrincipal userClaims, Guid groupId);
+        Task<ApiResponse<IEnumerable<MemberDto>>> GetPendingJoinRequestsAsync(ClaimsPrincipal userClaims, Guid groupId);
+        Task<ApiResponse<IEnumerable<MemberDto>>> GetMutualFriendsInGroupAsync(ClaimsPrincipal userClaims, Guid groupId);
     }
 }
