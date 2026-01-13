@@ -88,39 +88,42 @@ namespace SocialMedia.Services
                 return NotFoundResponse<GroupDto>("Group");
 
             var invalidUserResponse = GetUserIdOrUnauthorized<GroupDto>(userClaims, out var userId);
-            var dto = _mapper.Map<GroupDto>(group);
-
-            /*if (invalidUserResponse != null)
-            {
-                dto.CanViewPosts = !group.IsPrivate;
-                return ApiResponse<GroupDto>.SuccessResponse(dto);
-            }*/
-
 
             var profile = await _profileRepository.GetByApplicationIdAsync(userId);
-
             var membership = profile != null
                   ? group.Members.FirstOrDefault(m => m.ProfileId == profile.Id)
                   : null;
 
-            dto = _mapper.Map<GroupDto>(group);
+            var dto = _mapper.Map<GroupDto>(group);
             dto.IsPrivate = group.Privacy == GroupPrivacy.Private;
-            dto.MembersCount = group.Members.Count;
 
-            if (membership != null)
+            dto.MembersCount = group.Members.Count(m => m.Status == MembershipStatus.Approved);
+
+            if (membership != null && membership.Status == MembershipStatus.Approved)
             {
                 dto.IsMember = true;
                 dto.IsAdmin = membership.Role == GroupRole.Admin || membership.Role == GroupRole.Owner;
                 dto.IsOwner = membership.Role == GroupRole.Owner;
+                dto.HasRequestedJoin = false;
                 dto.CanViewPosts = true;
                 dto.CanCreatePost = true;
+            }
+            else if (membership != null && membership.Status == MembershipStatus.Pending)
+            {
+                dto.IsMember = false;
+                dto.IsAdmin = false;
+                dto.IsOwner = false;
+                dto.HasRequestedJoin = true;
+                dto.CanViewPosts = !dto.IsPrivate;
+                dto.CanCreatePost = false;
             }
             else
             {
                 dto.IsMember = false;
                 dto.IsAdmin = false;
                 dto.IsOwner = false;
-                dto.CanViewPosts = group.Privacy != GroupPrivacy.Private;
+                dto.HasRequestedJoin = false;
+                dto.CanViewPosts = !dto.IsPrivate;
                 dto.CanCreatePost = false;
             }
 
@@ -150,7 +153,8 @@ namespace SocialMedia.Services
 
             var myGroupIds = await _membershipRepository.QueryNoTracking()
                 .Where(m => m.ProfileId == profile.Id
-                    && m.Status == MembershipStatus.Approved)
+                    && m.Status == MembershipStatus.Approved ||
+                    m.Status == MembershipStatus.Pending)
                 .Select(m => m.GroupId)
                 .ToListAsync();
 

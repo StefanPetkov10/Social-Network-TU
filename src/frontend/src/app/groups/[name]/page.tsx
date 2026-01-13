@@ -23,6 +23,16 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@frontend/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@frontend/components/ui/alert-dialog";
 
 import { PostCard } from "@frontend/components/post-forms/post-card";
 import { CreatePost } from "@frontend/components/post-forms/create-post-form";
@@ -30,25 +40,28 @@ import { LoadingScreen } from "@frontend/components/common/loading-screen";
 import { ErrorScreen } from "@frontend/components/common/error-screen";
 
 import { useGroupByName, useGroupPosts } from "@frontend/hooks/use-groups";
+import { useJoinGroup, useLeaveGroup } from "@frontend/hooks/use-group-members";
 import { useProfile } from "@frontend/hooks/use-profile"; 
-import { getInitials } from "@frontend/lib/utils";
+import { getInitials, getUserDisplayName } from "@frontend/lib/utils";
 import ProtectedRoute from "@frontend/components/protected-route";
 import { SidebarProvider } from "@frontend/components/ui/sidebar";
 import { SiteHeader } from "@frontend/components/site-header";
 import { GroupsSidebar } from "@frontend/components/groups-forms/groups-sidebar";
-import { getUserDisplayName } from "@frontend/lib/utils";
-//import { GroupMembersView } from "@frontend/components/groups-forms/group-members-view";
 
 export default function GroupPage() {
     const params = useParams();
     const groupName = decodeURIComponent(params.name as string);
 
     const [activeTab, setActiveTab] = useState("Публикации");
+    const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
 
     const { data: groupData, isLoading: isGroupLoading, isError } = useGroupByName(groupName);
     const group = groupData?.data;
 
     const { data: currentUser } = useProfile();
+
+    const { mutate: joinGroup, isPending: isJoining } = useJoinGroup();
+    const { mutate: leaveGroup, isPending: isLeaving } = useLeaveGroup();
 
     const {
         data: postsData,
@@ -75,12 +88,14 @@ export default function GroupPage() {
     const isMember = group.isMember;
     const isOwner = group.isOwner;
     const isAdmin = group.isAdmin;
+    const isPending = group.hasRequestedJoin;
+
     const canViewContent = !group.isPrivate || isMember; 
 
     const baseTabs = ["Публикации", "Хора", "Медия", "Файлове"];
     const tabs = (isOwner || isAdmin) ? [...baseTabs, "Чакащи"] : baseTabs;
 
-    const hasPendingRequests = true; 
+    const hasPendingRequests = (isOwner || isAdmin) && true; 
 
     const userForLayout = {
         name: getUserDisplayName(currentUser),
@@ -157,7 +172,13 @@ export default function GroupPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem className="text-red-600 cursor-pointer font-medium focus:bg-red-50 focus:text-red-700">
+                                                    <DropdownMenuItem 
+                                                        className="text-red-600 cursor-pointer font-medium focus:bg-red-50 focus:text-red-700"
+                                                        onSelect={(e) => {
+                                                            e.preventDefault();
+                                                            setIsLeaveDialogOpen(true);
+                                                        }}
+                                                    >
                                                         <LogOut className="w-4 h-4 mr-2" />
                                                         Напусни групата
                                                     </DropdownMenuItem>
@@ -165,14 +186,22 @@ export default function GroupPage() {
                                             </DropdownMenu>
                                         ) : (
                                             <>
-                                                {group.hasRequestedJoin ? (
-                                                    <Button disabled className="bg-gray-100 text-gray-500 gap-2 px-8 h-11 rounded-lg font-medium">
+                                                {isPending ? (
+                                                    <Button disabled className="bg-gray-100 text-gray-500 gap-2 px-8 h-11 rounded-lg font-medium border border-gray-200">
                                                         <Clock className="w-5 h-5" />
                                                         Заявката е изпратена
                                                     </Button>
                                                 ) : (
-                                                    <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2 px-10 h-11 rounded-lg font-bold shadow-md shadow-blue-200 transition-all hover:scale-105 active:scale-95">
-                                                        <Users className="w-5 h-5" />
+                                                    <Button 
+                                                        onClick={() => joinGroup(group.id)}
+                                                        disabled={isJoining}
+                                                        className="bg-blue-600 hover:bg-blue-700 text-white gap-2 px-10 h-11 rounded-lg font-bold shadow-md shadow-blue-200 transition-all hover:scale-105 active:scale-95"
+                                                    >
+                                                        {isJoining ? (
+                                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                                        ) : (
+                                                            <Users className="w-5 h-5" />
+                                                        )}
                                                         Присъедини се
                                                     </Button>
                                                 )}
@@ -218,16 +247,23 @@ export default function GroupPage() {
                             {activeTab === "Публикации" && (
                                 <>
                                     {!canViewContent ? (
-                                        <div className="bg-white rounded-xl shadow-sm p-10 text-center space-y-5 border border-gray-200">
+                                        <div className="bg-white rounded-xl shadow-sm p-10 text-center space-y-5 border border-gray-200 animate-in fade-in zoom-in-95 duration-300">
                                             <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-400">
                                                 <Lock className="w-10 h-10" />
                                             </div>
                                             <div>
                                                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Тази група е частна</h2>
-                                                <p className="text-gray-500 text-lg">
-                                                    Присъединете се към групата, за да разглеждате публикациите.
+                                                <p className="text-gray-500 text-lg max-w-md mx-auto">
+                                                    {isPending 
+                                                        ? "Вашата заявка за присъединяване се разглежда. Ще получите достъп, когато администратор я одобри."
+                                                        : "Присъединете се към групата, за да разглеждате публикациите и да видите кой членува в нея."}
                                                 </p>
                                             </div>
+                                            {!isPending && (
+                                                <Button onClick={() => joinGroup(group.id)} disabled={isJoining} className="font-semibold">
+                                                    Присъедини се към групата
+                                                </Button>
+                                            )}
                                         </div>
                                     ) : (
                                         <>
@@ -276,16 +312,9 @@ export default function GroupPage() {
                                     )}
                                 </>
                             )}
-                            {/*{activeTab === "Хора" && canViewContent && (
-                                <GroupMembersView 
-                                    groupId={group.id}
-                                    currentUserProfile={currentUser}
-                                    totalMembers={group.membersCount}
-                                />
-                            )}*/}
-
+                            
                              {activeTab === "Чакащи" && (isAdmin || isOwner) && (
-                                <div className="bg-white p-6 rounded-xl shadow-sm">
+                                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                                     <h3 className="text-lg font-bold mb-4">Чакащи заявки</h3>
                                     <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-dashed">
                                         {hasPendingRequests ? "Списък със заявки..." : "Няма чакащи заявки."}
@@ -351,6 +380,35 @@ export default function GroupPage() {
                 </div>
             </div>
           </div>
+
+          <AlertDialog open={isLeaveDialogOpen} onOpenChange={setIsLeaveDialogOpen}>
+            <AlertDialogContent className="rounded-2xl">
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="text-xl font-bold">Напускане на групата?</AlertDialogTitle>
+                    <AlertDialogDescription className="text-base text-gray-600">
+                        Сигурни ли сте, че искате да напуснете <span className="font-semibold text-gray-900">{group.name}</span>? 
+                        Вече няма да имате достъп до съдържанието и дискусиите в тази група.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="mt-4">
+                    <AlertDialogCancel className="rounded-xl font-medium border-gray-200 hover:bg-gray-50 hover:text-gray-900">
+                        Отказ
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                        className="rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white shadow-sm shadow-red-200"
+                        onClick={() => {
+                            leaveGroup(group.id);
+                            setIsLeaveDialogOpen(false);
+                        }}
+                        disabled={isLeaving}
+                    >
+                        {isLeaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                        Напусни
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
         </div>
       </SidebarProvider>
     </ProtectedRoute>

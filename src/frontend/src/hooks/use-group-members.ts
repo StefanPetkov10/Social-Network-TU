@@ -56,21 +56,31 @@ export const useJoinGroup = () => {
     return useMutation({
         mutationFn: (groupId: string) => groupMembersService.joinGroup(groupId),
         onSuccess: (data, groupId) => {
-            toast.success("Успех", { description: "Заявката е обработена успешно." });
-            queryClient.invalidateQueries({ queryKey: ["group-by-name"] }); 
+            const isJoinedImmediately = data.message?.toLowerCase().includes("joined");
+
+            if (isJoinedImmediately) {
+                toast.success("Успешно присъединяване!", { 
+                    description: "Вече сте член на групата и можете да разглеждате съдържанието." 
+                });
+            } else {
+                toast.success("Заявката е изпратена!", { 
+                    description: "Изчакайте одобрение от администратор, за да влезете в групата." 
+                });
+            }
+            queryClient.invalidateQueries({ queryKey: ["groups-discover"] }); 
+            
+            queryClient.invalidateQueries({ queryKey: ["group-by-name"] });
             
             queryClient.invalidateQueries({ queryKey: ["my-groups"] });
-
-            queryClient.invalidateQueries({ queryKey: ["groups-discover"] });
             
             queryClient.invalidateQueries({ queryKey: ["group-members", groupId] });
         },
         onError: (error: any) => {
-            // Ако вече си член, просто презареждаме, за да оправим UI-то
-            if (error?.response?.data?.message?.includes("Already a member")) {
-                 queryClient.invalidateQueries({ queryKey: ["group-by-name"] });
+            if (error?.response?.data?.message?.includes("Already")) {
                  queryClient.invalidateQueries({ queryKey: ["groups-discover"] });
+                 queryClient.invalidateQueries({ queryKey: ["group-by-name"] });
             }
+            
             toast.error("Грешка", { description: error?.response?.data?.message || "Неуспешно присъединяване." });
         }
     });
@@ -81,11 +91,16 @@ export const useLeaveGroup = () => {
     return useMutation({
         mutationFn: (groupId: string) => groupMembersService.leaveGroup(groupId),
         onSuccess: (data, groupId) => {
-            toast.success("Успех", { description: "Напуснахте групата." });
+            toast.success("Успех", { description: "Напуснахте групата успешно." });
             queryClient.invalidateQueries({ queryKey: ["group-by-name"] });
+
+            queryClient.invalidateQueries({ queryKey: ["group-posts", groupId] });
+
             queryClient.invalidateQueries({ queryKey: ["my-groups"] });
-            queryClient.invalidateQueries({ queryKey: ["group-members", groupId] });
+
             queryClient.invalidateQueries({ queryKey: ["groups-discover"] });
+            
+            queryClient.invalidateQueries({ queryKey: ["group-members", groupId] });
         },
         onError: (error: any) => {
             toast.error("Грешка", { description: error?.response?.data?.message || "Грешка при напускане." });
