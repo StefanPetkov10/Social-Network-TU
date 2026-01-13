@@ -104,8 +104,8 @@ export function CreatePost({ user, groupId }: CreatePostProps) {
       let hasInvalidType = false;
 
       selectedFiles.forEach((file) => {
-        if (file.size > 10 * 1024 * 1024) {
-             setFileError(`Файлът "${file.name}" е твърде голям (макс 10MB).`);
+        if (file.size > 100 * 1024 * 1024) {
+             setFileError(`Файлът "${file.name}" е твърде голям (макс 100MB).`);
              hasInvalidType = true; 
              return;
         }
@@ -325,12 +325,17 @@ export function CreatePost({ user, groupId }: CreatePostProps) {
                                 ))}
 
                                 {files.filter(isMedia).map((file, i) => (
-                                    <div key={`media-${i}`} className="relative group rounded-md overflow-hidden border bg-muted/20">
+                                    <div key={`media-${i}`} className="relative group rounded-md overflow-hidden border bg-muted/20 flex justify-center items-center">
                                         {file.type.startsWith("image/") ? (
-                                            <img src={URL.createObjectURL(file)} alt="preview" className="w-full h-auto object-cover max-h-[300px]" />
+                                            <img 
+                                                src={URL.createObjectURL(file)} 
+                                                alt="preview" 
+                                                className="w-full h-auto object-contain max-h-[300px]" 
+                                            />
                                         ) : (
                                             <video src={URL.createObjectURL(file)} controls className="w-full max-h-[300px]" />
                                         )}
+                                        
                                         <Button 
                                             type="button"
                                             variant="destructive" 
@@ -341,7 +346,7 @@ export function CreatePost({ user, groupId }: CreatePostProps) {
                                             <X className="h-3 w-3" />
                                         </Button>
                                     </div>
-                                ))}
+            ))}
                             </div>
                         </div>
                     )}

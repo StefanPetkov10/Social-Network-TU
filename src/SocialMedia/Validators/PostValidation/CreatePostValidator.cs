@@ -17,8 +17,8 @@ namespace SocialMedia.Validators.PostValidation
             RuleFor(x => x.Files)
                 .Must(files => files == null || files.Count <= 5)
                 .WithMessage("You can upload a maximum of 5 files.")
-                .Must(files => files == null || files.All(file => file.Length <= 10 * 1024 * 1024))
-                .WithMessage("Each file must be less than 10MB.");
+                .Must(files => files == null || files.All(file => file.Length <= 100 * 1024 * 1024))
+                .WithMessage("Each file must be less than 100MB.");
         }
     }
 }

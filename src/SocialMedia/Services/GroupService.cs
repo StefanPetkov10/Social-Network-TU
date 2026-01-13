@@ -20,6 +20,7 @@ namespace SocialMedia.Services
         private readonly IRepository<Post, Guid> _postRepository;
         private readonly IRepository<Profile, Guid> _profileRepository;
         private readonly IRepository<Friendship, Guid> _friendshipRepository;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IMapper _mapper;
 
         public GroupService(IRepository<Group, Guid> groupRepository,
@@ -27,6 +28,7 @@ namespace SocialMedia.Services
             IRepository<Post, Guid> postRepository,
             IRepository<Profile, Guid> profileRepository,
             IRepository<Friendship, Guid> friendshipRepository,
+            IHttpContextAccessor httpContextAccessor,
             IMapper mapper, UserManager<ApplicationUser> userManager)
             : base(userManager)
         {
@@ -35,6 +37,8 @@ namespace SocialMedia.Services
             _groupRepository = groupRepository;
             _postRepository = postRepository;
             _friendshipRepository = friendshipRepository;
+            _profileRepository = profileRepository;
+            _httpContextAccessor = httpContextAccessor;
             _mapper = mapper;
         }
         public async Task<ApiResponse<GroupDto>> CreateGroupAsync(ClaimsPrincipal userClaims, CreateGroupDto dto)
@@ -251,7 +255,9 @@ namespace SocialMedia.Services
                 .Where(p => p.GroupId != null && !p.IsDeleted
                     && myMembership.Contains(p.GroupId.Value))
                 .Include(p => p.Profile)
+                    .ThenInclude(u => u.User)
                 .Include(p => p.Group)
+                .Include(p => p.Media)
                 .OrderByDescending(p => p.CreatedDate)
                 .AsQueryable();
 
@@ -266,16 +272,7 @@ namespace SocialMedia.Services
 
             var posts = await queryPosts.Take(take).ToListAsync();
 
-            var dtos = _mapper.Map<IEnumerable<PostDto>>(posts);
-            foreach (var dto in dtos)
-            {
-                dto.GroupName = posts.FirstOrDefault(p => p.Id == dto.Id)?.Group?.Name;
-                if (string.IsNullOrEmpty(dto.AuthorName))
-                {
-                    dto.AuthorAvatar = posts.FirstOrDefault(p => p.Id == dto.Id)?.Profile?.Photo;
-                    dto.AuthorName = posts.FirstOrDefault(p => p.Id == dto.Id)?.Profile?.FullName ?? "Unknown";
-                }
-            }
+            var dtos = posts.Select(p => SuccessPostDto(p, p.Profile, "").Data).ToList();
 
             var lastId = posts.LastOrDefault()?.Id;
 
@@ -283,6 +280,7 @@ namespace SocialMedia.Services
                 "Feed retrieved successfully.",
                 new { lastPostId = lastId });
         }
+
         public async Task<ApiResponse<IEnumerable<PostDto>>> GetGroupsPostsAsync(ClaimsPrincipal userClaims, Guid groupId, Guid? lastPostId = null, int take = 20)
         {
             if (take <= 0 || take > 50)
@@ -316,7 +314,9 @@ namespace SocialMedia.Services
 
             var queryPosts = _postRepository.QueryNoTracking()
                 .Where(p => p.GroupId == groupId && !p.IsDeleted)
+                .Include(p => p.Media)
                 .Include(p => p.Profile)
+                    .ThenInclude(p => p.User)
                 .OrderByDescending(p => p.CreatedDate)
                 .AsQueryable();
 
@@ -331,16 +331,7 @@ namespace SocialMedia.Services
 
             var posts = await queryPosts.Take(take).ToListAsync();
 
-            var dtos = _mapper.Map<IEnumerable<PostDto>>(posts);
-
-            foreach (var dto in dtos)
-            {
-                if (string.IsNullOrEmpty(dto.AuthorName))
-                {
-                    dto.AuthorName = profile?.FullName ?? "Unknown";
-                    dto.AuthorAvatar = profile?.Photo;
-                }
-            }
+            var dtos = posts.Select(p => SuccessPostDto(p, p.Profile, "").Data).ToList();
 
             var lastId = posts.LastOrDefault()?.Id;
 
@@ -447,6 +438,27 @@ namespace SocialMedia.Services
             await _groupRepository.SaveChangesAsync();
 
             return ApiResponse<object>.SuccessResponse(null, "Group deleted successfully.");
+        }
+
+        private ApiResponse<PostDto> SuccessPostDto(Post post, Database.Models.Profile profile, string message)
+        {
+            var dto = _mapper.Map<PostDto>(post);
+            dto.CreatedAt = post.CreatedDate;
+            dto.AuthorName = profile.FullName ?? "Unknown Author";
+            dto.AuthorAvatar = profile.Photo;
+            dto.Username = profile.User.UserName;
+            dto.GroupId = post.GroupId;
+            dto.GroupName = post.Group != null ? post.Group.Name : null;
+            var baseUrl = $"{_httpContextAccessor.HttpContext!.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}";
+            dto.Media = post.Media.Select(m => new PostMediaDto
+            {
+                Id = m.Id,
+                Url = $"{baseUrl}/{m.FilePath}",
+                MediaType = m.MediaType,
+                FileName = m.FileName,
+                Order = m.Order
+            }).ToList();
+            return ApiResponse<PostDto>.SuccessResponse(dto, message);
         }
     }
 }

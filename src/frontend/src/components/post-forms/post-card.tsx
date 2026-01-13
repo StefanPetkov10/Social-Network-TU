@@ -10,8 +10,7 @@ import {
   Trash2,
   Edit2,
   FileText,
-  Download,
-  Users 
+  Download
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { Button } from "@frontend/components/ui/button";
@@ -257,33 +256,49 @@ export function PostCard({ post, authorProfile, hideGroupInfo }: PostCardProps) 
 
       {visualMedia.length > 0 && (
         <div className="mb-4 -mx-4 md:mx-0">
-            {visualMedia.length === 1 ? (
-                <div className="overflow-hidden md:rounded-lg border bg-muted/20">
-                    {visualMedia[0].mediaType === 1 ? (
-                        <video controls src={visualMedia[0].url} className="w-full h-auto max-h-[500px]" />
-                    ) : (
-                        <img src={visualMedia[0].url} alt="post content" className="w-full h-auto max-h-[500px] object-cover" />
-                    )}
-                </div>
-            ) : (
-                <Carousel className="w-full md:rounded-lg overflow-hidden border bg-muted/20">
-                    <CarouselContent>
-                        {visualMedia.map((item, index) => (
-                            <CarouselItem key={index} className="basis-full">
-                                <div className="flex items-center justify-center bg-black/5 aspect-video md:aspect-[4/3] overflow-hidden">
-                                     {item.mediaType === 1 ? (
-                                        <video controls src={item.url} className="w-full h-full object-contain" />
-                                     ) : (
-                                        <img src={item.url} alt={`slide-${index}`} className="w-full h-full object-cover" />
-                                     )}
-                                </div>
-                            </CarouselItem>
-                        ))}
-                    </CarouselContent>
-                    <CarouselPrevious className="left-2" />
-                    <CarouselNext className="right-2" />
-                </Carousel>
-            )}
+          {visualMedia.length === 1 ? (
+            <div className="flex justify-center items-center md:rounded-lg overflow-hidden relative bg-transparent">
+              {visualMedia[0].mediaType === 1 ? (
+                <video
+                  controls
+                  src={visualMedia[0].url}
+                  className="w-full h-auto max-h-[60vh] md:rounded-lg border"
+                />
+              ) : (
+                <img
+                  src={visualMedia[0].url}
+                  alt="post content"
+                  className="w-auto h-auto max-w-full max-h-[60vh] mx-auto md:rounded-lg border"
+                />
+              )}
+            </div>
+          ) : (
+            <Carousel className="w-full md:rounded-lg overflow-hidden border">
+              <CarouselContent>
+                {visualMedia.map((item, index) => (
+                 <CarouselItem key={index} className="basis-full">
+                    <div className="flex items-center justify-center relative w-full h-full bg-transparent">
+                        {item.mediaType === 1 ? (
+                        <video 
+                            controls 
+                            src={item.url} 
+                            className="w-full h-auto max-h-[600px] object-contain" 
+                        />
+                        ) : (
+                        <img 
+                            src={item.url} 
+                            alt={`slide-${index}`} 
+                            className="w-full h-auto max-h-[600px] object-contain" 
+                        />
+                        )}
+                    </div>
+                </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="left-2 bg-white/80 hover:bg-white text-black shadow-sm border-none" />
+              <CarouselNext className="right-2 bg-white/80 hover:bg-white text-black shadow-sm border-none" />
+            </Carousel>
+          )}
         </div>
       )}
 
