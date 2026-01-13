@@ -140,13 +140,13 @@ namespace SocialMedia.Services
             if (profile == null)
                 return NotFoundResponse<IEnumerable<GroupDto>>("Profile");
 
-            var myFriends = await _friendshipRepository.QueryNoTracking()
+            var myFriendIds = await _friendshipRepository.QueryNoTracking()
                 .Where(f => (f.RequesterId == profile.Id || f.AddresseeId == profile.Id)
                             && f.Status == FriendshipStatus.Accepted)
                 .Select(f => f.RequesterId == profile.Id ? f.AddresseeId : f.RequesterId)
                 .ToListAsync();
 
-            var friendsHashSet = myFriends.ToHashSet();
+            var friendsHashSet = myFriendIds.ToHashSet();
 
             var myGroupIds = await _membershipRepository.QueryNoTracking()
                 .Where(m => m.ProfileId == profile.Id
@@ -155,13 +155,25 @@ namespace SocialMedia.Services
                 .ToListAsync();
 
             var suggestedGroups = await _groupRepository.QueryNoTracking()
+                .Include(g => g.Members)
                 .Where(g => !myGroupIds.Contains(g.Id))
                 .Select(g => new
                 {
                     Group = g,
                     MutualFriendsCount = g.Members.Count(m =>
                         m.Status == MembershipStatus.Approved &&
-                        friendsHashSet.Contains(m.ProfileId))
+                        friendsHashSet.Contains(m.ProfileId)),
+                    FriendPreviews = g.Members
+                        .Where(m => m.Status == MembershipStatus.Approved && myFriendIds.Contains(m.ProfileId))
+                        .OrderByDescending(m => m.JoinedOn)
+                        .Take(3)
+                        .Select(m => new MutualFriendDto
+                        {
+                            AuthorAvatar = m.Profile.Photo,
+                            FullName = m.Profile.FullName
+                        })
+                        .ToList()
+
                 })
                 .Where(x => x.MutualFriendsCount > 0)
                 .OrderByDescending(x => x.MutualFriendsCount)
@@ -187,6 +199,7 @@ namespace SocialMedia.Services
 
                 dto.MutualFriendsCount = x.MutualFriendsCount;
                 dto.MembersCount = x.Group.Members.Count;
+                dto.MutualFriends = x.FriendPreviews;
                 dto.IsPrivate = x.Group.Privacy == GroupPrivacy.Private;
 
                 dto.IsMember = false;

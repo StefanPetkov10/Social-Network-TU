@@ -13,10 +13,10 @@
         public bool HasRequestedJoin { get; set; }
 
         public int MembersCount { get; set; }
+        public List<MutualFriendDto> MutualFriends { get; set; } = new();
+        public int MutualFriendsCount { get; set; }
 
         public bool CanViewPosts { get; set; }
         public bool CanCreatePost { get; set; }
-
-        public int MutualFriendsCount { get; set; }
     }
 }

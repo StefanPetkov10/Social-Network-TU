@@ -1,5 +1,10 @@
 import { GroupPrivacy, GroupRole } from "./enums";
 
+export interface MutualFriend {
+  authorAvatar: string | null;
+  fullName: string;
+}
+
 export interface MemberDto {
   profileId: string;
   fullName: string;
@@ -25,6 +30,8 @@ export interface GroupDto {
   hasRequestedJoin: boolean;
   
   membersCount: number;
+  mutualFriends?: MutualFriend[];
+  mutualFriendsCount?: number;
   
   canViewPosts: boolean;
   canCreatePost: boolean;

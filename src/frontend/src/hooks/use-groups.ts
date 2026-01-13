@@ -41,10 +41,28 @@ export const useMyGroups = () => {
 export const useGroupByName = (name: string) => {
   return useQuery({
     queryKey: ["group-by-name", name],
-    queryFn: () => groupsService.getGroupByNmae(name),
+    queryFn: () => groupsService.getGroupByName(name),
     enabled: !!name,
-    staleTime: 1000 * 60 * 5,});
+    staleTime: 1000 * 60 * 5,
+  });
 }
+
+export const useDiscoverGroups = () => {
+  return useInfiniteQuery({
+    queryKey: ["groups-discover"],
+    queryFn: ({ pageParam = undefined }) => {
+        return groupsService.getDiscoverGroups(pageParam);
+    },
+    getNextPageParam: (lastPageResponse) => {
+      if (lastPageResponse.data && lastPageResponse.data.length > 0) {
+          return lastPageResponse.data[lastPageResponse.data.length - 1].id;
+      }
+      return undefined;
+    },
+    initialPageParam: undefined as unknown as string | undefined,
+    staleTime: 1000 * 60 * 5,
+  });
+};
 
 export const useGroupPosts = (groupId: string) => {
   return useInfiniteQuery({

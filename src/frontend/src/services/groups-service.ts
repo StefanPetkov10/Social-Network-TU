@@ -25,8 +25,17 @@ export const groupsService = {
         return data;
     },
 
-    getGroupByNmae: async (name: string) => {
+    getGroupByName: async (name: string) => {
         const { data } = await api.get<ApiResponse<GroupDto>>(`/api/Group/${name}`);
+        return data;
+    },
+
+    getDiscoverGroups: async (lastGroupId?: string) => {
+        const params = new URLSearchParams();
+        if (lastGroupId) params.append("lastGroupId", lastGroupId);
+        params.append("take", "20");
+        
+        const { data } = await api.get<ApiResponse<GroupDto[]>>("/api/Group/discover", { params });
         return data;
     },
     
