@@ -42,11 +42,12 @@ export const useGroupAdmins = (groupId: string) => {
     });
 };
 
-export const useGroupRequests = (groupId: string) => {
+export const useGroupRequests = (groupId: string, options?: { enabled?: boolean }) => {
     return useQuery({
         queryKey: ["group-requests", groupId],
         queryFn: () => groupMembersService.getPendingRequests(groupId),
-        enabled: !!groupId,
+        
+        enabled: !!groupId && (options?.enabled !== false), 
     });
 };
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter, usePathname } from "next/navigation"; 
 import { 
   Loader2, 
   Users, 
@@ -40,19 +40,44 @@ import { LoadingScreen } from "@frontend/components/common/loading-screen";
 import { ErrorScreen } from "@frontend/components/common/error-screen";
 
 import { useGroupByName, useGroupPosts } from "@frontend/hooks/use-groups";
-import { useJoinGroup, useLeaveGroup } from "@frontend/hooks/use-group-members";
+import { useJoinGroup, useLeaveGroup, useGroupRequests } from "@frontend/hooks/use-group-members";
 import { useProfile } from "@frontend/hooks/use-profile"; 
 import { getInitials, getUserDisplayName } from "@frontend/lib/utils";
 import ProtectedRoute from "@frontend/components/protected-route";
 import { SidebarProvider } from "@frontend/components/ui/sidebar";
 import { SiteHeader } from "@frontend/components/site-header";
 import { GroupsSidebar } from "@frontend/components/groups-forms/groups-sidebar";
+import { GroupRequestsView } from "@frontend/components/groups-forms/group-requests-view"; 
+
+const TAB_MAP: Record<string, string> = {
+    "posts": "Публикации",
+    "people": "Хора",
+    "media": "Медия",
+    "files": "Файлове",
+    "requests": "Чакащи"
+};
+
+const REVERSE_TAB_MAP: Record<string, string> = {
+    "Публикации": "posts",
+    "Хора": "people",
+    "Медия": "media",
+    "Файлове": "files",
+    "Чакащи": "requests"
+};
 
 export default function GroupPage() {
     const params = useParams();
     const groupName = decodeURIComponent(params.name as string);
+    
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const pathname = usePathname();
 
-    const [activeTab, setActiveTab] = useState("Публикации");
+    const currentTabParam = searchParams.get("tab") || "posts";
+    const initialTab = TAB_MAP[currentTabParam] || "Публикации";
+
+    const [activeTab, setActiveTab] = useState(initialTab);
+
     const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
 
     const { data: groupData, isLoading: isGroupLoading, isError } = useGroupByName(groupName);
@@ -82,19 +107,43 @@ export default function GroupPage() {
         }
     }, [entry, hasNextPage, fetchNextPage]);
 
+    useEffect(() => {
+        const tabParam = searchParams.get("tab") || "posts";
+        const tabName = TAB_MAP[tabParam] || "Публикации";
+        setActiveTab(tabName);
+    }, [searchParams]);
+
+    const isMember = group?.isMember;
+    const isOwner = group?.isOwner;
+    const isAdmin = group?.isAdmin;
+    const isPending = group?.hasRequestedJoin;
+
+    const shouldFetchRequests = !!group?.id && group.isPrivate && (isOwner || isAdmin);
+    
+    const { data: requestsData } = useGroupRequests(group?.id || "", { 
+        enabled: shouldFetchRequests 
+    }); 
+    const pendingCount = requestsData?.data?.length || 0;
+
+    const handleTabChange = (tabName: string) => {
+        setActiveTab(tabName);
+        
+        const urlKey = REVERSE_TAB_MAP[tabName] || "posts";
+        const newParams = new URLSearchParams(searchParams.toString());
+        newParams.set("tab", urlKey);
+        router.push(`${pathname}?${newParams.toString()}`, { scroll: false });
+    };
+
     if (isGroupLoading) return <LoadingScreen />;
     if (isError || !group) return <ErrorScreen message="Групата не е намерена или възникна грешка." />;
 
-    const isMember = group.isMember;
-    const isOwner = group.isOwner;
-    const isAdmin = group.isAdmin;
-    const isPending = group.hasRequestedJoin;
-
     const canViewContent = !group.isPrivate || isMember; 
-
     const baseTabs = ["Публикации", "Хора", "Медия", "Файлове"];
-    const tabs = (isOwner || isAdmin) ? [...baseTabs, "Чакащи"] : baseTabs;
-
+    
+    const showRequestsTab = group.isPrivate && (isOwner || isAdmin);
+    const tabs = showRequestsTab ? [...baseTabs, "Чакащи"] : baseTabs;
+    
+    // TODO: Вържете това с реална бройка от API
     const hasPendingRequests = (isOwner || isAdmin) && true; 
 
     const userForLayout = {
@@ -222,7 +271,7 @@ export default function GroupPage() {
                             {tabs.map((tab) => (
                                 <button
                                     key={tab}
-                                    onClick={() => setActiveTab(tab)}
+                                    onClick={() => handleTabChange(tab)}
                                     className={`relative py-4 px-6 text-[15px] font-semibold border-b-[3px] transition-all whitespace-nowrap flex items-center gap-2 ${
                                         activeTab === tab 
                                             ? "border-blue-600 text-blue-600" 
@@ -230,10 +279,10 @@ export default function GroupPage() {
                                     }`}
                                 >
                                     {tab}
-                                    {tab === "Чакащи" && hasPendingRequests && (
-                                        <span className="flex h-2 w-2 relative">
-                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                                    
+                                    {tab === "Чакащи" && pendingCount > 0 && (
+                                        <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 ml-1 bg-red-500 text-white text-[10px] font-bold rounded-full animate-pulse shadow-sm">
+                                            {pendingCount > 99 ? "99+" : pendingCount}
                                         </span>
                                     )}
                                 </button>
@@ -313,13 +362,11 @@ export default function GroupPage() {
                                 </>
                             )}
                             
-                             {activeTab === "Чакащи" && (isAdmin || isOwner) && (
-                                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                                    <h3 className="text-lg font-bold mb-4">Чакащи заявки</h3>
-                                    <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-dashed">
-                                        {hasPendingRequests ? "Списък със заявки..." : "Няма чакащи заявки."}
-                                    </div>
-                                </div>
+                             {activeTab === "Чакащи" && showRequestsTab && (
+                                <GroupRequestsView 
+                                    groupId={group.id} 
+                                    requests={requestsData?.data || []} 
+                                />
                             )}
                         </div>
 

@@ -43,7 +43,12 @@ namespace SocialMedia.Services
                     case MembershipStatus.Pending:
                         return ApiResponse<object>.ErrorResponse("Pending.", new[] { "Request already pending." });
                     case MembershipStatus.Rejected:
-                        return ApiResponse<object>.ErrorResponse("Rejected.", new[] { "Your request was rejected." });
+                        existingMembership.Status = group!.Privacy == GroupPrivacy.Public ? MembershipStatus.Approved : MembershipStatus.Pending;
+                        existingMembership.RequestedOn = DateTime.UtcNow;
+                        existingMembership.JoinedOn = DateTime.UtcNow;
+                        await _groupMemberRepository.UpdateAsync(existingMembership);
+                        await _groupMemberRepository.SaveChangesAsync();
+                        return ApiResponse<object>.SuccessResponse("Rejoined successfully.");
                     case MembershipStatus.Left:
                         existingMembership.Status = group!.Privacy == GroupPrivacy.Public ? MembershipStatus.Approved : MembershipStatus.Pending;
                         existingMembership.RequestedOn = DateTime.UtcNow;
