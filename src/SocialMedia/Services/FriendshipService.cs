@@ -93,6 +93,38 @@ namespace SocialMedia.Services
             }
         }
 
+        public async Task<ApiResponse<bool>> CancelFriendRequestAsync(ClaimsPrincipal userClaims, Guid targetProfileId)
+        {
+            var invalidUserResponse = GetUserIdOrUnauthorized<bool>(userClaims, out var userId);
+            if (invalidUserResponse != null) return invalidUserResponse;
+
+            var requester = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (requester == null) return NotFoundResponse<bool>("Your profile");
+
+            if (requester.Id == targetProfileId)
+                return ApiResponse<bool>.ErrorResponse("You cannot cancel a friend request to yourself.");
+
+            var existingRequest = await _friendshipRepository.FirstOrDefaultAsync(f =>
+                f.RequesterId == requester.Id &&
+                f.AddresseeId == targetProfileId &&
+                f.Status == FriendshipStatus.Pending);
+            if (existingRequest == null)
+                return ApiResponse<bool>.ErrorResponse("No pending friend request found to cancel.");
+
+            var existingFollow = await _followRepository.FirstOrDefaultAsync(f =>
+                f.FollowerId == requester.Id &&
+                f.FollowingId == targetProfileId);
+            if (existingFollow != null)
+            {
+                await _followRepository.DeleteAsync(existingFollow);
+            }
+
+            await _friendshipRepository.DeleteAsync(existingRequest);
+            await _friendshipRepository.SaveChangesAsync();
+
+            return ApiResponse<bool>.SuccessResponse(true, "Friend request canceled.");
+        }
+
         public async Task<ApiResponse<bool>> AcceptFriendRequestAsync(ClaimsPrincipal userClaims, Guid requestId)
         {
             var invalidUserResponse = GetUserIdOrUnauthorized<bool>(userClaims, out var userId);

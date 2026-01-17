@@ -65,6 +65,23 @@ export const useSendFriendRequest = () => {
   });
 };
 
+export const useCancelFriendRequest = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (addresseeId: string) => friendsService.cancelFriendRequest(addresseeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["friend-requests-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["friend-suggestions-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+      toast.success("Поканата е отменена.");
+    },
+    onError: (error: any) => {
+      const msg = error?.response?.data?.message || "Грешка при отмяна.";
+      toast.error(msg);
+    }
+  });
+};
+
 export const useAcceptFriendRequest = () => {
   const queryClient = useQueryClient();
   return useMutation({

@@ -43,9 +43,8 @@ import {
     useGroupMutualFriends,
     useRemoveMember
 } from "@frontend/hooks/use-group-members";
-import { useSendFriendRequest } from "@frontend/hooks/use-friends";
+import { useSendFriendRequest, useCancelFriendRequest } from "@frontend/hooks/use-friends";
 import { MemberDto } from "@frontend/lib/types/groups";
-// import { GroupRole } from "@frontend/lib/types/enums"; 
 
 interface GroupMembersViewProps {
   groupId: string;
@@ -293,17 +292,25 @@ function MemberCard({ member, isCompact = false, groupId, showBadges = false }: 
   const initials = getInitials(member.fullName);
   const isMe = member.isMe;
   const profileLink = isMe ? "/profile" : `/${member.username}`;
-
- 
+  
+  // @ts-ignore
   const [isPending, setIsPending] = useState(member.hasPendingRequest || false);
 
   const { mutate: sendRequest } = useSendFriendRequest();
   const { mutate: removeMember } = useRemoveMember();
+  const { mutate: cancelRequest, isPending: isCancelling } = useCancelFriendRequest();
   
   const handleAddFriend = () => {
     setIsPending(true);
     sendRequest(member.profileId, {
       onError: () => setIsPending(false)
+    });
+  };
+
+  const handleCancel = () => {
+    setIsPending(false); 
+    cancelRequest(member.profileId, {
+        onError: () => setIsPending(true) 
     });
   };
 
@@ -372,11 +379,21 @@ function MemberCard({ member, isCompact = false, groupId, showBadges = false }: 
         ) : isPending ? (
             <Button 
                 size="sm" 
-                disabled 
-                className="hidden md:flex bg-gray-100 text-gray-500 border border-gray-200 shadow-none cursor-not-allowed"
+                onClick={handleCancel}
+                disabled={isCancelling}
+                className="hidden md:flex group/pending bg-gray-100 text-gray-500 border border-gray-200 shadow-none hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all font-medium min-w-[110px]"
             >
-                <Clock className="w-4 h-4 mr-2" />
-                Изпратено
+                {isCancelling ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                    <>
+                        <Clock className="w-4 h-4 mr-2 group-hover/pending:hidden" />
+                        <span className="group-hover/pending:hidden">Изпратено</span>
+
+                        <X className="w-4 h-4 mr-2 hidden group-hover/pending:block" />
+                        <span className="hidden group-hover/pending:block">Откажи</span>
+                    </>
+                )}
             </Button>
         ) : (
             <Button 
@@ -403,6 +420,16 @@ function MemberCard({ member, isCompact = false, groupId, showBadges = false }: 
                </Link>
             </DropdownMenuItem>
             
+            {isPending && (
+              <DropdownMenuItem 
+                onClick={handleCancel}
+                className="cursor-pointer font-medium text-red-600 focus:text-red-700 focus:bg-red-50"
+              >
+                <X className="w-4 h-4 mr-2" />
+                Отмени поканата
+              </DropdownMenuItem>
+            )}
+
             {!member.isFriend && !isPending && (
               <DropdownMenuItem 
                 onClick={handleAddFriend}

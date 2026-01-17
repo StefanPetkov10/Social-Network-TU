@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import {
     ArrowLeft, UserPlus, UserCheck, MessageCircle, MoreHorizontal,
-    UserMinus, Users, Loader2, Check, X, Image as ImageIcon
+    UserMinus, Users, Loader2, Check, X, Image as ImageIcon,
+    Clock 
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { Button } from "@frontend/components/ui/button";
@@ -28,6 +29,8 @@ import { followersService } from "@frontend/services/followers-servise";
 import { toast } from "sonner";
 import { FriendshipStatus } from "@frontend/lib/types/enums";
 import { ProfilePreviewData } from "@frontend/lib/types/profile-view";
+// 2. Импортираме новия хук
+import { useCancelFriendRequest } from "@frontend/hooks/use-friends";
 
 type RequestStatusUI = "pending_received" | "pending_sent" | "friend" | "none";
 
@@ -111,7 +114,7 @@ export function FriendProfileView({
             await friendsService.sendFriendRequest(profileId);
             if (!uiFollowing) {
                 try { await followersService.followUser(profileId); } catch {}
-            }// backend auto-follow on friend request but we do it here for instant UI response
+            }
         },
         onMutate: () => {
             setUiStatus("pending_sent");
@@ -120,7 +123,7 @@ export function FriendProfileView({
         onSuccess: () => {
             toast.success("Поканата е изпратена!");
             queryClient.invalidateQueries({ queryKey: ["user-profile-by-id", profileId] });
-            queryClient.invalidateQueries({ queryKey: ["friend-suggestions-infinite"] }); // Махаме го от предложенията
+            queryClient.invalidateQueries({ queryKey: ["friend-suggestions-infinite"] }); 
         },
         onError: () => {
             setUiStatus("none");
@@ -129,12 +132,21 @@ export function FriendProfileView({
         }
     });
 
+    const { mutate: cancelRequest, isPending: isCancelPending } = useCancelFriendRequest();
+
+    const handleCancelRequest = () => {
+        setUiStatus("none");
+        setUiFollowing(false);
+        cancelRequest(profileId, {
+             onError: () => { setUiStatus("pending_sent"); setUiFollowing(true); }
+        });
+    };
+
     const { mutate: acceptRequest, isPending: isAcceptPending } = useMutation({
     mutationFn: () => {
-        if (!activeRequestId) throw new Error("Липсва ID на заявката!"); // По-добре грешка тук, отколкото грешна заявка
+        if (!activeRequestId) throw new Error("Липсва ID на заявката!"); 
         return friendsService.acceptFriendRequest(activeRequestId);
     },
-    // ...
         onMutate: () => {
             setUiStatus("friend");
             setUiFollowing(true); 
@@ -296,8 +308,23 @@ export function FriendProfileView({
                                 )}
 
                                 {uiStatus === 'pending_sent' && (
-                                    <Button variant="secondary" className="w-full gap-2 text-muted-foreground cursor-default border bg-gray-50" disabled>
-                                       <Check className="h-4 w-4" /> Изпратена
+                                    <Button 
+                                        onClick={handleCancelRequest}
+                                        disabled={isCancelPending}
+                                        className="w-full gap-2 bg-gray-50 text-gray-500 border border-gray-200 shadow-none group hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all"
+                                    >
+                                       {isCancelPending ? (
+                                           <Loader2 className="h-4 w-4 animate-spin" />
+                                       ) : (
+                                           <>
+                                               <span className="flex items-center gap-2 group-hover:hidden">
+                                                   <Clock className="h-4 w-4" /> Изпратена
+                                               </span>
+                                               <span className="hidden group-hover:flex items-center gap-2">
+                                                   <X className="h-4 w-4" /> Откажи
+                                               </span>
+                                           </>
+                                       )}
                                     </Button>
                                 )}
 

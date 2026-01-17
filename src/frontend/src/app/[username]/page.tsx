@@ -12,7 +12,9 @@ import {
   Users,
   Check,
   UserMinus,
-  ArrowLeft
+  ArrowLeft,
+  Clock,
+  X 
 } from "lucide-react";
 
 import { Button } from "@frontend/components/ui/button";
@@ -42,6 +44,7 @@ import { followersService } from "@frontend/services/followers-servise";
 import { cn, getInitials, getUserDisplayName, getUserUsername } from "@frontend/lib/utils";
 import { FriendshipStatus } from "@frontend/lib/types/enums"; 
 import { toast } from "sonner";
+import { useCancelFriendRequest } from "@frontend/hooks/use-friends";
 
 type RequestStatusUI = "pending_received" | "pending_sent" | "friend" | "none";
 
@@ -109,6 +112,16 @@ export default function UserProfilePage({ params }: PageProps) {
       },
       onError: () => { setUiStatus("none"); setUiFollowing(false); toast.error("Грешка."); }
   });
+
+  const { mutate: cancelRequest, isPending: isCancelPending } = useCancelFriendRequest();
+
+  const handleCancelRequest = () => {
+      setUiStatus("none");
+      setUiFollowing(false);
+      cancelRequest(profileId, {
+          onError: () => { setUiStatus("pending_sent"); setUiFollowing(true); }
+      });
+  };
 
   const { mutate: acceptRequest, isPending: isAcceptPending } = useMutation({
       mutationFn: () => {
@@ -284,8 +297,25 @@ export default function UserProfilePage({ params }: PageProps) {
                                         )}
 
                                         {uiStatus === 'pending_sent' && (
-                                            <Button variant="secondary" disabled className="gap-2 opacity-70 h-9 w-full">
-                                                <Check className="h-4 w-4" /> Изпратена
+                                            <Button 
+                                                onClick={handleCancelRequest}
+                                                disabled={isCancelPending}
+                                                className="group bg-gray-50 text-gray-500 border border-gray-200 shadow-none hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all h-9 w-full"
+                                            >
+                                                {isCancelPending ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                ) : (
+                                                    <>
+                                                        <div className="flex items-center gap-2 group-hover:hidden">
+                                                            <Clock className="h-4 w-4" /> 
+                                                            <span>Изпратена</span>
+                                                        </div>
+                                                        <div className="hidden group-hover:flex items-center gap-2">
+                                                            <X className="h-4 w-4" /> 
+                                                            <span>Откажи</span>
+                                                        </div>
+                                                    </>
+                                                )}
                                             </Button>
                                         )}
 

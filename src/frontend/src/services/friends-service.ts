@@ -22,6 +22,11 @@ export const friendsService = {
         return data;
     },
 
+    cancelFriendRequest: async (addresseeId: string) => {
+        const { data } = await api.delete<ApiResponse<null>>(`/api/Friendship/cancel-request/${addresseeId}`);
+        return data;
+    },
+
     acceptFriendRequest: async (pendingRequestId: string) => {
         const { data } = await api.post<ApiResponse<null>>(`/api/Friendship/accept-request/${pendingRequestId}`);
         return data;
