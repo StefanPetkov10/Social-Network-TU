@@ -33,7 +33,7 @@ export enum GroupPrivacy {
 }
 
 export enum GroupRole {
-  Member = 0,
+  Owner = 0,
   Admin = 1,
-  Owner = 2,
+  Member = 2,
 }

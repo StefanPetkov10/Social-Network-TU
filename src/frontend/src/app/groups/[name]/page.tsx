@@ -47,7 +47,9 @@ import ProtectedRoute from "@frontend/components/protected-route";
 import { SidebarProvider } from "@frontend/components/ui/sidebar";
 import { SiteHeader } from "@frontend/components/site-header";
 import { GroupsSidebar } from "@frontend/components/groups-forms/groups-sidebar";
-import { GroupRequestsView } from "@frontend/components/groups-forms/group-requests-view"; 
+import { GroupRequestsView } from "@frontend/components/groups-forms/group-requests-view";
+import { GroupMembersView } from "@frontend/components/groups-forms/group-members-view";
+
 
 const TAB_MAP: Record<string, string> = {
     "posts": "Публикации",
@@ -360,6 +362,12 @@ export default function GroupPage() {
                                         </>
                                     )}
                                 </>
+                            )}
+                            
+                           {activeTab === "Хора" && canViewContent && (
+                                <GroupMembersView 
+                                    groupId={group.id}
+                                />
                             )}
                             
                              {activeTab === "Чакащи" && showRequestsTab && (

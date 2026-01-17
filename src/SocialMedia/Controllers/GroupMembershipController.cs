@@ -5,7 +5,7 @@ using SocialMedia.Services.Interfaces;
 
 namespace SocialMedia.Controllers
 {
-    [Route("api/groups/{groupId}")]
+    [Route("api/[controller]/{groupId}")]
     [ApiController]
     [Authorize]
     public class GroupMembershipController : ControllerBase
@@ -19,12 +19,12 @@ namespace SocialMedia.Controllers
 
         [HttpGet("members")]
         public async Task<IActionResult> GetMembers(
-            [FromRoute] Guid groupId,
-            [FromQuery] string? search,
+            Guid groupId,
             [FromQuery] DateTime? lastJoinedDate,
-            [FromQuery] int take = 20)
+            [FromQuery] Guid? lastProfileId,
+            [FromQuery] int take = 50)
         {
-            var response = await _groupMembershipService.GetGroupMembersAsync(User, groupId, lastJoinedDate, take);
+            var response = await _groupMembershipService.GetGroupMembersAsync(User, groupId, lastJoinedDate, lastProfileId, take);
 
             if (!response.Success)
                 return BadRequest(response);

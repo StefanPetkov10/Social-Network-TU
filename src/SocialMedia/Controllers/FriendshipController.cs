@@ -67,7 +67,7 @@ namespace SocialMedia.Controllers
             return Ok(response);
         }
 
-        [HttpDelete("decline/{requestId:guid}")]
+        [HttpDelete("decline-request/{requestId:guid}")]
         public async Task<IActionResult> DeclineRequest(Guid requestId)
         {
             var userClaims = User;

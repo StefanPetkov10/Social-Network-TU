@@ -196,6 +196,8 @@ namespace SocialMedia.Services
                 )
                 .OrderByDescending(p => p.CreatedDate).AsQueryable();
 
+            //can add a property -> lastPost.CreatedDate in GetFeedAsync to avoid one more search in DB. 
+            //I will have lastPostDate without get it from DB
             if (lastPostId.HasValue)
             {
                 var lastPost = await _postRepository.GetByIdAsync(lastPostId.Value);

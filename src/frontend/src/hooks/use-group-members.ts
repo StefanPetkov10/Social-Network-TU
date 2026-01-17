@@ -4,16 +4,37 @@ import { toast } from "sonner";
 import { GroupRole } from "@frontend/lib/types/enums";
 
 
+type PageParam = { lastJoinedDate: string; lastMemberId: string; };
+
 export const useGroupMembers = (groupId: string) => {
   return useInfiniteQuery({
     queryKey: ["group-members", groupId], 
-    queryFn: ({ pageParam = undefined }) => {
-        return groupMembersService.getGroupMembers(groupId, pageParam as string | undefined);
+    
+    queryFn: ({ pageParam }) => {
+        return groupMembersService.getGroupMembers(
+            groupId, 
+            pageParam?.lastJoinedDate, 
+            pageParam?.lastMemberId,
+        );
     },
+
     getNextPageParam: (lastPageResponse) => {
-      return lastPageResponse.meta?.lastJoinedDate || undefined;
+      const data = lastPageResponse.data || [];
+      const meta = lastPageResponse.meta;
+
+      if (data.length < 20) {
+          return undefined;
+      }
+
+      if (meta?.lastJoinedDate && meta?.lastProfileId) {
+        return {
+          lastJoinedDate: meta.lastJoinedDate,
+          lastMemberId: meta.lastProfileId
+        };
+      }
+      return undefined;
     },
-    initialPageParam: undefined,
+    initialPageParam: undefined as PageParam | undefined,
     enabled: !!groupId,
   });
 };

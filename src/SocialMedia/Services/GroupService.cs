@@ -156,13 +156,12 @@ namespace SocialMedia.Services
             var friendsHashSet = myFriendIds.ToHashSet();
 
             var myGroupIds = await _membershipRepository.QueryNoTracking()
-                .Where(m => m.ProfileId == profile.Id
-                    && m.Status == MembershipStatus.Approved ||
-                    m.Status == MembershipStatus.Pending)
+                .Where(m => m.ProfileId == profile.Id &&
+                           (m.Status == MembershipStatus.Approved || m.Status == MembershipStatus.Pending))
                 .Select(m => m.GroupId)
                 .ToListAsync();
 
-            var suggestedGroups = await _groupRepository.QueryNoTracking()
+            var groupsWithFriends = await _groupRepository.QueryNoTracking()
                 .Include(g => g.Members)
                 .Where(g => !myGroupIds.Contains(g.Id))
                 .Select(g => new
@@ -181,27 +180,47 @@ namespace SocialMedia.Services
                             FullName = m.Profile.FullName
                         })
                         .ToList()
-
                 })
                 .Where(x => x.MutualFriendsCount > 0)
                 .OrderByDescending(x => x.MutualFriendsCount)
                 .Take(take)
                 .ToListAsync();
 
+            var finalResultList = groupsWithFriends.ToList();
+
+            if (finalResultList.Count < take)
+            {
+                int needed = take - finalResultList.Count;
+
+                var excludedGroupIds = myGroupIds.Concat(finalResultList.Select(x => x.Group.Id)).ToList();
+
+                var otherGroups = await _groupRepository.QueryNoTracking()
+                    .Include(g => g.Members)
+                    .Where(g => !excludedGroupIds.Contains(g.Id))
+                    .Select(g => new
+                    {
+                        Group = g,
+                        MutualFriendsCount = 0,
+                        FriendPreviews = new List<MutualFriendDto>()
+                    })
+                    .OrderByDescending(x => x.Group.CreatedDate)
+                    .Take(needed)
+                    .ToListAsync();
+
+                finalResultList.AddRange(otherGroups);
+            }
+
+
             if (lastGroupId.HasValue && lastGroupId.Value != Guid.Empty)
             {
-                var lastGroup = await _groupRepository.GetByIdAsync(lastGroupId.Value);
-                if (lastGroup != null)
+                var index = finalResultList.FindIndex(x => x.Group.Id == lastGroupId.Value);
+                if (index >= 0)
                 {
-                    suggestedGroups = suggestedGroups
-                        .SkipWhile(x => x.Group.Id != lastGroup.Id)
-                        .Skip(1)
-                        .Take(take)
-                        .ToList();
+                    finalResultList = finalResultList.Skip(index + 1).ToList();
                 }
             }
 
-            var dtos = suggestedGroups.Select(x =>
+            var dtos = finalResultList.Select(x =>
             {
                 var dto = _mapper.Map<GroupDto>(x.Group);
 
@@ -220,12 +239,6 @@ namespace SocialMedia.Services
                 return dto;
             }).ToList();
 
-            var lastItem = suggestedGroups.LastOrDefault();
-            if (lastItem != null)
-            {
-                var lastDto = dtos.LastOrDefault(d => d.Id == lastItem.Group.Id);
-            }
-
             if (!dtos.Any())
             {
                 return ApiResponse<IEnumerable<GroupDto>>.SuccessResponse(Enumerable.Empty<GroupDto>(), "No groups found.");
@@ -233,6 +246,7 @@ namespace SocialMedia.Services
 
             return ApiResponse<IEnumerable<GroupDto>>.SuccessResponse(dtos, "Discover groups retrieved.");
         }
+
         public async Task<ApiResponse<IEnumerable<PostDto>>> GetMyGroupsFeedAsync(ClaimsPrincipal userClaims, Guid? lastPostId = null, int take = 20)
         {
             if (take <= 0 || take > 50) take = 20;

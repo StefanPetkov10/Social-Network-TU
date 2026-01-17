@@ -27,6 +27,11 @@ export const useCreateGroup = () => {
         mutationFn: ( data: CreateGroupDto ) => {
              return groupsService.createGroup(data);
         },
+        onSuccess: (data: ApiResponse<GroupDto>) => {
+           queryClient.invalidateQueries({ queryKey: ["groups-discover"] }); 
+           queryClient.invalidateQueries({ queryKey: ["my-groups"] });
+           toast.success("Групата е създадена успешно!");
+        }
     });
 }
 

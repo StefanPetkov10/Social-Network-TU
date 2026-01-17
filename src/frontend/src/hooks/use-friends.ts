@@ -55,6 +55,7 @@ export const useSendFriendRequest = () => {
         return;
       }
       queryClient.invalidateQueries({ queryKey: ["friend-suggestions-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
       toast.success("Поканата е изпратена успешно!");
     },
     onError: (error: any) => {

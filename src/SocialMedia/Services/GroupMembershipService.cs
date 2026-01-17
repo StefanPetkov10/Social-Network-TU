@@ -218,7 +218,7 @@ namespace SocialMedia.Services
                 ProfileId = m.ProfileId,
                 FullName = m.Profile.FullName,
                 Username = m.Profile.User.UserName,
-                Photo = m.Profile.Photo,
+                AuthorAvatar = m.Profile.Photo,
                 Role = m.Role,
                 JoinedOn = DateTime.UtcNow,
                 IsMe = false,
@@ -248,12 +248,16 @@ namespace SocialMedia.Services
                 ProfileId = m.ProfileId,
                 FullName = m.Profile.FullName,
                 Username = m.Profile.User.UserName,
-                Photo = m.Profile.Photo,
+                AuthorAvatar = m.Profile.Photo,
                 Role = m.Role,
                 JoinedOn = m.JoinedOn,
                 IsMe = m.ProfileId == profile.Id,
                 IsFriend = myFriendIds.Contains(m.ProfileId),
-                MutualFriendsCount = 0
+                MutualFriendsCount = 0,
+                HasPendingRequest = _friendshipRepository.QueryNoTracking()
+                .Any(f => f.RequesterId == profile.Id &&
+                          f.AddresseeId == m.ProfileId &&
+                          f.Status == FriendshipStatus.Pending)
             });
 
             return ApiResponse<IEnumerable<MemberDto>>.SuccessResponse(dtos);
@@ -280,7 +284,7 @@ namespace SocialMedia.Services
                 ProfileId = m.ProfileId,
                 FullName = m.Profile.FullName,
                 Username = m.Profile.User.UserName,
-                Photo = m.Profile.Photo,
+                AuthorAvatar = m.Profile.Photo,
                 Role = m.Role,
                 JoinedOn = m.JoinedOn,
                 IsMe = false,
@@ -314,8 +318,8 @@ namespace SocialMedia.Services
                                         (f.RequesterId == m.ProfileId && myFriendIds.Contains(f.AddresseeId))
                                     ))
                 })
+                .Where(x => x.MutualCount > 0)
                 .OrderByDescending(x => x.MutualCount)
-                .Take(5)
                 .ToListAsync();
 
             var dtos = topCandidates.Select(x => new MemberDto
@@ -323,12 +327,16 @@ namespace SocialMedia.Services
                 ProfileId = x.Member.ProfileId,
                 FullName = x.Profile.FullName,
                 Username = x.User.UserName,
-                Photo = x.Profile.Photo,
+                AuthorAvatar = x.Profile.Photo,
                 Role = x.Member.Role,
                 JoinedOn = x.Member.JoinedOn,
                 IsMe = false,
                 IsFriend = false,
-                MutualFriendsCount = x.MutualCount
+                MutualFriendsCount = x.MutualCount,
+                HasPendingRequest = _friendshipRepository.QueryNoTracking()
+                .Any(f => f.RequesterId == profile.Id &&
+                          f.AddresseeId == x.Member.ProfileId &&
+                          f.Status == FriendshipStatus.Pending)
             });
 
             if (!dtos.Any())
@@ -337,52 +345,95 @@ namespace SocialMedia.Services
             return ApiResponse<IEnumerable<MemberDto>>.SuccessResponse(dtos);
         }
 
-        public async Task<ApiResponse<IEnumerable<MemberDto>>> GetGroupMembersAsync(ClaimsPrincipal userClaims, Guid groupId, DateTime? lastJoinedDate = null, int take = 20)
+        /*if (!string.IsNullOrEmpty(search)) - LOWER(column) LIKE '%search%'
+        {
+            search = search.ToLower();
+            query = query.Where(m => m.Profile.FirstName.ToLower().Contains(search) ||
+                                     m.Profile.LastName.ToLower().Contains(search) ||
+                                     m.Profile.User.UserName.ToLower().Contains(search));
+        }*/
+        public async Task<ApiResponse<IEnumerable<MemberDto>>> GetGroupMembersAsync(
+            ClaimsPrincipal userClaims,
+            Guid groupId,
+            DateTime? lastJoinedDate = null,
+            Guid? lastProfileId = null,
+            int take = 50)
         {
             var (profile, group, _, error) = await ValidateAccess(userClaims, groupId);
             if (error != null) return ApiResponse<IEnumerable<MemberDto>>.ErrorResponse(error);
+
+            var totalCount = await _groupMemberRepository.QueryNoTracking()
+                .CountAsync(m => m.GroupId == groupId && m.Status == MembershipStatus.Approved);
 
             var myFriendIds = await GetUserFriendIdsAsync(profile!.Id);
 
             var query = _groupMemberRepository.QueryNoTracking()
                 .Where(m => m.GroupId == groupId && m.Status == MembershipStatus.Approved)
-                .Include(m => m.Profile)
-                .ThenInclude(p => p.User)
-                .OrderByDescending(m => m.JoinedOn)
                 .AsQueryable();
 
-            /*if (!string.IsNullOrEmpty(search)) - LOWER(column) LIKE '%search%'
+            if (lastJoinedDate.HasValue && lastProfileId.HasValue)
             {
-                search = search.ToLower();
-                query = query.Where(m => m.Profile.FirstName.ToLower().Contains(search) ||
-                                         m.Profile.LastName.ToLower().Contains(search) ||
-                                         m.Profile.User.UserName.ToLower().Contains(search));
-            }*/
-
-            if (lastJoinedDate.HasValue)
+                query = query.Where(m => m.JoinedOn < lastJoinedDate.Value ||
+                                        (m.JoinedOn == lastJoinedDate.Value && m.ProfileId.CompareTo(lastProfileId.Value) < 0));
+            }
+            else if (lastJoinedDate.HasValue)
             {
-                query = query.Where(m => m.JoinedOn < lastJoinedDate);
+                query = query.Where(m => m.JoinedOn < lastJoinedDate.Value);
             }
 
-            var members = await query.Take(take).ToListAsync();
+            query = query
+                .OrderByDescending(m => m.JoinedOn)
+                .ThenByDescending(m => m.ProfileId);
 
-            var dtos = members.Select(m => new MemberDto
+
+            var membersData = await query
+                .Select(m => new
+                {
+                    m.ProfileId,
+                    m.Role,
+                    m.JoinedOn,
+                    FullName = m.Profile.FullName,
+                    Username = m.Profile.User.UserName,
+                    Photo = m.Profile.Photo,
+                    MutualCount = _friendshipRepository.QueryNoTracking()
+                        .Count(f => f.Status == FriendshipStatus.Accepted &&
+                                    (
+                                        (f.AddresseeId == m.ProfileId && myFriendIds.Contains(f.RequesterId)) ||
+                                        (f.RequesterId == m.ProfileId && myFriendIds.Contains(f.AddresseeId))
+                                    ))
+                })
+                .Take(take)
+                .ToListAsync();
+
+            var dtos = membersData.Select(m => new MemberDto
             {
                 ProfileId = m.ProfileId,
-                FullName = m.Profile.FullName,
-                Username = m.Profile.User.UserName,
-                Photo = m.Profile.Photo,
+                FullName = m.FullName,
+                Username = m.Username,
+                AuthorAvatar = m.Photo,
                 Role = m.Role,
                 JoinedOn = m.JoinedOn,
+
                 IsMe = m.ProfileId == profile.Id,
                 IsFriend = myFriendIds.Contains(m.ProfileId),
-                MutualFriendsCount = 0
+
+                MutualFriendsCount = (m.ProfileId == profile.Id) ? 0 : m.MutualCount,
+
+                HasPendingRequest = _friendshipRepository.QueryNoTracking()
+                .Any(f => f.RequesterId == profile.Id &&
+                          f.AddresseeId == m.ProfileId &&
+                          f.Status == FriendshipStatus.Pending)
             });
 
-            var lastDate = members.LastOrDefault()?.JoinedOn;
+            var lastItem = membersData.LastOrDefault();
 
             return ApiResponse<IEnumerable<MemberDto>>.SuccessResponse(dtos, "Members retrieved",
-                    new { lastJoinedDate = lastDate }
+                    new
+                    {
+                        lastJoinedDate = lastItem?.JoinedOn,
+                        lastProfileId = lastItem?.ProfileId,
+                        totalCount = totalCount
+                    }
             );
         }
 
