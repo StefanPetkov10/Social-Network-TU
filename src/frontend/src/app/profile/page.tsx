@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+// ПРОМЯНА: Добавени imports за URL навигация
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Button } from "@frontend/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
-import { Edit, Users, Loader2, Save, X } from "lucide-react";
+// ПРОМЯНА: Добавени икони за новите секции
+import { Edit, Users, Loader2, Save, X, ImageIcon, FileText } from "lucide-react";
 import { MainLayout } from "@frontend/components/main-layout";
 import ProtectedRoute from "@frontend/components/protected-route";
 import { LoadingScreen } from "@frontend/components/common/loading-screen";
@@ -18,16 +20,40 @@ import { ProfileFriendsCard } from "@frontend/components/profile-form/profile-fr
 import { useIntersection } from "@mantine/hooks";
 import { Input } from "@frontend/components/ui/input"; 
 import { EditProfileDialog } from "@frontend/components/profile-form/profile-edit-dialog";
-import { getInitials, getUserDisplayName, getUserUsername } from "@frontend/lib/utils";
-import { get } from "http";
+import { getInitials, getUserDisplayName, getUserUsername, cn } from "@frontend/lib/utils";
+import { MediaGalleryView } from "@frontend/components/media/media-gallery-view";
+import { DocumentsListView } from "@frontend/components/media/documents-list-view";
 
+const TAB_MAP: Record<string, string> = {
+    "posts": "Публикации",
+    "friends": "Приятели",
+    "media": "Медия",
+    "documents": "Документи"
+};
+
+const REVERSE_TAB_MAP: Record<string, string> = {
+    "Публикации": "posts",
+    "Приятели": "friends",
+    "Медия": "media",
+    "Документи": "documents"
+};
 
 export default function ProfilePage() {
     const router = useRouter();
-    const [activeTab, setActiveTab] = useState("Публикации");
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
+
+    const currentTabParam = searchParams.get("tab") || "posts";
+    const activeTab = TAB_MAP[currentTabParam] || "Публикации";
+
+    const handleTabChange = (tabName: string) => {
+        const urlKey = REVERSE_TAB_MAP[tabName] || "posts";
+        const newParams = new URLSearchParams(searchParams.toString());
+        newParams.set("tab", urlKey);
+        router.push(`${pathname}?${newParams.toString()}`, { scroll: false });
+    };
     
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    
     const [isAddingBio, setIsAddingBio] = useState(false);
     const [bioInput, setBioInput] = useState("");
 
@@ -48,10 +74,10 @@ export default function ProfilePage() {
     });
 
     useEffect(() => {
-        if (entry?.isIntersecting && hasNextPage) {
+        if (entry?.isIntersecting && hasNextPage && activeTab === "Публикации") {
             fetchNextPage();
         }
-    }, [entry, hasNextPage, fetchNextPage]);
+    }, [entry, hasNextPage, fetchNextPage, activeTab]);
 
     useEffect(() => {
         if (isError) {
@@ -189,13 +215,16 @@ export default function ProfilePage() {
                             </div>
                             
                             <div className="px-5 border-t flex gap-6 overflow-x-auto scrollbar-hide">
-                                {["Публикации", "Информация", "Приятели", "Медия & Документи"].map((tab) => (
+                                {["Публикации", "Приятели", "Медия", "Документи"].map((tab) => (
                                     <button
                                         key={tab}
-                                        onClick={() => setActiveTab(tab)}
-                                        className={`py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                                            activeTab === tab ? "border-blue-600 text-blue-600" : "border-transparent text-muted-foreground hover:text-foreground"
-                                        }`}
+                                        onClick={() => handleTabChange(tab)}
+                                        className={cn(
+                                            "py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap px-1",
+                                            activeTab === tab 
+                                            ? "border-blue-600 text-blue-600" 
+                                            : "border-transparent text-muted-foreground hover:text-foreground"
+                                        )}
                                     >
                                         {tab}
                                     </button>
@@ -216,38 +245,77 @@ export default function ProfilePage() {
                                     currentUsername={profile.userName} 
                                     loggedInUsername={profile?.userName} 
                                 />
-                                <ProfileMediaCard profileId={profile.id} />
+                                
+                                {activeTab !== "Медия" && activeTab !== "Документи" && (
+                                    <ProfileMediaCard profileId={profile.id} />
+                                )}
                             </div>
 
                             <div className="lg:col-span-2 space-y-4">
-                                {userDataForPost && <CreatePost user={userDataForPost} />}
-                                {postsLoading ? (
-                                    <div className="flex justify-center p-4">
-                                        <Loader2 className="animate-spin text-primary" />
+                                
+                                {activeTab === "Публикации" && (
+                                    <>
+                                        {userDataForPost && <CreatePost user={userDataForPost} />}
+                                        {postsLoading ? (
+                                            <div className="flex justify-center p-4">
+                                                <Loader2 className="animate-spin text-primary" />
+                                            </div>
+                                        ) : (
+                                            <>
+                                                {postsData?.pages[0]?.data && postsData.pages[0].data.length === 0 ? (
+                                                    <div className="text-center p-8 text-muted-foreground bg-white rounded-xl border border-dashed shadow-sm">
+                                                        Все още няма публикации.
+                                                    </div>
+                                                ) : (
+                                                    postsData?.pages.map((page, i) => (
+                                                        <div key={i} className="space-y-4">
+                                                            {page.data?.map((post) => (
+                                                                <PostCard key={post.id} post={post} authorProfile={profile} />
+                                                            ))}
+                                                        </div>
+                                                    ))
+                                                )}
+                                                {isFetchingNextPage && (
+                                                    <div className="flex justify-center p-4">
+                                                        <Loader2 className="animate-spin text-muted-foreground" />
+                                                    </div>
+                                                )}
+                                                <div ref={ref} className="h-10" />
+                                            </>
+                                        )}
+                                    </>
+                                )}
+
+                                {activeTab === "Медия" && (
+                                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                         <div className="bg-white rounded-xl border p-4 shadow-sm mb-4">
+                                             <h2 className="text-lg font-bold flex items-center gap-2">
+                                                <ImageIcon className="w-5 h-5 text-primary" /> 
+                                                Галерия
+                                             </h2>
+                                         </div>
+                                         <MediaGalleryView id={profile.id} type="user" />
                                     </div>
-                                ) : (
-                                    postsData?.pages.map((page, i) => (
-                                        <div key={i} className="space-y-4">
-                                            {page.data && page.data.length === 0 && i === 0 ? (
-                                                <div className="text-center p-8 text-muted-foreground bg-white rounded-xl border border-dashed shadow-sm">
-                                                    Все още няма публикации.
-                                                </div>
-                                            ) : (
-                                                page.data?.map((post) => (
-                                                    <PostCard key={post.id}
-                                                     post={post}
-                                                     authorProfile={profile} />
-                                                ))
-                                            )}
+                                )}
+
+                                {activeTab === "Документи" && (
+                                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                        <div className="bg-white rounded-xl border p-4 shadow-sm mb-4">
+                                            <h2 className="text-lg font-bold flex items-center gap-2">
+                                                <FileText className="w-5 h-5 text-primary" />
+                                                Файлове
+                                            </h2>
                                         </div>
-                                    ))
-                                )}
-                                {isFetchingNextPage && (
-                                    <div className="flex justify-center p-4">
-                                        <Loader2 className="animate-spin text-muted-foreground" />
+                                        <DocumentsListView id={profile.id} type="user" />
                                     </div>
                                 )}
-                                <div ref={ref} className="h-10" />
+
+                                {activeTab === "Приятели" && (
+                                    <div className="bg-white rounded-xl border p-8 text-center text-muted-foreground">
+                                        <p>Списък с приятели...</p>
+                                    </div>
+                                )}
+
                             </div>
                         </div>
                     </div>

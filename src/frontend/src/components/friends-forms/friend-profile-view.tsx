@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import {
     ArrowLeft, UserPlus, UserCheck, MessageCircle, MoreHorizontal,
     UserMinus, Users, Loader2, Check, X, Image as ImageIcon,
-    Clock 
+    Clock, 
+    FileText 
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { Button } from "@frontend/components/ui/button";
@@ -29,8 +30,9 @@ import { followersService } from "@frontend/services/followers-servise";
 import { toast } from "sonner";
 import { FriendshipStatus } from "@frontend/lib/types/enums";
 import { ProfilePreviewData } from "@frontend/lib/types/profile-view";
-// 2. Импортираме новия хук
 import { useCancelFriendRequest } from "@frontend/hooks/use-friends";
+import { DocumentsListView } from "../media/documents-list-view";
+import { MediaGalleryView } from "../media/media-gallery-view";
 
 type RequestStatusUI = "pending_received" | "pending_sent" | "friend" | "none";
 
@@ -347,7 +349,7 @@ export function FriendProfileView({
                     </div>
 
                     <div className="px-6 border-t flex gap-8 overflow-x-auto scrollbar-hide bg-muted/30">
-                        {["Публикации", "Информация", "Приятели", "Снимки"].map((tab) => (
+                        {["Публикации", "Приятели", "Медия", "Документи"].map((tab) => (
                             <button key={tab} onClick={() => setActiveTab(tab)} className={cn("py-3 text-sm font-semibold border-b-[3px] transition-all whitespace-nowrap px-1", activeTab === tab ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground hover:border-border")}>{tab}</button>
                         ))}
                     </div>
@@ -356,7 +358,10 @@ export function FriendProfileView({
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                     <div className="lg:col-span-1 space-y-6 sticky top-24 h-fit">
                         <ProfileFriendsCard profileId={profileId} />
-                        <ProfileMediaCard profileId={profileId} />
+                        
+                        {activeTab !== "Медия" && activeTab !== "Документи" && (
+                             <ProfileMediaCard profileId={profileId} />
+                        )}
                     </div>
                     <div className="lg:col-span-2 space-y-4 pb-10">
                         {activeTab === "Публикации" && (
@@ -374,6 +379,30 @@ export function FriendProfileView({
                                     </div>
                                 )}
                             </>
+                        )}
+
+                        {activeTab === "Медия" && (
+                            <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                 <div className="bg-white rounded-xl border p-4 shadow-sm mb-4">
+                                     <h2 className="text-lg font-bold flex items-center gap-2">
+                                        <ImageIcon className="w-5 h-5 text-primary" /> 
+                                        Галерия
+                                     </h2>
+                                 </div>
+                                 <MediaGalleryView id={profileId} type="user" />
+                            </div>
+                        )}
+                        
+                        {activeTab === "Документи" && (
+                            <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                <div className="bg-white rounded-xl border p-4 shadow-sm mb-4">
+                                    <h2 className="text-lg font-bold flex items-center gap-2">
+                                        <FileText className="w-5 h-5 text-primary" />
+                                        Файлове
+                                    </h2>
+                                </div>
+                                <DocumentsListView id={profileId} type="user" />
+                            </div>
                         )}
                     </div>
                 </div>

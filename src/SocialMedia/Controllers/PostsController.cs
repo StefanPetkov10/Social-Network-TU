@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SocialMedia.Common;
 using SocialMedia.DTOs.Post;
+using SocialMedia.DTOs.Post.Enums;
 using SocialMedia.Services.Interfaces;
 
 namespace SocialMedia.Controllers
@@ -55,7 +56,10 @@ namespace SocialMedia.Controllers
         }
 
         [HttpGet("profile/{profileId:guid}")]
-        public async Task<IActionResult> GetUserPosts(Guid profileId, [FromQuery] Guid? lastPostId, [FromQuery] int take = 10)
+        public async Task<IActionResult> GetUserPosts(
+            Guid profileId,
+            [FromQuery] Guid? lastPostId,
+            [FromQuery] int take = 10)
         {
             var response = await _postService.GetUserPostsAsync(User, profileId, lastPostId, take);
             if (response.Success)
@@ -64,6 +68,37 @@ namespace SocialMedia.Controllers
             }
             return NotFound(response);
         }
+
+        [HttpGet("media/profile/{profileId}/paginated")]
+        public async Task<IActionResult> GetProfileMediaPaginated(
+            Guid profileId,
+            [FromQuery] MediaTypeGroup type,
+            [FromQuery] int skip = 0,
+            [FromQuery] int take = 20)
+        {
+            var result = await _postService.GetProfileMediaPaginatedAsync(User, profileId, type, skip, take);
+            if (result.Success)
+            {
+                return Ok(result);
+            }
+            return NotFound(result);
+        }
+
+        [HttpGet("media/group/{groupId}/paginated")]
+        public async Task<IActionResult> GetGroupMediaPaginated(
+            Guid groupId,
+            [FromQuery] MediaTypeGroup type,
+            [FromQuery] int skip = 0,
+            [FromQuery] int take = 20)
+        {
+            var result = await _postService.GetGroupMediaPaginatedAsync(User, groupId, type, skip, take);
+            if (result.Success)
+            {
+                return Ok(result);
+            }
+            return NotFound(result);
+        }
+
         [HttpPut("{postId}")]
         public async Task<IActionResult> UpdatePost(Guid postId, [FromForm] UpdatePostDto dto)
         {

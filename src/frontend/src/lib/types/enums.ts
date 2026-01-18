@@ -27,6 +27,11 @@ export enum MediaType {
   Other = 4
 }
 
+export enum MediaTypeGroup {
+    Visuals = 0,  
+    Documents = 1  
+}
+
 export enum GroupPrivacy {
   Public = 0,
   Private = 1,

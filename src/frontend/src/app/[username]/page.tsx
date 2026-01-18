@@ -1,20 +1,21 @@
 "use client";
 
 import { useState, useEffect, use, useMemo } from "react";
-import { notFound } from "next/navigation";
+import { notFound, useRouter, useSearchParams, usePathname } from "next/navigation";
 import { 
   UserPlus, 
   UserCheck, 
   MessageCircle, 
   MoreHorizontal, 
   Loader2, 
-  ImageIcon,
+  ImageIcon, 
   Users,
   Check,
   UserMinus,
   ArrowLeft,
   Clock,
-  X 
+  X,
+  FileText 
 } from "lucide-react";
 
 import { Button } from "@frontend/components/ui/button";
@@ -46,7 +47,24 @@ import { FriendshipStatus } from "@frontend/lib/types/enums";
 import { toast } from "sonner";
 import { useCancelFriendRequest } from "@frontend/hooks/use-friends";
 
+import { MediaGalleryView } from "@frontend/components/media/media-gallery-view";
+import { DocumentsListView } from "@frontend/components/media/documents-list-view";
+
 type RequestStatusUI = "pending_received" | "pending_sent" | "friend" | "none";
+
+const TAB_MAP: Record<string, string> = {
+    "posts": "Публикации",
+    "friends": "Приятели",
+    "media": "Медия",
+    "documents": "Документи"
+};
+
+const REVERSE_TAB_MAP: Record<string, string> = {
+    "Публикации": "posts",
+    "Приятели": "friends",
+    "Медия": "media",
+    "Документи": "documents"
+};
 
 interface PageProps {
   params: Promise<{
@@ -58,7 +76,20 @@ export default function UserProfilePage({ params }: PageProps) {
   const { username: rawUsername } = use(params);
   const username = decodeURIComponent(rawUsername).replace("@", "");
   
-  const [activeTab, setActiveTab] = useState("Публикации");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
+  const currentTabParam = searchParams.get("tab") || "posts";
+  const activeTab = TAB_MAP[currentTabParam] || "Публикации";
+
+  const handleTabChange = (tabName: string) => {
+      const urlKey = REVERSE_TAB_MAP[tabName] || "posts";
+      const newParams = new URLSearchParams(searchParams.toString());
+      newParams.set("tab", urlKey);
+      router.push(`${pathname}?${newParams.toString()}`, { scroll: false });
+  };
+  
   const [showUnfollowDialog, setShowUnfollowDialog] = useState(false);
   const [showUnfriendDialog, setShowUnfriendDialog] = useState(false);
 
@@ -182,7 +213,13 @@ export default function UserProfilePage({ params }: PageProps) {
   } = useUserPosts(profile?.id || "");
 
   const { ref, entry } = useIntersection({ root: null, threshold: 1 });
-  useEffect(() => { if (entry?.isIntersecting && hasNextPage) fetchNextPage(); }, [entry, hasNextPage, fetchNextPage]);
+  
+  useEffect(() => { 
+      if (entry?.isIntersecting && hasNextPage && activeTab === "Публикации") 
+        {
+            fetchNextPage(); 
+        }
+  }, [entry, hasNextPage, fetchNextPage, activeTab]);
 
   const userForHeader = useMemo(() => ({
     name: myProfile ? getUserDisplayName(myProfile) : "Потребител",
@@ -344,10 +381,10 @@ export default function UserProfilePage({ params }: PageProps) {
                     </div>
 
                     <div className="px-5 border-t flex gap-6 overflow-x-auto scrollbar-hide">
-                        {["Публикации", "Информация", "Приятели", "Медия & Документи"].map((tab) => (
+                        {["Публикации", "Приятели", "Медия", "Документи"].map((tab) => (
                             <button
                                 key={tab}
-                                onClick={() => setActiveTab(tab)}
+                                onClick={() => handleTabChange(tab)}
                                 className={cn(
                                     "py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap px-1",
                                     activeTab === tab 
@@ -369,8 +406,10 @@ export default function UserProfilePage({ params }: PageProps) {
                                     currentUsername={profile.userName} 
                                     loggedInUsername={myProfile?.userName} 
                                 />
-                                <ProfileMediaCard profileId={profile.id} />
-                        <ProfileMediaCard profileId={profile.id} />
+                        
+                        {activeTab !== "Медия" && activeTab !== "Документи" && (
+                            <ProfileMediaCard profileId={profile.id} />
+                        )}
                     </div>
 
                     <div className="lg:col-span-2 space-y-4">
@@ -417,9 +456,33 @@ export default function UserProfilePage({ params }: PageProps) {
                             </>
                         )}
 
-                        {activeTab === "Информация" && (
-                             <div className="bg-background rounded-xl border p-8 shadow-sm text-center text-muted-foreground">
-                                <p>Информацията за потребителя ще се покаже тук.</p>
+                        {activeTab === "Медия" && (
+                             <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                  <div className="bg-white rounded-xl border p-4 shadow-sm mb-4">
+                                     <h2 className="text-lg font-bold flex items-center gap-2">
+                                        <ImageIcon className="w-5 h-5 text-primary" /> 
+                                        Галерия
+                                     </h2>
+                                 </div>
+                                 <MediaGalleryView id={profile.id} type="user" />
+                             </div>
+                        )}
+
+                        {activeTab === "Документи" && (
+                            <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                <div className="bg-white rounded-xl border p-4 shadow-sm mb-4">
+                                    <h2 className="text-lg font-bold flex items-center gap-2">
+                                        <FileText className="w-5 h-5 text-primary" />
+                                        Файлове
+                                    </h2>
+                                </div>
+                                <DocumentsListView id={profile.id} type="user" />
+                            </div>
+                        )}
+
+                        {activeTab === "Приятели" && (
+                             <div className="bg-white rounded-xl border p-8 text-center text-muted-foreground">
+                                <p>Информацията за приятелите ще се покаже тук.</p>
                              </div>
                         )}
                     </div>

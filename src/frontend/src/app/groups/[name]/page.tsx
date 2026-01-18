@@ -11,7 +11,9 @@ import {
   ChevronDown,
   LogOut,
   Clock,
-  Info
+  Info,
+  FileText, 
+  Image as ImageIcon 
 } from "lucide-react";
 import { useIntersection } from "@mantine/hooks";
 
@@ -49,13 +51,15 @@ import { SiteHeader } from "@frontend/components/site-header";
 import { GroupsSidebar } from "@frontend/components/groups-forms/groups-sidebar";
 import { GroupRequestsView } from "@frontend/components/groups-forms/group-requests-view";
 import { GroupMembersView } from "@frontend/components/groups-forms/group-members-view";
+import { MediaGalleryView } from "@frontend/components/media/media-gallery-view";
+import { DocumentsListView } from "@frontend/components/media/documents-list-view";
 
 
 const TAB_MAP: Record<string, string> = {
     "posts": "Публикации",
     "people": "Хора",
     "media": "Медия",
-    "files": "Файлове",
+    "files": "Документи",
     "requests": "Чакащи"
 };
 
@@ -63,7 +67,7 @@ const REVERSE_TAB_MAP: Record<string, string> = {
     "Публикации": "posts",
     "Хора": "people",
     "Медия": "media",
-    "Файлове": "files",
+    "Документи": "files",
     "Чакащи": "requests"
 };
 
@@ -140,13 +144,11 @@ export default function GroupPage() {
     if (isError || !group) return <ErrorScreen message="Групата не е намерена или възникна грешка." />;
 
     const canViewContent = !group.isPrivate || isMember; 
-    const baseTabs = ["Публикации", "Хора", "Медия", "Файлове"];
+    const baseTabs = ["Публикации", "Хора", "Медия", "Документи"];
     
     const showRequestsTab = group.isPrivate && (isOwner || isAdmin);
     const tabs = showRequestsTab ? [...baseTabs, "Чакащи"] : baseTabs;
-    
-    // TODO: Вържете това с реална бройка от API
-    const hasPendingRequests = (isOwner || isAdmin) && true; 
+
 
     const userForLayout = {
         name: getUserDisplayName(currentUser),
@@ -369,8 +371,32 @@ export default function GroupPage() {
                                     groupId={group.id}
                                 />
                             )}
+
+                            {activeTab === "Медия" && canViewContent && (
+                                <div className="space-y-4">
+                                     <div className="bg-white rounded-xl border p-4 shadow-sm">
+                                        <h2 className="text-lg font-bold flex items-center gap-2">
+                                            <ImageIcon className="w-5 h-5 text-primary" />
+                                            Медия от групата
+                                        </h2>
+                                     </div>
+                                     <MediaGalleryView id={group.id} type="group" />
+                                </div>
+                            )}
+
+                            {activeTab === "Документи" && canViewContent && (
+                                <div className="space-y-4">
+                                    <div className="bg-white rounded-xl border p-4 shadow-sm">
+                                        <h2 className="text-lg font-bold flex items-center gap-2">
+                                            <FileText className="w-5 h-5 text-primary" />
+                                            Файлове
+                                        </h2>
+                                    </div>
+                                    <DocumentsListView id={group.id} type="group" />
+                                </div>
+                            )}
                             
-                             {activeTab === "Чакащи" && showRequestsTab && (
+                            {activeTab === "Чакащи" && showRequestsTab && (
                                 <GroupRequestsView 
                                     groupId={group.id} 
                                     requests={requestsData?.data || []} 

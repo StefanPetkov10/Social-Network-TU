@@ -31,7 +31,7 @@ import {
   FormMessage,
 } from "@frontend/components/ui/form";
 
-import { useCreatePost } from "@frontend/hooks/use-create-post";
+import { useCreatePost } from "@frontend/hooks/use-post";
 import { validateFile } from "@frontend/lib/file-validation";
 import { getInitials, getUserDisplayName } from "@frontend/lib/utils";
 

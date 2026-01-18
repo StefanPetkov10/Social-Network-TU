@@ -7,6 +7,7 @@ using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database.Models;
 using SocialMedia.Database.Models.Enums;
 using SocialMedia.DTOs.Post;
+using SocialMedia.DTOs.Post.Enums;
 using SocialMedia.Services.Interfaces;
 
 namespace SocialMedia.Services
@@ -380,6 +381,113 @@ namespace SocialMedia.Services
                 }).ToListAsync();
 
             return ApiResponse<ProfileMediaDto>.SuccessResponse(new ProfileMediaDto { Images = images, Documents = documents });
+        }
+
+        public async Task<ApiResponse<IEnumerable<PostMediaDto>>> GetProfileMediaPaginatedAsync(
+            ClaimsPrincipal userClaims,
+            Guid profileId,
+            MediaTypeGroup mediaTypeGroup,
+            int skip,
+            int take)
+        {
+            var invalidUserResponse = GetUserIdOrUnauthorized<IEnumerable<PostMediaDto>>(userClaims, out var userId);
+            if (invalidUserResponse != null) return invalidUserResponse;
+
+            var viewerProfile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (viewerProfile == null) return ApiResponse<IEnumerable<PostMediaDto>>.ErrorResponse("Invalid user profile.");
+
+            bool isOwner = viewerProfile.Id == profileId;
+            bool isFriend = await _friendshipRepository.AnyAsync(f =>
+                f.Status == FriendshipStatus.Accepted &&
+                ((f.RequesterId == viewerProfile.Id && f.AddresseeId == profileId) ||
+                 (f.AddresseeId == viewerProfile.Id && f.RequesterId == profileId)));
+
+            var query = _postMediaRepository.QueryNoTracking()
+                .Include(m => m.Post)
+                .Where(m => !m.Post.IsDeleted
+                    && m.Post.ProfileId == profileId
+                    && m.Post.GroupId == null)
+                .Where(m => m.Post.Visibility == PostVisibility.Public || isOwner ||
+                           (m.Post.Visibility == PostVisibility.FriendsOnly && isFriend));
+
+            if (mediaTypeGroup == MediaTypeGroup.Documents)
+            {
+                query = query.Where(m => m.MediaType == MediaType.Document);
+            }
+            else
+            {
+                query = query.Where(m => m.MediaType == MediaType.Image ||
+                                         m.MediaType == MediaType.Video ||
+                                         m.MediaType == MediaType.Gif);
+            }
+
+            var mediaList = await query
+                .OrderByDescending(m => m.Post.CreatedDate)
+                .Skip(skip)
+                .Take(take)
+                .Select(m => new PostMediaDto
+                {
+                    Id = m.Id,
+                    Url = $"{_httpContextAccessor.HttpContext!.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}/{m.FilePath}",
+                    MediaType = m.MediaType,
+                    FileName = m.FileName,
+                    Order = m.Order
+                }).ToListAsync();
+
+            return ApiResponse<IEnumerable<PostMediaDto>>.SuccessResponse(mediaList, "Profile media retrieved.");
+        }
+
+        public async Task<ApiResponse<IEnumerable<PostMediaDto>>> GetGroupMediaPaginatedAsync(
+            ClaimsPrincipal userClaims,
+            Guid groupId,
+            MediaTypeGroup mediaTypeGroup,
+            int skip,
+            int take)
+        {
+            var invalidUserResponse = GetUserIdOrUnauthorized<IEnumerable<PostMediaDto>>(userClaims, out var userId);
+            if (invalidUserResponse != null) return invalidUserResponse;
+
+            var viewerProfile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (viewerProfile == null) return ApiResponse<IEnumerable<PostMediaDto>>.ErrorResponse("Invalid user profile.");
+
+            var group = await _groupRepository.GetByIdAsync(groupId);
+            if (group == null) return NotFoundResponse<IEnumerable<PostMediaDto>>("Group");
+
+            if (group.Privacy == GroupPrivacy.Private)
+            {
+                var isMember = await _groupRepository.IsMemberAsync(group.Id, viewerProfile.Id);
+                if (!isMember) return ApiResponse<IEnumerable<PostMediaDto>>.ErrorResponse("You are not a member of this private group.");
+            }
+
+            var query = _postMediaRepository.QueryNoTracking()
+                .Include(m => m.Post)
+                .Where(m => !m.Post.IsDeleted && m.Post.GroupId == groupId);
+
+            if (mediaTypeGroup == MediaTypeGroup.Documents)
+            {
+                query = query.Where(m => m.MediaType == MediaType.Document);
+            }
+            else
+            {
+                query = query.Where(m => m.MediaType == MediaType.Image ||
+                                         m.MediaType == MediaType.Video ||
+                                         m.MediaType == MediaType.Gif);
+            }
+
+            var mediaList = await query
+                .OrderByDescending(m => m.Post.CreatedDate)
+                .Skip(skip)
+                .Take(take)
+                .Select(m => new PostMediaDto
+                {
+                    Id = m.Id,
+                    Url = $"{_httpContextAccessor.HttpContext!.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}/{m.FilePath}",
+                    MediaType = m.MediaType,
+                    FileName = m.FileName,
+                    Order = m.Order
+                }).ToListAsync();
+
+            return ApiResponse<IEnumerable<PostMediaDto>>.SuccessResponse(mediaList, "Group media retrieved.");
         }
 
         private ApiResponse<PostDto> SuccessPostDto(Post post, Database.Models.Profile profile, string message)

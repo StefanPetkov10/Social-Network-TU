@@ -1,3 +1,4 @@
+import { MediaTypeGroup } from "@frontend/lib/types/enums";
 import api from "../lib/axios";
 import { PostDto, PostMediaDto } from "../lib/types/posts";
 import { ApiResponse } from "@frontend/lib/types/api"; 
@@ -36,6 +37,26 @@ export const postService = {
 
   getProfileMedia: async (profileId: string) => {
     const { data } = await api.get<ApiResponse<ProfileMediaResponse>>(`/api/Posts/media/${profileId}`);
+    return data;
+  },
+
+  getProfileMediaPaginated: async (profileId: string, type: MediaTypeGroup, skip: number, take: number = 20) => {
+    const params = new URLSearchParams();
+    params.append("type", type.toString());
+    params.append("skip", skip.toString());
+    params.append("take", take.toString());
+    
+    const { data } = await api.get<ApiResponse<PostMediaDto[]>>(`/api/Posts/media/profile/${profileId}/paginated`, { params });
+    return data;
+  },
+
+  getGroupMediaPaginated: async (groupId: string, type: MediaTypeGroup, skip: number, take: number = 20) => {
+    const params = new URLSearchParams();
+    params.append("type", type.toString());
+    params.append("skip", skip.toString());
+    params.append("take", take.toString());
+
+    const { data } = await api.get<ApiResponse<PostMediaDto[]>>(`/api/Posts/media/group/${groupId}/paginated`, { params });
     return data;
   }
 };
