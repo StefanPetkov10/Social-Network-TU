@@ -1,11 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-// ПРОМЯНА: Добавени imports за URL навигация
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Button } from "@frontend/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
-// ПРОМЯНА: Добавени икони за новите секции
 import { Edit, Users, Loader2, Save, X, ImageIcon, FileText } from "lucide-react";
 import { MainLayout } from "@frontend/components/main-layout";
 import ProtectedRoute from "@frontend/components/protected-route";
@@ -23,6 +21,7 @@ import { EditProfileDialog } from "@frontend/components/profile-form/profile-edi
 import { getInitials, getUserDisplayName, getUserUsername, cn } from "@frontend/lib/utils";
 import { MediaGalleryView } from "@frontend/components/media/media-gallery-view";
 import { DocumentsListView } from "@frontend/components/media/documents-list-view";
+import { FriendsListView } from "@frontend/components/profile-form/friends-list-view";
 
 const TAB_MAP: Record<string, string> = {
     "posts": "Публикации",
@@ -192,7 +191,10 @@ export default function ProfilePage() {
                                         </div>
 
                                         <div className="flex items-center justify-center md:justify-start gap-5 text-sm font-medium pt-2 text-muted-foreground">
-                                            <span className="hover:text-foreground cursor-pointer flex items-center gap-1">
+                                            <span 
+                                                className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors"
+                                                onClick={() => handleTabChange("Приятели")}
+                                            >
                                                 <Users className="h-4 w-4" />
                                                 <strong className="text-foreground">{profile.friendsCount}</strong> Приятели
                                             </span>
@@ -240,12 +242,13 @@ export default function ProfilePage() {
 
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
                             <div className="lg:col-span-1 space-y-5 sticky top-20 h-fit">
-                               <ProfileFriendsCard 
+                                {activeTab !== "Приятели" && (
+                                    <ProfileFriendsCard 
                                     profileId={profile.id} 
                                     currentUsername={profile.userName} 
                                     loggedInUsername={profile?.userName} 
-                                />
-                                
+                                />                       
+                             )}                                   
                                 {activeTab !== "Медия" && activeTab !== "Документи" && (
                                     <ProfileMediaCard profileId={profile.id} />
                                 )}
@@ -286,6 +289,12 @@ export default function ProfilePage() {
                                     </>
                                 )}
 
+                                {activeTab === "Приятели" && (
+                                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                        <FriendsListView profileId={profile.id} />
+                                    </div>
+                                )}
+
                                 {activeTab === "Медия" && (
                                     <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
                                          <div className="bg-white rounded-xl border p-4 shadow-sm mb-4">
@@ -309,13 +318,6 @@ export default function ProfilePage() {
                                         <DocumentsListView id={profile.id} type="user" />
                                     </div>
                                 )}
-
-                                {activeTab === "Приятели" && (
-                                    <div className="bg-white rounded-xl border p-8 text-center text-muted-foreground">
-                                        <p>Списък с приятели...</p>
-                                    </div>
-                                )}
-
                             </div>
                         </div>
                     </div>

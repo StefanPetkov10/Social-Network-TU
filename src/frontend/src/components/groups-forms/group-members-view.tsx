@@ -95,6 +95,8 @@ export function GroupMembersView({ groupId }: GroupMembersViewProps) {
              allMembersRaw.find(m => m.isMe);
   }, [admins, friends, mutuals, allMembersRaw]);
 
+  const viewerRole = currentUserMember?.role;
+
   const masterList = useMemo(() => {
     return allMembersRaw.filter(m => !m.isMe);
   }, [allMembersRaw]);
@@ -148,7 +150,7 @@ export function GroupMembersView({ groupId }: GroupMembersViewProps) {
             <UserCircle2 className="w-4 h-4 text-blue-600" />
             <span className="text-sm font-semibold text-gray-700">Ти (Твоят профил)</span>
           </div>
-          <MemberCard member={currentUserMember} groupId={groupId} showBadges={true} />
+          <MemberCard member={currentUserMember} groupId={groupId} showBadges={true} viewerRole={viewerRole} />
         </div>
        )}
 
@@ -172,6 +174,7 @@ export function GroupMembersView({ groupId }: GroupMembersViewProps) {
                 member={member} 
                 groupId={groupId} 
                 showBadges={true} 
+                viewerRole={viewerRole}
             />
           ))}
         </MemberSection>
@@ -185,7 +188,7 @@ export function GroupMembersView({ groupId }: GroupMembersViewProps) {
           count={friends.length} 
         >
           {visibleFriends.map((member) => (
-            <MemberCard key={member.profileId} member={member} groupId={groupId} />
+            <MemberCard key={member.profileId} member={member} groupId={groupId} viewerRole={viewerRole} />
           ))}
         </MemberSection>
       )}
@@ -206,7 +209,7 @@ export function GroupMembersView({ groupId }: GroupMembersViewProps) {
           }
         >
           {visibleMutuals.map((member) => (
-            <MemberCard key={member.profileId} member={member} groupId={groupId} />
+            <MemberCard key={member.profileId} member={member} groupId={groupId} viewerRole={viewerRole} />
           ))}
         </MemberSection>
       )}
@@ -228,6 +231,7 @@ export function GroupMembersView({ groupId }: GroupMembersViewProps) {
                     isCompact={true} 
                     groupId={groupId}
                     showBadges={true} 
+                    viewerRole={viewerRole}
                 />
               </div>
             ))
@@ -286,14 +290,14 @@ interface MemberCardProps {
   isCompact?: boolean;
   groupId: string;
   showBadges?: boolean;
+  viewerRole?: number;
 }
 
-function MemberCard({ member, isCompact = false, groupId, showBadges = false }: MemberCardProps) {
+function MemberCard({ member, isCompact = false, groupId, showBadges = false, viewerRole }: MemberCardProps) {
   const initials = getInitials(member.fullName);
   const isMe = member.isMe;
   const profileLink = isMe ? "/profile" : `/${member.username}`;
   
-  // @ts-ignore
   const [isPending, setIsPending] = useState(member.hasPendingRequest || false);
 
   const { mutate: sendRequest } = useSendFriendRequest();
@@ -325,6 +329,11 @@ function MemberCard({ member, isCompact = false, groupId, showBadges = false }: 
 
   const isOwner = member.role === 0; 
   const isAdmin = member.role === 1;
+  const isRegularMember = member.role === 2;
+
+  const canRemoveMember = 
+    (viewerRole === 0 || viewerRole === 1) && 
+    isRegularMember;
 
   return (
     <div className={`flex items-center justify-between gap-3 p-3 rounded-lg transition-all duration-200 ${isMe ? 'bg-blue-50/30' : 'hover:bg-gray-50'} group`}>
@@ -440,13 +449,15 @@ function MemberCard({ member, isCompact = false, groupId, showBadges = false }: 
               </DropdownMenuItem>
             )}
 
-            <DropdownMenuItem 
+            {canRemoveMember && (
+              <DropdownMenuItem 
                 onClick={() => removeMember({ groupId, profileId: member.profileId })}
                 className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 font-medium"
-            >
-              <AlertCircleIcon className="w-4 h-4 mr-2" />
-              Премахни
-            </DropdownMenuItem>
+              >
+                <AlertCircleIcon className="w-4 h-4 mr-2" />
+                Премахни
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

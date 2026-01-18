@@ -3,7 +3,7 @@ import { FriendDto, FriendRequest, FriendSuggestion } from "@frontend/lib/types/
 import { ApiResponse } from "@frontend/lib/types/api";
 
 export const friendsService = {
-    getFriendRequests: async (cursor: string | null = null, take: number = 10) => {
+    getFriendRequests: async (cursor: string | null = null, take: number = 20) => {
         const params = new URLSearchParams();
         if (cursor) params.append("lastRequestDate", cursor);
         params.append("take", take.toString());
@@ -37,7 +37,7 @@ export const friendsService = {
         return data;
     },
 
-    getFriendsList: async (profileId: string, cursor: string | null = null, take: number = 10) => {
+    getFriendsList: async (profileId: string, cursor: string | null = null, take: number = 20) => {
         const params = new URLSearchParams();
         if (cursor) params.append("lastFriendshipDate", cursor);
         params.append("take", take.toString());

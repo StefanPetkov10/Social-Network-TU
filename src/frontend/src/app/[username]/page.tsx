@@ -49,6 +49,7 @@ import { useCancelFriendRequest } from "@frontend/hooks/use-friends";
 
 import { MediaGalleryView } from "@frontend/components/media/media-gallery-view";
 import { DocumentsListView } from "@frontend/components/media/documents-list-view";
+import { FriendsListView } from "@frontend/components/profile-form/friends-list-view";
 
 type RequestStatusUI = "pending_received" | "pending_sent" | "friend" | "none";
 
@@ -280,7 +281,10 @@ export default function UserProfilePage({ params }: PageProps) {
                                 </div>
 
                                 <div className="flex items-center justify-center md:justify-start gap-5 text-sm font-medium pt-2 text-muted-foreground">
-                                    <span className="flex items-center gap-1">
+                                    <span 
+                                        className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors"
+                                        onClick={() => handleTabChange("Приятели")}
+                                    >
                                         <Users className="h-4 w-4" />
                                         <strong className="text-foreground">{profile.friendsCount}</strong> Приятели
                                     </span>
@@ -401,12 +405,13 @@ export default function UserProfilePage({ params }: PageProps) {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
                     
                     <div className="lg:col-span-1 space-y-5 sticky top-24">
-                        <ProfileFriendsCard 
+                        {activeTab !== "Приятели" && (
+                                    <ProfileFriendsCard 
                                     profileId={profile.id} 
                                     currentUsername={profile.userName} 
-                                    loggedInUsername={myProfile?.userName} 
-                                />
-                        
+                                    loggedInUsername={profile?.userName} 
+                                />                      
+                             )}      
                         {activeTab !== "Медия" && activeTab !== "Документи" && (
                             <ProfileMediaCard profileId={profile.id} />
                         )}
@@ -456,18 +461,24 @@ export default function UserProfilePage({ params }: PageProps) {
                             </>
                         )}
 
-                        {activeTab === "Медия" && (
+                        {activeTab === "Приятели" && (
                              <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                  <div className="bg-white rounded-xl border p-4 shadow-sm mb-4">
+                                 <FriendsListView profileId={profile.id} />
+                             </div>
+                        )}
+
+                        {activeTab === "Медия" && (
+                            <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                 <div className="bg-white rounded-xl border p-4 shadow-sm mb-4">
                                      <h2 className="text-lg font-bold flex items-center gap-2">
                                         <ImageIcon className="w-5 h-5 text-primary" /> 
                                         Галерия
                                      </h2>
                                  </div>
                                  <MediaGalleryView id={profile.id} type="user" />
-                             </div>
+                            </div>
                         )}
-
+                        
                         {activeTab === "Документи" && (
                             <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
                                 <div className="bg-white rounded-xl border p-4 shadow-sm mb-4">
@@ -478,12 +489,6 @@ export default function UserProfilePage({ params }: PageProps) {
                                 </div>
                                 <DocumentsListView id={profile.id} type="user" />
                             </div>
-                        )}
-
-                        {activeTab === "Приятели" && (
-                             <div className="bg-white rounded-xl border p-8 text-center text-muted-foreground">
-                                <p>Информацията за приятелите ще се покаже тук.</p>
-                             </div>
                         )}
                     </div>
                 </div>
@@ -499,7 +504,7 @@ export default function UserProfilePage({ params }: PageProps) {
         <AlertDialog open={showUnfriendDialog} onOpenChange={setShowUnfriendDialog}>
             <AlertDialogContent>
                 <AlertDialogHeader><AlertDialogTitle>Премахване на приятел?</AlertDialogTitle><AlertDialogDescription>Сигурни ли сте, че искате да премахнете <strong>{displayName}</strong> от приятели?</AlertDialogDescription></AlertDialogHeader>
-                <AlertDialogFooter><AlertDialogCancel>Отказ</AlertDialogCancel><AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => removeFriend()} disabled={isRemovePending}>Премахни</AlertDialogAction></AlertDialogFooter>
+                <AlertDialogFooter><AlertDialogCancel>Отказ</AlertDialogCancel><AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => removeFriend()}>Премахни</AlertDialogAction></AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
 

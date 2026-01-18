@@ -46,7 +46,7 @@ export default function AllFriendsPage() {
     if (!searchQuery) return friendsList;
     return friendsList.filter((friend) => 
         (friend.displayFullName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (friend.userName || "").toLowerCase().includes(searchQuery.toLowerCase())
+        (friend.username || "").toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [friendsList, searchQuery]);
 

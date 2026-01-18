@@ -355,7 +355,7 @@ namespace SocialMedia.Services
                 friendDtos, "Pending requests retrieved.", new { nextCursor });
         }
 
-        public async Task<ApiResponse<IEnumerable<FriendDto>>> GetFriendsListAsync(Guid profileId, DateTime? lastFriendshipDate = null, int take = 10)
+        public async Task<ApiResponse<IEnumerable<FriendDto>>> GetFriendsListAsync(Guid profileId, DateTime? lastFriendshipDate = null, int take = 20)
         {
             var userProfile = await _profileRepository.GetByIdAsync(profileId);
             if (userProfile == null) return ApiResponse<IEnumerable<FriendDto>>.ErrorResponse("Profile not found.");

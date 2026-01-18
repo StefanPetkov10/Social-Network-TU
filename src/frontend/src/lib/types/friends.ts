@@ -4,7 +4,7 @@ export interface FriendRequest {
   pendingRequestId: string; 
   profileId: string;       
   displayFullName: string;
-  userName: string;
+  username: string;
   authorAvatar: string | null;
 }
 
@@ -21,6 +21,6 @@ export interface FriendSuggestion {
 export interface FriendDto {
     profileId: string;
     displayFullName: string;
-    userName: string;
+    username: string;
     authorAvatar?: string;
 }

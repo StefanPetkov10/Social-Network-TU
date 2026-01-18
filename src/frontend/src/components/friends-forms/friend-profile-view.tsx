@@ -33,6 +33,7 @@ import { ProfilePreviewData } from "@frontend/lib/types/profile-view";
 import { useCancelFriendRequest } from "@frontend/hooks/use-friends";
 import { DocumentsListView } from "../media/documents-list-view";
 import { MediaGalleryView } from "../media/media-gallery-view";
+import { FriendsListView } from "../profile-form/friends-list-view";
 
 type RequestStatusUI = "pending_received" | "pending_sent" | "friend" | "none";
 
@@ -266,8 +267,13 @@ export function FriendProfileView({
                                 <div className="max-w-lg mx-auto md:mx-0 py-2"><p className="text-sm text-foreground/90 leading-relaxed">{bio}</p></div>
                                 
                                 <div className="flex items-center justify-center md:justify-start gap-5 text-sm font-medium pt-2 text-muted-foreground">
-                                    <span className="flex items-center gap-1"><Users className="h-4 w-4" /><strong className="text-foreground">{profile.friendsCount || 0}</strong> Приятели</span>
-                                    <span><strong className="text-foreground">{profile.followersCount || 0}</strong> Последователи</span>
+                                    <span 
+                                        className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors"
+                                        onClick={() => setActiveTab("Приятели")}
+                                    >
+                                        <Users className="h-4 w-4" />
+                                        <strong className="text-foreground">{profile.friendsCount || 0}</strong> Приятели
+                                    </span>                                    <span><strong className="text-foreground">{profile.followersCount || 0}</strong> Последователи</span>
                                     <span><strong className="text-foreground">{profile.followingCount || 0}</strong> Последвани</span>
                                 </div>
                             </div>
@@ -357,8 +363,9 @@ export function FriendProfileView({
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                     <div className="lg:col-span-1 space-y-6 sticky top-24 h-fit">
-                        <ProfileFriendsCard profileId={profileId} />
-                        
+                        {activeTab !== "Приятели" && (
+                            <ProfileFriendsCard profileId={profileId} />
+                        )}                        
                         {activeTab !== "Медия" && activeTab !== "Документи" && (
                              <ProfileMediaCard profileId={profileId} />
                         )}
@@ -379,6 +386,12 @@ export function FriendProfileView({
                                     </div>
                                 )}
                             </>
+                        )}
+
+                        {activeTab === "Приятели" && (
+                             <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                 <FriendsListView profileId={profileId} />
+                             </div>
                         )}
 
                         {activeTab === "Медия" && (
