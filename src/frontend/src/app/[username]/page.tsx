@@ -50,7 +50,7 @@ import { useCancelFriendRequest } from "@frontend/hooks/use-friends";
 import { MediaGalleryView } from "@frontend/components/media/media-gallery-view";
 import { DocumentsListView } from "@frontend/components/media/documents-list-view";
 import { FriendsListView } from "@frontend/components/profile-form/friends-list-view";
-
+import { FollowersListDialog, FollowingListDialog } from "@frontend/components/profile-form/follows-lists";
 type RequestStatusUI = "pending_received" | "pending_sent" | "friend" | "none";
 
 const TAB_MAP: Record<string, string> = {
@@ -93,6 +93,9 @@ export default function UserProfilePage({ params }: PageProps) {
   
   const [showUnfollowDialog, setShowUnfollowDialog] = useState(false);
   const [showUnfriendDialog, setShowUnfriendDialog] = useState(false);
+
+  const [showFollowersDialog, setShowFollowersDialog] = useState(false);
+  const [showFollowingDialog, setShowFollowingDialog] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -288,10 +291,16 @@ export default function UserProfilePage({ params }: PageProps) {
                                         <Users className="h-4 w-4" />
                                         <strong className="text-foreground">{profile.friendsCount}</strong> Приятели
                                     </span>
-                                    <span>
+                                    <span 
+                                        className="cursor-pointer hover:text-foreground transition-colors"
+                                        onClick={() => setShowFollowersDialog(true)}
+                                    >
                                         <strong className="text-foreground">{profile.followersCount}</strong> Последователи
                                     </span>
-                                    <span>
+                                    <span 
+                                        className="cursor-pointer hover:text-foreground transition-colors"
+                                        onClick={() => setShowFollowingDialog(true)}
+                                    >
                                         <strong className="text-foreground">{profile.followingCount}</strong> Последвани
                                     </span>
                                 </div>
@@ -408,8 +417,8 @@ export default function UserProfilePage({ params }: PageProps) {
                         {activeTab !== "Приятели" && (
                                     <ProfileFriendsCard 
                                     profileId={profile.id} 
-                                    currentUsername={profile.userName} 
-                                    loggedInUsername={profile?.userName} 
+                                    currentUsername={profile.username} 
+                                    loggedInUsername={profile?.username} 
                                 />                      
                              )}      
                         {activeTab !== "Медия" && activeTab !== "Документи" && (
@@ -507,7 +516,23 @@ export default function UserProfilePage({ params }: PageProps) {
                 <AlertDialogFooter><AlertDialogCancel>Отказ</AlertDialogCancel><AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => removeFriend()}>Премахни</AlertDialogAction></AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
-
+        {profile && (
+            <>
+                <FollowersListDialog 
+                    open={showFollowersDialog} 
+                    onOpenChange={setShowFollowersDialog} 
+                    profileId={profile.id}
+                    isMyProfile={isMe} 
+                />
+                <FollowingListDialog 
+                    open={showFollowingDialog} 
+                    onOpenChange={setShowFollowingDialog} 
+                    profileId={profile.id}
+                    
+                    isMyProfile={isMe}
+                />
+            </>
+        )}  
     </div>
     </SidebarProvider>
   );

@@ -50,13 +50,13 @@ export function ProfileFriendsCard({ profileId, currentUsername, loggedInUsernam
                 const initials = getInitials(name);
                 const authorAvatar = friend.authorAvatar || friend.avatarUrl || friend.photo || "";
                 
-                const isMe = loggedInUsername && friend.userName === loggedInUsername;
+                const isMe = loggedInUsername && friend.username === loggedInUsername;
                 
-                const profileLink = isMe ? "/profile" : `/${friend.userName}`;
+                const profileLink = isMe ? "/profile" : `/${friend.username}`;
 
                 return (
                     <Link 
-                        key={friend.profileId || friend.userName} 
+                        key={friend.profileId || friend.username} 
                         href={profileLink} 
                         className="flex flex-col items-center gap-1 cursor-pointer group"
                     >

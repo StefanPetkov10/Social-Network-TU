@@ -3,19 +3,21 @@ import { FollowUser, FollowSuggestion } from "@frontend/lib/types/followers";
 import { ApiResponse } from "@frontend/lib/types/api";
 
 export const followersService = {
-    getMyFollowers: async (cursor: string | null = null, take: number = 20) => {
+    getUserFollowers: async (profileId: string, cursor: string | null = null, take: number = 20) => {
         const params = new URLSearchParams();
         if (cursor) params.append("lastFollowerDate", cursor);
         params.append("take", take.toString());
-        const { data } = await api.get<ApiResponse<FollowUser[]>>(`/api/Follow/my-followers?${params.toString()}`);
+        
+        const { data } = await api.get<ApiResponse<FollowUser[]>>(`/api/Follow/followers/${profileId}?${params.toString()}`);
         return data;
     },
 
-    getMyFollowing: async (cursor: string | null = null, take: number = 20) => {
+    getUserFollowing: async (profileId: string, cursor: string | null = null, take: number = 20) => {
         const params = new URLSearchParams();
         if (cursor) params.append("lastFollowingDate", cursor);
         params.append("take", take.toString());
-        const { data } = await api.get<ApiResponse<FollowUser[]>>(`/api/Follow/following?${params.toString()}`);
+        
+        const { data } = await api.get<ApiResponse<FollowUser[]>>(`/api/Follow/following/${profileId}?${params.toString()}`);
         return data;
     },
 
@@ -33,5 +35,9 @@ export const followersService = {
         const { data } = await api.delete<ApiResponse<null>>(`/api/Follow/unfollow/${profileId}`);
         return data;
     },
-};
 
+    removeFollower: async (followerId: string) => {
+        const { data } = await api.delete<ApiResponse<null>>(`/api/Follow/remove-follower/${followerId}`);
+        return data;
+    },
+};

@@ -38,10 +38,11 @@ namespace SocialMedia.Controllers
             return BadRequest(response);
         }
 
-        [HttpGet("is-following")]
-        public async Task<IActionResult> IsFollowing(Guid followingId)
+        [HttpGet("followers/{id}")]
+        public async Task<IActionResult> GetFollowers(Guid id, [FromQuery] DateTime? lastFollowerDate, [FromQuery] int take)
         {
-            var response = await _followService.IsFollowingAsync(User, followingId);
+            var response = await _followService.GetFollowersAsync(User, id, lastFollowerDate, take);
+            //return response.Success ? Ok(response) : BadRequest(response);
             if (response.Success)
             {
                 return Ok(response);
@@ -49,10 +50,10 @@ namespace SocialMedia.Controllers
             return BadRequest(response);
         }
 
-        [HttpGet("my-followers")]
-        public async Task<IActionResult> Followers([FromQuery] DateTime? lastFollowerDate, [FromQuery] int take)
+        [HttpGet("following/{id}")]
+        public async Task<IActionResult> GetFollowing(Guid id, [FromQuery] DateTime? lastFollowingDate, [FromQuery] int take)
         {
-            var response = await _followService.GetFollowersAsync(User, lastFollowerDate, take);
+            var response = await _followService.GetFollowingAsync(User, id, lastFollowingDate, take);
             if (response.Success)
             {
                 return Ok(response);
@@ -60,10 +61,10 @@ namespace SocialMedia.Controllers
             return BadRequest(response);
         }
 
-        [HttpGet("following")]
-        public async Task<IActionResult> Following([FromQuery] DateTime? lastFollowingDate, [FromQuery] int take)
+        [HttpDelete("remove-follower/{followerId}")]
+        public async Task<IActionResult> RemoveFollower(Guid followerId)
         {
-            var response = await _followService.GetFollowingAsync(User, lastFollowingDate, take);
+            var response = await _followService.RemoveFollowerAsync(User, followerId);
             if (response.Success)
             {
                 return Ok(response);
@@ -74,7 +75,7 @@ namespace SocialMedia.Controllers
         [HttpGet("suggestions")]
         public async Task<IActionResult> FollowSuggestions([FromQuery] int skip, [FromQuery] int take)
         {
-            var response = await _followService.GetFollowSuggestionsAsync(User);
+            var response = await _followService.GetFollowSuggestionsAsync(User, skip, take);
             if (response.Success)
             {
                 return Ok(response);

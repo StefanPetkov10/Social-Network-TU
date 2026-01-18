@@ -22,6 +22,7 @@ import { getInitials, getUserDisplayName, getUserUsername, cn } from "@frontend/
 import { MediaGalleryView } from "@frontend/components/media/media-gallery-view";
 import { DocumentsListView } from "@frontend/components/media/documents-list-view";
 import { FriendsListView } from "@frontend/components/profile-form/friends-list-view";
+import { FollowersListDialog, FollowingListDialog } from "@frontend/components/profile-form/follows-lists";
 
 const TAB_MAP: Record<string, string> = {
     "posts": "Публикации",
@@ -55,6 +56,10 @@ export default function ProfilePage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isAddingBio, setIsAddingBio] = useState(false);
     const [bioInput, setBioInput] = useState("");
+
+    // State за диалозите
+    const [showFollowersDialog, setShowFollowersDialog] = useState(false);
+    const [showFollowingDialog, setShowFollowingDialog] = useState(false);
 
     const { data: profile, isLoading, isError, error } = useProfile();
     const { mutate: updateBio, isPending: isUpdatingBio } = useUpdateBio();
@@ -198,10 +203,18 @@ export default function ProfilePage() {
                                                 <Users className="h-4 w-4" />
                                                 <strong className="text-foreground">{profile.friendsCount}</strong> Приятели
                                             </span>
-                                            <span className="hover:text-foreground cursor-pointer">
+                                            
+                                            <span 
+                                                className="hover:text-foreground cursor-pointer transition-colors"
+                                                onClick={() => setShowFollowersDialog(true)}
+                                            >
                                                 <strong className="text-foreground">{profile.followersCount}</strong> Последователи
                                             </span>
-                                            <span className="hover:text-foreground cursor-pointer">
+
+                                            <span 
+                                                className="hover:text-foreground cursor-pointer transition-colors"
+                                                onClick={() => setShowFollowingDialog(true)}
+                                            >
                                                 <strong className="text-foreground">{profile.followingCount}</strong> Последвани
                                             </span>
                                         </div>
@@ -245,10 +258,10 @@ export default function ProfilePage() {
                                 {activeTab !== "Приятели" && (
                                     <ProfileFriendsCard 
                                     profileId={profile.id} 
-                                    currentUsername={profile.userName} 
-                                    loggedInUsername={profile?.userName} 
-                                />                       
-                             )}                                   
+                                    currentUsername={profile.username} 
+                                    loggedInUsername={profile?.username} 
+                                />                      
+                             )}                                 
                                 {activeTab !== "Медия" && activeTab !== "Документи" && (
                                     <ProfileMediaCard profileId={profile.id} />
                                 )}
@@ -267,12 +280,15 @@ export default function ProfilePage() {
                                             <>
                                                 {postsData?.pages[0]?.data && postsData.pages[0].data.length === 0 ? (
                                                     <div className="text-center p-8 text-muted-foreground bg-white rounded-xl border border-dashed shadow-sm">
+                                                        <div className="bg-muted/50 p-4 rounded-full w-fit mx-auto mb-3">
+                                                            <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+                                                        </div>
                                                         Все още няма публикации.
                                                     </div>
                                                 ) : (
-                                                    postsData?.pages.map((page, i) => (
+                                                    postsData?.pages.map((page: any, i: number) => (
                                                         <div key={i} className="space-y-4">
-                                                            {page.data?.map((post) => (
+                                                            {page.data?.map((post: any) => (
                                                                 <PostCard key={post.id} post={post} authorProfile={profile} />
                                                             ))}
                                                         </div>
@@ -301,7 +317,7 @@ export default function ProfilePage() {
                                              <h2 className="text-lg font-bold flex items-center gap-2">
                                                 <ImageIcon className="w-5 h-5 text-primary" /> 
                                                 Галерия
-                                             </h2>
+                                            </h2>
                                          </div>
                                          <MediaGalleryView id={profile.id} type="user" />
                                     </div>
@@ -322,6 +338,24 @@ export default function ProfilePage() {
                         </div>
                     </div>
                 </div>
+
+                {profile && profile.id && (
+                    <>
+                        <FollowersListDialog 
+                            open={showFollowersDialog} 
+                            onOpenChange={setShowFollowersDialog} 
+                            profileId={profile.id}
+                            isMyProfile={true} 
+                        />
+                        <FollowingListDialog 
+                            open={showFollowingDialog} 
+                            onOpenChange={setShowFollowingDialog} 
+                            profileId={profile.id}
+                            isMyProfile={true} 
+                        />
+                    </>
+                )}
+
             </MainLayout>
         </ProtectedRoute>
     );

@@ -59,8 +59,8 @@ export function getInitials(name: string = ""): string {
 }
 
 export function getUserUsername(profile: any): string {
-  if (profile && profile.userName) {
-    return `@${profile.userName}`;
+  if (profile && profile.username) {
+    return `@${profile.username}`;
   }
   return "";
 }

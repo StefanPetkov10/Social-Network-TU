@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import {
     ArrowLeft, UserPlus, UserCheck, MessageCircle, MoreHorizontal,
-    UserMinus, Users, Loader2, Check, X, Image as ImageIcon,
-    Clock, 
+    UserMinus, Users, Loader2, Image as ImageIcon,
+    Clock, X,
     FileText 
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
@@ -34,6 +34,7 @@ import { useCancelFriendRequest } from "@frontend/hooks/use-friends";
 import { DocumentsListView } from "../media/documents-list-view";
 import { MediaGalleryView } from "../media/media-gallery-view";
 import { FriendsListView } from "../profile-form/friends-list-view";
+import { FollowersListDialog, FollowingListDialog } from "@frontend/components/profile-form/follows-lists";
 
 type RequestStatusUI = "pending_received" | "pending_sent" | "friend" | "none";
 
@@ -66,6 +67,9 @@ export function FriendProfileView({
     
     const [showUnfollowDialog, setShowUnfollowDialog] = useState(false);
     const [showUnfriendDialog, setShowUnfriendDialog] = useState(false);
+
+    const [showFollowersDialog, setShowFollowersDialog] = useState(false);
+    const [showFollowingDialog, setShowFollowingDialog] = useState(false);
 
     const queryClient = useQueryClient();
 
@@ -244,7 +248,15 @@ export function FriendProfileView({
     return (
         <div className="flex flex-col animate-in slide-in-from-right-4 duration-300 w-full min-h-screen relative pb-10">
             <div className="sticky top-0 left-0 z-50 pointer-events-none">
-                <Button onClick={onBack} className={cn("transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] flex items-center overflow-hidden group -mt-2 -ml-2 pointer-events-auto h-11 rounded-full bg-white/90 backdrop-blur-md border border-gray-200 text-gray-700 shadow-lg", isScrolled ? "w-11 px-0 justify-center" : "px-6 w-auto")}>
+                <Button 
+                    onClick={onBack} 
+                    className={cn(
+                        "transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] flex items-center overflow-hidden group -mt-2 -ml-2 pointer-events-auto h-11 rounded-full border border-gray-200 shadow-lg",
+                        "bg-white/90 backdrop-blur-md text-gray-700",
+                        "hover:bg-white hover:text-gray-900",
+                        isScrolled ? "w-11 px-0 justify-center" : "px-6 w-auto"
+                    )}
+                >
                     <ArrowLeft className={cn("h-5 w-5 transition-transform ml-1 duration-300 group-hover:-translate-x-0.5", isScrolled ? "" : "mr-3")} />
                     <span className={cn("font-medium text-sm whitespace-nowrap", isScrolled ? "max-w-0 opacity-0" : "max-w-[120px] opacity-100")}>Назад</span>
                 </Button>
@@ -273,8 +285,21 @@ export function FriendProfileView({
                                     >
                                         <Users className="h-4 w-4" />
                                         <strong className="text-foreground">{profile.friendsCount || 0}</strong> Приятели
-                                    </span>                                    <span><strong className="text-foreground">{profile.followersCount || 0}</strong> Последователи</span>
-                                    <span><strong className="text-foreground">{profile.followingCount || 0}</strong> Последвани</span>
+                                    </span>
+                                    
+                                    <span 
+                                        className="cursor-pointer hover:text-foreground transition-colors"
+                                        onClick={() => setShowFollowersDialog(true)}
+                                    >
+                                        <strong className="text-foreground">{profile.followersCount || 0}</strong> Последователи
+                                    </span>
+                                    
+                                    <span 
+                                        className="cursor-pointer hover:text-foreground transition-colors"
+                                        onClick={() => setShowFollowingDialog(true)}
+                                    >
+                                        <strong className="text-foreground">{profile.followingCount || 0}</strong> Последвани
+                                    </span>
                                 </div>
                             </div>
 
@@ -363,10 +388,9 @@ export function FriendProfileView({
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                     <div className="lg:col-span-1 space-y-6 sticky top-24 h-fit">
-                        {activeTab !== "Приятели" && (
-                            <ProfileFriendsCard profileId={profileId} />
-                        )}                        
-                        {activeTab !== "Медия" && activeTab !== "Документи" && (
+                        <ProfileFriendsCard profileId={profileId} />
+                        
+                        {activeTab !== "Медия" && activeTab !== "Документи" && activeTab !== "Приятели" && (
                              <ProfileMediaCard profileId={profileId} />
                         )}
                     </div>
@@ -386,12 +410,6 @@ export function FriendProfileView({
                                     </div>
                                 )}
                             </>
-                        )}
-
-                        {activeTab === "Приятели" && (
-                             <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                 <FriendsListView profileId={profileId} />
-                             </div>
                         )}
 
                         {activeTab === "Медия" && (
@@ -417,6 +435,12 @@ export function FriendProfileView({
                                 <DocumentsListView id={profileId} type="user" />
                             </div>
                         )}
+
+                        {activeTab === "Приятели" && (
+                             <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                <FriendsListView profileId={profileId} />
+                             </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -433,6 +457,23 @@ export function FriendProfileView({
                     <AlertDialogFooter><AlertDialogCancel>Отказ</AlertDialogCancel><AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => removeFriend()}>Премахни</AlertDialogAction></AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {profile && profile.id && (
+                <>
+                    <FollowersListDialog 
+                        open={showFollowersDialog} 
+                        onOpenChange={setShowFollowersDialog} 
+                        profileId={profile.id}
+                        isMyProfile={false} 
+                    />
+                    <FollowingListDialog 
+                        open={showFollowingDialog} 
+                        onOpenChange={setShowFollowingDialog} 
+                        profileId={profile.id}
+                        isMyProfile={false}
+                    />
+                </>
+            )}
         </div>
     );
 }

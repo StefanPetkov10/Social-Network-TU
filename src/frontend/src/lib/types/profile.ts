@@ -5,7 +5,7 @@ export interface ProfileDto {
   firstName: string;
   lastName: string;
   fullName: string;
-  userName: string;
+  username: string;
   authorAvatar?: string; 
   dateOfBirth: string; 
   sex: Gender; 
@@ -24,7 +24,7 @@ export interface ProfileDto {
 export interface UpdateProfileDto {
   firstName: string;
   lastName: string;
-  userName: string;
+  username: string;
   sex: Gender; 
   bio?: string;
   photoBase64?: string | null;

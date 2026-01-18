@@ -16,7 +16,7 @@ namespace SocialMedia.Validators.Profile_Validation
                 .NotEmpty().WithMessage("Last name is required.")
                 .Length(2, 10).WithMessage("Last name must be between 2 and 10 characters.");
 
-            RuleFor(x => x.UserName)
+            RuleFor(x => x.Username)
                 .NotEmpty().WithMessage("Username is required.")
                 .Length(3, 20).WithMessage("Username should be between 3 and 20.")
                 .Matches("^[a-zA-Z0-9_]*$").WithMessage("Only letters, numbers, and underscore are allowed.");

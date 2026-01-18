@@ -1,7 +1,7 @@
 export interface FollowUser {
   profileId: string;
   displayFullName: string;
-  userName?: string;
+  username?: string;
   authorAvatar?: string;
   bio?: string;       
   

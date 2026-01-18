@@ -326,7 +326,10 @@ namespace SocialMedia.Services
             );
         }
 
-        public async Task<ApiResponse<IEnumerable<PendingFriendDto>>> GetPendingFriendRequestsAsync(ClaimsPrincipal userClaims, DateTime? lastRequestDate = null, int take = 10)
+        public async Task<ApiResponse<IEnumerable<PendingFriendDto>>> GetPendingFriendRequestsAsync(
+            ClaimsPrincipal userClaims,
+            DateTime? lastRequestDate = null,
+            int take = 20)
         {
             var invalidUserResponse = GetUserIdOrUnauthorized<IEnumerable<PendingFriendDto>>(userClaims, out var userId);
             if (invalidUserResponse != null) return invalidUserResponse;

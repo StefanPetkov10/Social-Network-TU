@@ -6,7 +6,7 @@ export const useInfiniteFollowers = (profileId: string) => {
     return useInfiniteQuery({
         queryKey: ["followers-list", profileId],
         queryFn: ({ pageParam = null }) => {
-            return followersService.getMyFollowers(pageParam as string | null, 20);
+            return followersService.getUserFollowers(profileId, pageParam as string | null, 20);
         },
         initialPageParam: null,
         getNextPageParam: (lastPage) => {
@@ -20,7 +20,7 @@ export const useInfiniteFollowing = (profileId: string) => {
     return useInfiniteQuery({
         queryKey: ["following-list", profileId],
         queryFn: ({ pageParam = null }) => {
-            return followersService.getMyFollowing(pageParam as string | null, 20);
+            return followersService.getUserFollowing(profileId, pageParam as string | null, 20);
         },
         initialPageParam: null,
         getNextPageParam: (lastPage) => {
@@ -70,6 +70,22 @@ export const useUnfollowUser = () => {
         },
         onError: (error: any) => {
             toast.error("Грешка при премахване на последовател.", { description: error.message });
+        },
+    });
+}
+
+export const useRemoveFollower = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (followerId: string) => followersService.removeFollower(followerId),
+        onSuccess: () => {
+            toast.success("Последователят е премахнат.");
+            queryClient.invalidateQueries({ queryKey: ["followers-list"] });
+            queryClient.invalidateQueries({ queryKey: ["following-list"] });
+
+        },
+        onError: (error: any) => {
+            toast.error("Грешка при премахване.", { description: error.message });
         },
     });
 }

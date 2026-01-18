@@ -10,7 +10,7 @@ namespace SocialMedia.AutoMapper
             CreateMap<Database.Models.Profile, FollowDto>()
                 .ForMember(dest => dest.ProfileId, opt => opt.MapFrom(src => src.Id))
                 .ForMember(dest => dest.DisplayFullName, opt => opt.MapFrom(src => src.FullName))
-                .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.UserName))
+                .ForMember(dest => dest.Username, opt => opt.MapFrom(src => src.User.UserName))
                 .ForMember(dest => dest.AuthorAvatar, opt => opt.MapFrom(src => src.Photo))
                 .ForMember(dest => dest.Bio, opt => opt.MapFrom(src => src.Bio))
 

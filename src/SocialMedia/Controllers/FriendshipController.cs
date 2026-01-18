@@ -39,7 +39,7 @@ namespace SocialMedia.Controllers
         }
 
         [HttpGet("pending-requests")]
-        public async Task<IActionResult> GetPendingRequests([FromQuery] DateTime? lastRequestDate, [FromQuery] int take = 10)
+        public async Task<IActionResult> GetPendingRequests([FromQuery] DateTime? lastRequestDate, [FromQuery] int take = 20)
         {
             var userClaims = User;
             var response = await _friendshipService.GetPendingFriendRequestsAsync(userClaims, lastRequestDate, take);

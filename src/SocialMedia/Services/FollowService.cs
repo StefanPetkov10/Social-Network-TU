@@ -77,31 +77,44 @@ namespace SocialMedia.Services
             return ApiResponse<bool>.SuccessResponse(true, "Unfollowed successfully.");
         }
 
-        public async Task<ApiResponse<bool>> IsFollowingAsync(ClaimsPrincipal userClaims, Guid followingId)
+        public async Task<ApiResponse<bool>> RemoveFollowerAsync(ClaimsPrincipal userClaims, Guid followerId)
         {
             var invalidUserResponse = GetUserIdOrUnauthorized<bool>(userClaims, out var appUserId);
             if (invalidUserResponse != null) return invalidUserResponse;
-            var follower = await _profileRepository.GetByApplicationIdAsync(appUserId);
-            if (follower == null) return NotFoundResponse<bool>("Your profile");
 
-            var exists = await _followRepository
-               .AnyAsync(f => f.FollowerId == follower.Id && f.FollowingId == followingId);
+            var myProfile = await _profileRepository.GetByApplicationIdAsync(appUserId);
+            if (myProfile == null) return NotFoundResponse<bool>("Your profile");
 
-            return ApiResponse<bool>.SuccessResponse(exists);
+            var follow = await _followRepository
+                .FirstOrDefaultAsync(f => f.FollowerId == followerId && f.FollowingId == myProfile.Id);
+
+            if (follow == null) return ApiResponse<bool>.ErrorResponse("This user is not following you.");
+
+            await _followRepository.DeleteAsync(follow);
+            await _followRepository.SaveChangesAsync();
+
+            return ApiResponse<bool>.SuccessResponse(true, "Follower removed.");
         }
 
-        public async Task<ApiResponse<IEnumerable<FollowDto>>> GetFollowersAsync(ClaimsPrincipal userClaims, DateTime? lastFollowerDate = null, int take = 20)
+        public async Task<ApiResponse<IEnumerable<FollowDto>>> GetFollowersAsync(
+            ClaimsPrincipal userClaims,
+            Guid targetProfileId,
+            DateTime? lastFollowerDate = null,
+            int take = 20)
         {
             if (take <= 0 || take > 50) take = 20;
 
             var invalidUserResponse = GetUserIdOrUnauthorized<IEnumerable<FollowDto>>(userClaims, out var userId);
             if (invalidUserResponse != null) return invalidUserResponse;
 
-            var myProfile = await _profileRepository.GetByApplicationIdAsync(userId);
-            if (myProfile == null) return ApiResponse<IEnumerable<FollowDto>>.ErrorResponse("Profile not found.");
+            var viewerProfile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (viewerProfile == null) return ApiResponse<IEnumerable<FollowDto>>.ErrorResponse("Viewer profile not found.");
+
+            var targetProfile = await _profileRepository.GetByIdAsync(targetProfileId);
+            if (targetProfile == null) return NotFoundResponse<IEnumerable<FollowDto>>("Target profile");
 
             var query = _followRepository.QueryNoTracking()
-               .Where(f => f.FollowingId == myProfile.Id);
+               .Where(f => f.FollowingId == targetProfile.Id);
 
             if (lastFollowerDate.HasValue)
             {
@@ -119,37 +132,94 @@ namespace SocialMedia.Services
                 return ApiResponse<IEnumerable<FollowDto>>.SuccessResponse(new List<FollowDto>(), "No followers found.");
 
             var profiles = followers.Select(f => f.Follower);
-
             var dtos = _mapper.Map<List<FollowDto>>(profiles);
 
-            var followerProfileIds = dtos.Select(d => d.ProfileId).ToList();
+            var profileIdsInList = dtos.Select(d => d.ProfileId).ToList();
 
             var iFollowThemIds = await _followRepository.QueryNoTracking()
-                .Where(f => f.FollowerId == myProfile.Id && followerProfileIds.Contains(f.FollowingId))
+                .Where(f => f.FollowerId == viewerProfile.Id && profileIdsInList.Contains(f.FollowingId))
                 .Select(f => f.FollowingId)
                 .ToListAsync();
 
             var friendIds = await _friendshipRepository.QueryNoTracking()
                 .Where(f => f.Status == FriendshipStatus.Accepted &&
-                            (f.RequesterId == myProfile.Id || f.AddresseeId == myProfile.Id) &&
-                            (followerProfileIds.Contains(f.RequesterId) || followerProfileIds.Contains(f.AddresseeId)))
-                .Select(f => f.RequesterId == myProfile.Id ? f.AddresseeId : f.RequesterId)
+                            (f.RequesterId == viewerProfile.Id || f.AddresseeId == viewerProfile.Id) &&
+                            (profileIdsInList.Contains(f.RequesterId) || profileIdsInList.Contains(f.AddresseeId)))
+                .Select(f => f.RequesterId == viewerProfile.Id ? f.AddresseeId : f.RequesterId)
                 .ToListAsync();
 
             foreach (var dto in dtos)
             {
-                dto.IsFollower = true;
                 dto.IsFollowing = iFollowThemIds.Contains(dto.ProfileId);
                 dto.IsFriend = friendIds.Contains(dto.ProfileId);
             }
 
             var nextCursor = followers.LastOrDefault()?.CreatedAt;
 
-            return ApiResponse<IEnumerable<FollowDto>>.SuccessResponse(
-                dtos,
-                "Followers retrieved.",
-                new { nextCursor }
-            );
+            return ApiResponse<IEnumerable<FollowDto>>.SuccessResponse(dtos, "Followers retrieved.", new { nextCursor });
+        }
+
+        public async Task<ApiResponse<IEnumerable<FollowDto>>> GetFollowingAsync(
+            ClaimsPrincipal userClaims,
+            Guid targetProfileId,
+            DateTime? lastFollowingDate = null,
+            int take = 20)
+        {
+            if (take <= 0 || take > 50) take = 20;
+
+            var invalidUserResponse = GetUserIdOrUnauthorized<IEnumerable<FollowDto>>(userClaims, out var userId);
+            if (invalidUserResponse != null) return invalidUserResponse;
+
+            var viewerProfile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (viewerProfile == null) return ApiResponse<IEnumerable<FollowDto>>.ErrorResponse("Viewer profile not found.");
+
+            var targetProfile = await _profileRepository.GetByIdAsync(targetProfileId);
+            if (targetProfile == null) return NotFoundResponse<IEnumerable<FollowDto>>("Target profile");
+
+            var query = _followRepository.QueryNoTracking()
+                .Where(f => f.FollowerId == targetProfile.Id);
+
+            if (lastFollowingDate.HasValue)
+            {
+                query = query.Where(f => f.CreatedAt < lastFollowingDate.Value);
+            }
+
+            var following = await query
+                .OrderByDescending(f => f.CreatedAt)
+                .Take(take)
+                .Include(f => f.Following)
+                    .ThenInclude(p => p.User)
+                .ToListAsync();
+
+            if (!following.Any())
+                return ApiResponse<IEnumerable<FollowDto>>.SuccessResponse(new List<FollowDto>(), "No following found.");
+
+            var profiles = following.Select(f => f.Following);
+            var dtos = _mapper.Map<List<FollowDto>>(profiles);
+
+            var profileIdsInList = dtos.Select(d => d.ProfileId).ToList();
+
+            var iFollowThemIds = await _followRepository.QueryNoTracking()
+                .Where(f => f.FollowerId == viewerProfile.Id && profileIdsInList.Contains(f.FollowingId))
+                .Select(f => f.FollowingId)
+                .ToListAsync();
+
+            var friendIds = await _friendshipRepository.QueryNoTracking()
+                .Where(f => f.Status == FriendshipStatus.Accepted &&
+                            (f.RequesterId == viewerProfile.Id || f.AddresseeId == viewerProfile.Id) &&
+                            (profileIdsInList.Contains(f.RequesterId) || profileIdsInList.Contains(f.AddresseeId)))
+                .Select(f => f.RequesterId == viewerProfile.Id ? f.AddresseeId : f.RequesterId)
+                .ToListAsync();
+
+            foreach (var dto in dtos)
+            {
+                dto.IsFollowing = iFollowThemIds.Contains(dto.ProfileId);
+                dto.IsFriend = friendIds.Contains(dto.ProfileId);
+            }
+
+            var nextCursor = following.LastOrDefault()?.CreatedAt;
+
+            return ApiResponse<IEnumerable<FollowDto>>.SuccessResponse(dtos, "Following retrieved.", new { nextCursor });
         }
 
         public async Task<ApiResponse<IEnumerable<FollowDto>>> GetFollowingAsync(ClaimsPrincipal userClaims, DateTime? lastFollowingDate = null, int take = 20)

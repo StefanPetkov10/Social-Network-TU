@@ -7,7 +7,7 @@ namespace AutoMapper
         public ProfileMapping()
         {
             CreateMap<SocialMedia.Database.Models.Profile, ProfileDto>()
-                .ForMember(dest => dest.UserName, opt => opt.Ignore())
+                .ForMember(dest => dest.Username, opt => opt.Ignore())
                 .ForMember(dest => dest.Sex, opt => opt.MapFrom(src => src.Sex.ToString()))
                 .ForMember(dest => dest.AuthorAvatar, opt => opt.MapFrom(src => src.Photo))
 

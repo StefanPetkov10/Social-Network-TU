@@ -81,11 +81,11 @@ namespace SocialMedia.Services
             if (profile.User == null && profile.ApplicationId != null)
             {
                 var user = await _userManager.FindByIdAsync(profile.ApplicationId.ToString());
-                dto.UserName = user?.UserName ?? "Unknown";
+                dto.Username = user?.UserName ?? "Unknown";
             }
             else if (profile.User != null)
             {
-                dto.UserName = profile.User.UserName;
+                dto.Username = profile.User.UserName;
             }
 
             dto.FollowersCount = await _followRepo.QueryNoTracking().CountAsync(f => f.FollowingId == profile.Id);
@@ -148,16 +148,16 @@ namespace SocialMedia.Services
             if (user == null)
                 return NotFoundResponse<object>("User");
 
-            if (user.UserName.ToUpper() != dto.UserName.ToUpper())
+            if (user.UserName.ToUpper() != dto.Username.ToUpper())
             {
-                var existingUser = await _userManager.FindByNameAsync(dto.UserName);
+                var existingUser = await _userManager.FindByNameAsync(dto.Username);
                 if (existingUser != null)
                 {
                     return ApiResponse<object>.ErrorResponse("This Username is already taken.");
                 }
 
-                user.UserName = dto.UserName;
-                user.NormalizedUserName = dto.UserName.ToUpper();
+                user.UserName = dto.Username;
+                user.NormalizedUserName = dto.Username.ToUpper();
 
                 var result = await _userManager.UpdateAsync(user);
                 if (!result.Succeeded)
