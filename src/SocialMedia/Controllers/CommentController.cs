@@ -29,7 +29,7 @@ namespace SocialMedia.Controllers
             {
                 return BadRequest(response.Errors);
             }
-            return Ok(response.Data);
+            return Ok(response);
         }
 
         [HttpGet("{postId}")]
@@ -40,7 +40,7 @@ namespace SocialMedia.Controllers
             {
                 return BadRequest(response.Errors);
             }
-            return Ok(response.Data);
+            return Ok(response);
         }
 
         [HttpGet("{commentId}/replies")]
@@ -51,7 +51,7 @@ namespace SocialMedia.Controllers
             {
                 return BadRequest(response.Errors);
             }
-            return Ok(response.Data);
+            return Ok(response);
         }
 
         [HttpPut("{commentId}")]
@@ -67,7 +67,7 @@ namespace SocialMedia.Controllers
             {
                 return BadRequest(response.Errors);
             }
-            return Ok(response.Data);
+            return Ok(response);
         }
 
         [HttpDelete("{commentId}")]
@@ -78,7 +78,7 @@ namespace SocialMedia.Controllers
             {
                 return BadRequest(response.Errors);
             }
-            return Ok(response.Data);
+            return Ok(response);
         }
     }
 }

@@ -6,11 +6,11 @@ import {
   MessageCircle, 
   Share2, 
   Bookmark, 
-  ThumbsUp,
-  Trash2,
-  Edit2,
-  FileText,
-  Download
+  ThumbsUp, 
+  Trash2, 
+  Edit2, 
+  FileText, 
+  Download 
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { Button } from "@frontend/components/ui/button";
@@ -35,6 +35,11 @@ import { PostDto } from "@frontend/lib/types/posts";
 import { ReactionType } from "@frontend/lib/types/enums";
 import { reactionService } from "@frontend/services/reaction-service";
 import { ProfileDto } from "@frontend/lib/types/profile";
+import { useProfile } from "@frontend/hooks/use-profile";
+import { PostCommentDialog } from "../comments-forms/post-comment-dialog"; 
+
+import { formatDistanceToNow } from "date-fns";
+import { bg } from "date-fns/locale";
 
 const REACTION_CONFIG = {
   [ReactionType.Like]: { icon: "👍", label: "Харесва ми", color: "text-blue-600" },
@@ -48,18 +53,21 @@ interface PostCardProps {
     post: PostDto;
     authorProfile?: ProfileDto; 
     hideGroupInfo?: boolean; 
+    isPreview?: boolean;
 }
 
-export function PostCard({ post, authorProfile, hideGroupInfo }: PostCardProps) {
+export function PostCard({ post, authorProfile, hideGroupInfo, isPreview = false }: PostCardProps) {
+  const { data: currentUser } = useProfile();
   const [currentReaction, setCurrentReaction] = useState<ReactionType | null>(post.userReaction ?? null);
   const [likesCount, setLikesCount] = useState(post.likesCount);
   const [isReactionMenuOpen, setIsReactionMenuOpen] = useState(false);
+  const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
 
   const authorName = post.authorName || "Потребител";
   const authorAvatarUrl = post.authorAvatar || "";
   const authorInitials = getInitials(authorName);
   const authorUsername = post.username;
-  const isCurrentUser = authorProfile?.userName === authorUsername;
+  const isCurrentUser = authorProfile?.username === authorUsername;
   const authorProfileUrl = isCurrentUser 
       ? "/profile" 
       : (authorUsername ? `/${authorUsername}` : "#");
@@ -73,27 +81,6 @@ export function PostCard({ post, authorProfile, hideGroupInfo }: PostCardProps) 
  
   const documents = post.media?.filter(m => m.mediaType !== 0 && m.mediaType !== 1) || [];
   const visualMedia = post.media?.filter(m => m.mediaType === 0 || m.mediaType === 1) || [];
-
-  const getRelativeTime = (dateString: string) => {
-    if (!dateString || dateString.startsWith("0001")) return "Току-що";
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
-    if (diffInSeconds < 5) return "Току-що";
-    if (diffInSeconds < 60) return `преди ${diffInSeconds} сек.`;
-    
-    const minutes = Math.floor(diffInSeconds / 60);
-    if (minutes < 60) return `преди ${minutes} мин.`;
-    
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `преди ${hours} ч.`;
-    
-    const days = Math.floor(hours / 24);
-    if (days < 7) return `преди ${days} дни`;
-    
-    return date.toLocaleDateString("bg-BG", { day: "numeric", month: "long" });
-  };
 
   const handleReaction = async (type: ReactionType) => {
     const oldReaction = currentReaction;
@@ -123,7 +110,11 @@ export function PostCard({ post, authorProfile, hideGroupInfo }: PostCardProps) 
   const activeReactionConfig = currentReaction !== null ? REACTION_CONFIG[currentReaction] : null;
 
   return (
-    <div className="bg-background rounded-xl border p-4 shadow-sm animate-in fade-in zoom-in duration-300">
+    <>
+    <div className={cn(
+        "bg-background rounded-xl border p-4 shadow-sm animate-in fade-in zoom-in duration-300",
+        isPreview && "border-none shadow-none"
+    )}>
       <div className="flex justify-between items-start mb-3">
         <div className="flex gap-3">
           
@@ -170,7 +161,9 @@ export function PostCard({ post, authorProfile, hideGroupInfo }: PostCardProps) 
                             {authorName}
                         </Link>
                         <span>•</span>
-                        <span>{getRelativeTime(post.createdAt)}</span>
+                        <span>
+                            {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true, locale: bg })}
+                        </span>
                     </div>
                 </div>
             ) : (
@@ -181,7 +174,7 @@ export function PostCard({ post, authorProfile, hideGroupInfo }: PostCardProps) 
                         </h4>
                     </Link>
                     <p className="text-xs text-muted-foreground">
-                      {getRelativeTime(post.createdAt)}
+                      {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true, locale: bg })}
                     </p>
                 </>
             )}
@@ -314,69 +307,117 @@ export function PostCard({ post, authorProfile, hideGroupInfo }: PostCardProps) 
                </>
             )}
           </div>
-          {post.commentsCount > 0 && <span>{post.commentsCount} коментара</span>}
+          {post.commentsCount > 0 && (
+            <span 
+                className={cn(
+                    "transition-colors",
+                    !isPreview && "cursor-pointer hover:underline hover:text-foreground"
+                )}
+                onClick={() => !isPreview && setIsCommentDialogOpen(true)}
+            >
+                {post.commentsCount} коментара
+            </span>
+          )}
       </div>
 
       <Separator />
 
-      <div className="flex justify-between pt-1 relative">
-         <div 
-            className="flex-1 group relative"
-            onMouseEnter={() => setIsReactionMenuOpen(true)}
-            onMouseLeave={() => setIsReactionMenuOpen(false)}
-         >
-            {isReactionMenuOpen && (
-                <div className="absolute bottom-full left-0 flex bg-background border shadow-lg rounded-full p-1 gap-1 animate-in slide-in-from-bottom-2 z-50 mb-2"> 
-                    {(Object.keys(REACTION_CONFIG) as unknown as ReactionType[]).map((type) => (
-                        <button
-                            key={type}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleReaction(Number(type));
-                            }}
-                            className="p-2 hover:bg-muted rounded-full transition-transform hover:scale-125 text-xl leading-none"
-                        >
-                            {REACTION_CONFIG[type].icon}
-                        </button>
-                    ))}
-                </div>
-            )}
-
-            <Button 
+      {!isPreview && (
+          <div className="flex justify-between pt-1 relative">
+             <div 
+                className="flex-1 group relative"
+                onMouseEnter={() => setIsReactionMenuOpen(true)}
+                onMouseLeave={() => setIsReactionMenuOpen(false)}
+             >
+                {isReactionMenuOpen && (
+                    <div className="absolute bottom-full left-0 flex bg-background border shadow-lg rounded-full p-1 gap-1 animate-in slide-in-from-bottom-2 z-50"> 
+                        {(Object.keys(REACTION_CONFIG) as unknown as ReactionType[]).map((type) => (
+                            <button
+                                key={type}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleReaction(Number(type));
+                                }}
+                                className="p-2 hover:bg-muted rounded-full transition-transform hover:scale-125 text-xl leading-none"
+                            >
+                                {REACTION_CONFIG[type].icon}
+                            </button>
+                        ))}
+                    </div>
+                )}
+    
+                <Button 
+                    variant="ghost" 
+                    className={cn(
+                        "w-full flex gap-2 items-center hover:bg-muted/50 transition-colors py-6", 
+                        activeReactionConfig ? activeReactionConfig.color : "text-muted-foreground"
+                    )}
+                    onClick={() => {
+                        if (currentReaction !== null) {
+                            handleReaction(currentReaction);
+                        } else {
+                            handleReaction(ReactionType.Like);
+                        }
+                    }}
+                >
+                    {activeReactionConfig ? (
+                       <>
+                         <span className="text-lg leading-none">{activeReactionConfig.icon}</span>
+                         <span className="font-semibold">{activeReactionConfig.label}</span>
+                       </>
+                    ) : (
+                       <>
+                         <ThumbsUp className="h-4 w-4" />
+                         <span>Харесване</span>
+                       </>
+                    )}
+                </Button>
+             </div>
+    
+             <Button 
                 variant="ghost" 
-                className={cn(
-                    "w-full flex gap-2 items-center hover:bg-muted/50 transition-colors py-6", 
-                    activeReactionConfig ? activeReactionConfig.color : "text-muted-foreground"
-                )}
-                onClick={() => {
-                    if (currentReaction !== null) {
-                        handleReaction(currentReaction);
-                    } else {
-                        handleReaction(ReactionType.Like);
-                    }
-                }}
-            >
-                {activeReactionConfig ? (
-                   <>
-                     <span className="text-lg leading-none">{activeReactionConfig.icon}</span>
-                     <span className="font-semibold">{activeReactionConfig.label}</span>
-                   </>
-                ) : (
-                   <>
-                     <ThumbsUp className="h-4 w-4" />
-                     <span>Харесване</span>
-                   </>
-                )}
-            </Button>
-         </div>
-
-         <Button variant="ghost" className="flex-1 gap-2 text-muted-foreground hover:bg-muted/50 py-6">
-            <MessageCircle className="h-4 w-4" /> Коментар
-         </Button>
-         <Button variant="ghost" className="flex-1 gap-2 text-muted-foreground hover:bg-muted/50 py-6">
-            <Share2 className="h-4 w-4" /> Споделяне
-         </Button>
-      </div>
+                className="flex-1 gap-2 text-muted-foreground hover:bg-muted/50 py-6"
+                onClick={() => setIsCommentDialogOpen(true)}
+             >
+                <MessageCircle className="h-4 w-4" /> Коментар
+             </Button>
+             
+             <Button variant="ghost" className="flex-1 gap-2 text-muted-foreground hover:bg-muted/50 py-6">
+                <Share2 className="h-4 w-4" /> Споделяне
+             </Button>
+          </div>
+      )}
     </div>
+
+    {!isPreview && currentUser && (
+        <PostCommentDialog 
+            open={isCommentDialogOpen} 
+            onOpenChange={setIsCommentDialogOpen}
+            post={post}
+            currentUser={currentUser}
+        />
+    )}
+    </>
   );
 }
+
+{/* const getRelativeTime = (dateString: string) => {
+    if (!dateString || dateString.startsWith("0001")) return "Току-що";
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (diffInSeconds < 5) return "Току-що";
+    if (diffInSeconds < 60) return `преди ${diffInSeconds} сек.`;
+    
+    const minutes = Math.floor(diffInSeconds / 60);
+    if (minutes < 60) return `преди ${minutes} мин.`;
+    
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `преди ${hours} ч.`;
+    
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `преди ${days} дни`;
+    
+    return date.toLocaleDateString("bg-BG", { day: "numeric", month: "long" });
+  }; - old */}

@@ -35,6 +35,7 @@ namespace SocialMedia.Services
             _mapper = mapper;
             _fileService = fileService;
         }
+
         public async Task<ApiResponse<CommentDto>> CreateCommentAsPost(ClaimsPrincipal userClaims, Guid postId, CreateCommentDto dto)
         {
             var invalidUserResponse = GetUserIdOrUnauthorized<CommentDto>(userClaims, out var userIdValue);
@@ -87,13 +88,13 @@ namespace SocialMedia.Services
             _postRepository.Update(post);
             await _postRepository.SaveChangesAsync();
 
-            return SuccessCommentDto(comment, profile, "Comment created successfully.");
+            return ApiResponse<CommentDto>.SuccessResponse(SuccessCommentDto(comment), "Comment created successfully.");
         }
+
+        //In this method can add option about sorting like: newest, oldest, most liked
         public async Task<ApiResponse<IEnumerable<CommentDto>>> GetCommentsByPostIdAsync(ClaimsPrincipal userClaims,
             Guid postId, Guid? lastCommentId = null, int take = 20)
         {
-            //In this method can add option about sorting like: newest, oldest, most liked
-
             if (take <= 0 || take > 50)
                 take = 20;
             var invalidUserResponse = GetUserIdOrUnauthorized<IEnumerable<CommentDto>>(userClaims, out var userIdValue);
@@ -113,6 +114,9 @@ namespace SocialMedia.Services
                 .Include(c => c.Profile)
                 .Include(c => c.Media)
                 .Include(c => c.Replies)
+                    .ThenInclude(r => r.Profile)
+                .Include(c => c.Replies)
+                    .ThenInclude(r => r.Media)
                 .Include(c => c.Post)
                 .Where(c => c.PostId == postId && c.Depth == 0 && !c.IsDeleted)
                 .OrderByDescending(c => c.CreatedDate)
@@ -129,14 +133,14 @@ namespace SocialMedia.Services
 
             var comments = await commentsQuery.Take(take).ToListAsync();
 
-            var dtos = comments.Select(c => SuccessCommentDto(c, c.Profile, "").Data).ToList();
+            var dtos = comments.Select(c => SuccessCommentDto(c)).ToList();
 
-            var last = comments.LastOrDefault();
+            var lastId = comments.LastOrDefault()?.Id;
 
             return ApiResponse<IEnumerable<CommentDto>>.SuccessResponse(
                 dtos,
                 "Comments retrieved successfully.",
-                new { lastCommentId = last });
+                new { lastCommentId = lastId });
         }
 
         public async Task<ApiResponse<IEnumerable<CommentDto>>> GetRepliesAsync(ClaimsPrincipal userClaims,
@@ -161,6 +165,7 @@ namespace SocialMedia.Services
 
             var query = _commentRepository.Query()
                 .Include(c => c.Profile)
+                .Include(c => c.Media)
                 .Include(c => c.Replies)
                 .Where(c => c.ParentCommentId == commentId && !c.IsDeleted)
                 .OrderByDescending(c => c.CreatedDate)
@@ -177,26 +182,14 @@ namespace SocialMedia.Services
 
             var comments = await query.Take(take).ToListAsync();
 
-            var dtoReplies = comments.Select(r => new CommentDto
-            {
-                Id = r.Id,
-                PostId = r.PostId,
-                ProfileId = r.ProfileId,
-                Content = r.Content,
-                AuthorName = r.Profile.FullName ?? "Unknown",
-                AuthorAvatar = r.Profile.Photo,
-                PostedDate = r.CreatedDate,
-                RepliesCount = r.Replies.Count,
-                RepliesPreview = new List<CommentDto>()
-            }).ToList();
+            var dtoReplies = comments.Select(c => SuccessCommentDto(c)).ToList();
 
-            var last = comments.LastOrDefault();
+            var lastId = comments.LastOrDefault()?.Id;
             return ApiResponse<IEnumerable<CommentDto>>.SuccessResponse(
                 dtoReplies,
                 "Replies retrieved successfully.",
-                new { lastCommentId = last?.Id });
+                new { lastCommentId = lastId });
         }
-
 
         public async Task<ApiResponse<CommentDto?>> EditCommentAsync(ClaimsPrincipal userClaims, Guid commentId, UpdateCommentDto dto)
         {
@@ -210,6 +203,7 @@ namespace SocialMedia.Services
 
             var comment = await _commentRepository.Query()
                 .Include(c => c.Media)
+                .Include(c => c.Profile)
                 .FirstOrDefaultAsync(c => c.Id == commentId);
 
             if (comment == null)
@@ -234,7 +228,8 @@ namespace SocialMedia.Services
             }
 
             await _commentRepository.SaveChangesAsync();
-            return SuccessCommentDto(comment, profile, "Comment updated successfully.");
+
+            return ApiResponse<CommentDto>.SuccessResponse(SuccessCommentDto(comment), "Comment updated successfully.");
         }
 
         public async Task<ApiResponse<bool>> SoftDeleteCommentAsync(ClaimsPrincipal userClaims, Guid commentId)
@@ -269,11 +264,15 @@ namespace SocialMedia.Services
             return ApiResponse<bool>.SuccessResponse(true, "Comment deleted successfully.");
         }
 
-        private ApiResponse<CommentDto> SuccessCommentDto(Comment comment, Database.Models.Profile profile, string message)
+        private CommentDto SuccessCommentDto(Comment comment)
         {
             var dto = _mapper.Map<CommentDto>(comment);
-            dto.AuthorName = profile.FullName ?? "Unknown Author";
-            dto.AuthorAvatar = profile.Photo;
+
+            if (comment.Profile != null)
+            {
+                dto.AuthorName = comment.Profile.FullName ?? "Unknown";
+                dto.AuthorAvatar = comment.Profile.Photo;
+            }
 
             var baseUrl = $"{_httpContextAccessor.HttpContext!.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}";
 
@@ -287,9 +286,44 @@ namespace SocialMedia.Services
                 };
             }
 
-            return ApiResponse<CommentDto>.SuccessResponse(dto, message);
+            // ВАЖНО: Обработка на RepliesPreview, за да се спре рекурсията.
+            // Взимаме отговорите, но за тях НЕ зареждаме техните отговори (RepliesPreview = null)
+            if (comment.Replies != null && comment.Replies.Any())
+            {
+                var activeReplies = comment.Replies.Where(r => !r.IsDeleted).OrderBy(r => r.CreatedDate).Take(3);
+
+                dto.RepliesPreview = activeReplies.Select(reply =>
+                {
+                    var replyDto = _mapper.Map<CommentDto>(reply);
+
+                    if (reply.Profile != null)
+                    {
+                        replyDto.AuthorName = reply.Profile.FullName ?? "Unknown";
+                        replyDto.AuthorAvatar = reply.Profile.Photo;
+                    }
+
+                    if (reply.Media != null)
+                    {
+                        replyDto.Media = new CommentMediaDto
+                        {
+                            Id = reply.Media.Id,
+                            Url = $"{baseUrl}/{reply.Media.FilePath}",
+                            MediaType = reply.Media.MediaType
+                        };
+                    }
+
+                    // СПИРАЧКА НА ЦИКЪЛА: Зануляваме вложените отговори на отговорите
+                    replyDto.RepliesPreview = null;
+
+                    return replyDto;
+                }).ToList();
+            }
+            else
+            {
+                dto.RepliesPreview = new List<CommentDto>();
+            }
+
+            return dto;
         }
-
-
     }
 }
