@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { commentService } from "@frontend/services/comment-service";
-import { CreateCommentPayload } from "@frontend/lib/types/comment";
+import { CreateCommentPayload, UpdateCommentPayload } from "@frontend/lib/types/comment";
 import { toast } from "sonner";
 
 export const useGetComments = (postId: string) => {
@@ -55,4 +55,55 @@ export const useCreateComment = (postId: string) => {
         toast.error(msg);
     }
   });
+};
+
+export const useEditComment = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ 
+            commentId, postId, parentCommentId, payload }: { 
+            commentId: string; postId: string; parentCommentId?: string; payload: UpdateCommentPayload 
+        }) => {
+            return commentService.editComment(commentId, payload);
+        },
+            
+        onSuccess: async (_, variables) => {
+            if (variables.parentCommentId) {
+                await queryClient.invalidateQueries({ queryKey: ["replies", variables.parentCommentId] });
+            }
+            await queryClient.invalidateQueries({ queryKey: ["comments", variables.postId] });
+                        
+            toast.success("Коментарът е обновен!");
+        },
+        onError: (error: any) => {
+            toast.error("Грешка при редакция.");
+        }
+    });
+};
+
+export const useDeleteComment = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ commentId, postId, parentCommentId }: {  
+          commentId: string; postId: string; parentCommentId?: string;
+        }) => {
+            return commentService.deleteComment(commentId);
+        },
+            
+        onSuccess: async (_, variables) => {
+            if (variables.parentCommentId) {
+                await queryClient.invalidateQueries({ queryKey: ["replies", variables.parentCommentId] });
+            }
+            await queryClient.invalidateQueries({ queryKey: ["comments", variables.postId] });
+
+            await queryClient.invalidateQueries({ queryKey: ["posts"] });
+
+            toast.success("Коментарът е изтрит.");
+        },
+        onError: (error: any) => {
+            toast.error("Грешка при изтриване.");
+        }
+    });
 };

@@ -13,9 +13,11 @@ export interface CommentDto {
     profileId: string;
     authorName: string;
     authorAvatar: string | null;
+    authorUsername: string;
     content: string;
     isDeleted: boolean;
     depth: number;
+    parentCommentId?: string | null;
     createdDate: string;
     repliesCount: number;
     repliesPreview?: CommentDto[];
@@ -25,5 +27,10 @@ export interface CommentDto {
 export interface CreateCommentPayload {
     content: string;
     parentCommentId?: string;
+    file?: File | null;
+}
+
+export interface UpdateCommentPayload {
+    content: string;
     file?: File | null;
 }

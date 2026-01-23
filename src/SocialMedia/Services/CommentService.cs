@@ -115,6 +115,7 @@ namespace SocialMedia.Services
             var commentsQuery = _commentRepository
                 .Query()
                 .Include(c => c.Profile)
+                    .ThenInclude(p => p.User)
                 .Include(c => c.Media)
                 .Include(c => c.Replies).ThenInclude(r => r.Profile)
                 .Include(c => c.Replies).ThenInclude(r => r.Media)
@@ -158,6 +159,7 @@ namespace SocialMedia.Services
 
             var query = _commentRepository.Query()
                 .Include(c => c.Profile)
+                    .ThenInclude(p => p.User)
                 .Include(c => c.Media)
                 .Include(c => c.Replies)
                 .Where(c => c.ParentCommentId == commentId && !c.IsDeleted)
@@ -191,6 +193,7 @@ namespace SocialMedia.Services
             var comment = await _commentRepository.Query()
                 .Include(c => c.Media)
                 .Include(c => c.Profile)
+                    .ThenInclude(p => p.User)
                 .FirstOrDefaultAsync(c => c.Id == commentId);
 
             if (comment == null) return NotFoundResponse<CommentDto>("Comment");
@@ -225,7 +228,13 @@ namespace SocialMedia.Services
             var profile = await _profileRepository.GetByApplicationIdAsync(userIdValue);
             if (profile == null) return NotFoundResponse<bool>("Profile");
 
-            var comment = await _commentRepository.Query().Include(c => c.Post).FirstOrDefaultAsync(c => c.Id == commentId);
+            var comment = await _commentRepository.Query()
+                .Include(c => c.Post)
+                .Include(c => c.Replies)
+                    .ThenInclude(r => r.Replies)
+                    .ThenInclude(rr => rr.Replies)
+                .FirstOrDefaultAsync(c => c.Id == commentId);
+
             if (comment == null) return NotFoundResponse<bool>("Comment");
 
             if (comment.ProfileId != profile.Id)
@@ -234,14 +243,49 @@ namespace SocialMedia.Services
             if (comment.IsDeleted)
                 return ApiResponse<bool>.ErrorResponse("Comment is already deleted.");
 
-            comment.IsDeleted = true;
-            comment.UpdatedDate = DateTime.UtcNow;
-            comment.Post.CommentsCount--;
+            var allCommentsToDelete = new List<Comment>();
+            CollectCommentsRecursive(comment, allCommentsToDelete);
 
-            _commentRepository.Update(comment);
+            var countToRemove = allCommentsToDelete.Count(c => !c.IsDeleted);
+
+            var now = DateTime.UtcNow;
+            foreach (var c in allCommentsToDelete)
+            {
+                if (!c.IsDeleted)
+                {
+                    c.IsDeleted = true;
+                    c.UpdatedDate = now;
+                    _commentRepository.Update(c);
+                }
+            }
+
+            if (comment.Post != null)
+            {
+                comment.Post.CommentsCount -= countToRemove;
+
+                if (comment.Post.CommentsCount < 0)
+                {
+                    comment.Post.CommentsCount = 0;
+                }
+                _postRepository.Update(comment.Post);
+            }
+
             await _commentRepository.SaveChangesAsync();
 
-            return ApiResponse<bool>.SuccessResponse(true, "Comment deleted successfully.");
+            return ApiResponse<bool>.SuccessResponse(true, "Comment and replies deleted successfully.");
+        }
+
+        //Рекурсия
+        private void CollectCommentsRecursive(Comment current, List<Comment> accumulator)
+        {
+            accumulator.Add(current);
+            if (current.Replies != null && current.Replies.Any())
+            {
+                foreach (var reply in current.Replies)
+                {
+                    CollectCommentsRecursive(reply, accumulator);
+                }
+            }
         }
 
         private CommentDto SuccessCommentDto(Comment comment)
@@ -252,6 +296,7 @@ namespace SocialMedia.Services
             {
                 dto.AuthorName = comment.Profile.FullName ?? "Unknown";
                 dto.AuthorAvatar = comment.Profile.Photo;
+                dto.AuthorUsername = comment.Profile.User.UserName!;
             }
 
             var baseUrl = $"{_httpContextAccessor.HttpContext!.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}";
@@ -281,6 +326,7 @@ namespace SocialMedia.Services
                     {
                         replyDto.AuthorName = reply.Profile.FullName ?? "Unknown";
                         replyDto.AuthorAvatar = reply.Profile.Photo;
+                        replyDto.AuthorUsername = reply.Profile.User.UserName!;
                     }
 
                     if (reply.Media != null)
