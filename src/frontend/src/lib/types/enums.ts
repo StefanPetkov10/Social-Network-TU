@@ -24,7 +24,7 @@ export enum MediaType {
   Video = 1,
   Document = 2,
   Gif = 3,
-  Other = 4
+  Other = 99
 }
 
 export enum MediaTypeGroup {

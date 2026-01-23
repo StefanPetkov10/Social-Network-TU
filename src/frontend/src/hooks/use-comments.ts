@@ -12,12 +12,28 @@ export const useGetComments = (postId: string) => {
     },
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => {
-        if (lastPage.data && lastPage.data.length > 0) {
-            return lastPage.data[lastPage.data.length - 1].id;
-        }
-        return undefined;
+        const comments = lastPage?.data;
+        if (!comments || comments.length < 20) return undefined;
+        return comments[comments.length - 1].id;
     },
   });
+};
+
+export const useGetReplies = (commentId: string, enabled: boolean = false) => {
+    return useInfiniteQuery({
+      queryKey: ["replies", commentId],
+      queryFn: async ({ pageParam }) => {
+         const response = await commentService.getReplies(commentId, pageParam);
+         return response; 
+      },
+      initialPageParam: undefined as string | undefined,
+      getNextPageParam: (lastPage) => {
+          const replies = lastPage?.data;
+          if (!replies || replies.length < 10) return undefined;
+          return replies[replies.length - 1].id;
+      },
+      enabled: enabled,
+    });
 };
 
 export const useCreateComment = (postId: string) => {
@@ -25,9 +41,18 @@ export const useCreateComment = (postId: string) => {
 
   return useMutation({
     mutationFn: (payload: CreateCommentPayload) => commentService.createComment(postId, payload),
-    onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ["comments", postId] });
-      queryClient.invalidateQueries({ queryKey: ["posts"] }); 
+    onSuccess: async (_, variables) => {
+      if (variables.parentCommentId) {
+          await queryClient.invalidateQueries({ queryKey: ["replies", variables.parentCommentId] });
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ["comments", postId] });
+
+      await queryClient.invalidateQueries({ queryKey: ["posts"] }); 
     },
+    onError: (error: any) => {
+        const msg = error?.response?.data?.errors?.[0] || "Грешка при публикуване.";
+        toast.error(msg);
+    }
   });
 };

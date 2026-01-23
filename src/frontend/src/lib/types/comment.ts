@@ -3,6 +3,7 @@ import { MediaType } from "./enums";
 export interface CommentMediaDto {
     id: string;
     url: string;
+    fileName: string;
     mediaType: MediaType;
 }
 

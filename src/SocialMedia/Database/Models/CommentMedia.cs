@@ -19,6 +19,9 @@ namespace SocialMedia.Database.Models
 
         [Required]
         public MediaType MediaType { get; set; }
+
+        [Required]
+        public string FileName { get; set; } = null!;
     }
 
 }

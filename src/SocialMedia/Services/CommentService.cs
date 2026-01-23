@@ -70,13 +70,19 @@ namespace SocialMedia.Services
 
             if (dto.File != null)
             {
-                var (path, mediaType) = await _fileService.SaveFileAsync(dto.File);
+                var file = dto.File;
+                var (path, mediaType) = await _fileService.SaveFileAsync(file);
+                if (string.IsNullOrEmpty(path))
+                {
+                    return ApiResponse<CommentDto>.ErrorResponse($"File '{file.FileName}' is not supported type.");
+                }
 
                 comment.Media = new CommentMedia
                 {
                     Id = Guid.NewGuid(),
                     FilePath = path,
                     MediaType = mediaType,
+                    FileName = file.FileName,
                     CommentId = comment.Id
                 };
             }
@@ -95,31 +101,26 @@ namespace SocialMedia.Services
         public async Task<ApiResponse<IEnumerable<CommentDto>>> GetCommentsByPostIdAsync(ClaimsPrincipal userClaims,
             Guid postId, Guid? lastCommentId = null, int take = 20)
         {
-            if (take <= 0 || take > 50)
-                take = 20;
+            if (take <= 0 || take > 50) take = 20;
+
             var invalidUserResponse = GetUserIdOrUnauthorized<IEnumerable<CommentDto>>(userClaims, out var userIdValue);
-            if (invalidUserResponse != null)
-                return invalidUserResponse;
+            if (invalidUserResponse != null) return invalidUserResponse;
 
             var profile = await _profileRepository.GetByApplicationIdAsync(userIdValue);
-            if (profile == null)
-                return NotFoundResponse<IEnumerable<CommentDto>>("Profile");
+            if (profile == null) return NotFoundResponse<IEnumerable<CommentDto>>("Profile");
 
             var post = await _postRepository.GetByIdAsync(postId);
-            if (post == null)
-                return NotFoundResponse<IEnumerable<CommentDto>>("Post");
+            if (post == null) return NotFoundResponse<IEnumerable<CommentDto>>("Post");
 
             var commentsQuery = _commentRepository
                 .Query()
                 .Include(c => c.Profile)
                 .Include(c => c.Media)
-                .Include(c => c.Replies)
-                    .ThenInclude(r => r.Profile)
-                .Include(c => c.Replies)
-                    .ThenInclude(r => r.Media)
+                .Include(c => c.Replies).ThenInclude(r => r.Profile)
+                .Include(c => c.Replies).ThenInclude(r => r.Media)
                 .Include(c => c.Post)
                 .Where(c => c.PostId == postId && c.Depth == 0 && !c.IsDeleted)
-                .OrderByDescending(c => c.CreatedDate)
+                .OrderByDescending(c => c.CreatedDate) // Главните коментари: Newest First
                 .AsQueryable();
 
             if (lastCommentId.HasValue)
@@ -132,43 +133,35 @@ namespace SocialMedia.Services
             }
 
             var comments = await commentsQuery.Take(take).ToListAsync();
-
             var dtos = comments.Select(c => SuccessCommentDto(c)).ToList();
-
             var lastId = comments.LastOrDefault()?.Id;
 
-            return ApiResponse<IEnumerable<CommentDto>>.SuccessResponse(
-                dtos,
-                "Comments retrieved successfully.",
-                new { lastCommentId = lastId });
+            return ApiResponse<IEnumerable<CommentDto>>.SuccessResponse(dtos, "Comments retrieved successfully.", new { lastCommentId = lastId });
         }
 
         public async Task<ApiResponse<IEnumerable<CommentDto>>> GetRepliesAsync(ClaimsPrincipal userClaims,
              Guid commentId, Guid? lastCommentId = null, int take = 10)
         {
-            if (take <= 0 || take > 50)
-                take = 20;
+            if (take <= 0 || take > 50) take = 20;
+
             var invalidUserResponse = GetUserIdOrUnauthorized<IEnumerable<CommentDto>>(userClaims, out var userIdValue);
-            if (invalidUserResponse != null)
-                return invalidUserResponse;
+            if (invalidUserResponse != null) return invalidUserResponse;
 
             var profile = await _profileRepository.GetByApplicationIdAsync(userIdValue);
-            if (profile == null)
-                return NotFoundResponse<IEnumerable<CommentDto>>("Profile");
+            if (profile == null) return NotFoundResponse<IEnumerable<CommentDto>>("Profile");
 
             var parent = await _commentRepository.Query()
                 .Include(c => c.Profile)
                 .FirstOrDefaultAsync(c => c.Id == commentId);
 
-            if (parent == null)
-                return NotFoundResponse<IEnumerable<CommentDto>>("Parent Comment");
+            if (parent == null) return NotFoundResponse<IEnumerable<CommentDto>>("Parent Comment");
 
             var query = _commentRepository.Query()
                 .Include(c => c.Profile)
                 .Include(c => c.Media)
                 .Include(c => c.Replies)
                 .Where(c => c.ParentCommentId == commentId && !c.IsDeleted)
-                .OrderByDescending(c => c.CreatedDate)
+                .OrderBy(c => c.CreatedDate)
                 .AsQueryable();
 
             if (lastCommentId.HasValue)
@@ -176,38 +169,31 @@ namespace SocialMedia.Services
                 var lastComment = await _commentRepository.GetByIdAsync(lastCommentId.Value);
                 if (lastComment != null)
                 {
-                    query = query.Where(c => c.CreatedDate < lastComment.CreatedDate);
+                    query = query.Where(c => c.CreatedDate > lastComment.CreatedDate);
                 }
             }
 
             var comments = await query.Take(take).ToListAsync();
-
             var dtoReplies = comments.Select(c => SuccessCommentDto(c)).ToList();
-
             var lastId = comments.LastOrDefault()?.Id;
-            return ApiResponse<IEnumerable<CommentDto>>.SuccessResponse(
-                dtoReplies,
-                "Replies retrieved successfully.",
-                new { lastCommentId = lastId });
+
+            return ApiResponse<IEnumerable<CommentDto>>.SuccessResponse(dtoReplies, "Replies retrieved successfully.", new { lastCommentId = lastId });
         }
 
         public async Task<ApiResponse<CommentDto?>> EditCommentAsync(ClaimsPrincipal userClaims, Guid commentId, UpdateCommentDto dto)
         {
             var invalidUserResponse = GetUserIdOrUnauthorized<CommentDto>(userClaims, out var userIdValue);
-            if (invalidUserResponse != null)
-                return invalidUserResponse;
+            if (invalidUserResponse != null) return invalidUserResponse;
 
             var profile = await _profileRepository.GetByApplicationIdAsync(userIdValue);
-            if (profile == null)
-                return NotFoundResponse<CommentDto>("Profile");
+            if (profile == null) return NotFoundResponse<CommentDto>("Profile");
 
             var comment = await _commentRepository.Query()
                 .Include(c => c.Media)
                 .Include(c => c.Profile)
                 .FirstOrDefaultAsync(c => c.Id == commentId);
 
-            if (comment == null)
-                return NotFoundResponse<CommentDto>("Comment");
+            if (comment == null) return NotFoundResponse<CommentDto>("Comment");
 
             if (comment.ProfileId != profile.Id)
                 return ApiResponse<CommentDto>.ErrorResponse("Forbidden.", new[] { "You can only edit your own comments." });
@@ -228,25 +214,19 @@ namespace SocialMedia.Services
             }
 
             await _commentRepository.SaveChangesAsync();
-
             return ApiResponse<CommentDto>.SuccessResponse(SuccessCommentDto(comment), "Comment updated successfully.");
         }
 
         public async Task<ApiResponse<bool>> SoftDeleteCommentAsync(ClaimsPrincipal userClaims, Guid commentId)
         {
             var invalidUserResponse = GetUserIdOrUnauthorized<bool>(userClaims, out var userIdValue);
-            if (invalidUserResponse != null)
-                return invalidUserResponse;
+            if (invalidUserResponse != null) return invalidUserResponse;
 
             var profile = await _profileRepository.GetByApplicationIdAsync(userIdValue);
-            if (profile == null)
-                return NotFoundResponse<bool>("Profile");
+            if (profile == null) return NotFoundResponse<bool>("Profile");
 
-            var comment = await _commentRepository.Query()
-                .Include(c => c.Post)
-                .FirstOrDefaultAsync(c => c.Id == commentId);
-            if (comment == null)
-                return NotFoundResponse<bool>("Comment");
+            var comment = await _commentRepository.Query().Include(c => c.Post).FirstOrDefaultAsync(c => c.Id == commentId);
+            if (comment == null) return NotFoundResponse<bool>("Comment");
 
             if (comment.ProfileId != profile.Id)
                 return ApiResponse<bool>.ErrorResponse("Forbidden.", new[] { "You can only delete your own comments." });
@@ -282,6 +262,7 @@ namespace SocialMedia.Services
                 {
                     Id = comment.Media.Id,
                     Url = $"{baseUrl}/{comment.Media.FilePath}",
+                    FileName = comment.Media.FileName,
                     MediaType = comment.Media.MediaType,
                 };
             }
@@ -308,6 +289,7 @@ namespace SocialMedia.Services
                         {
                             Id = reply.Media.Id,
                             Url = $"{baseUrl}/{reply.Media.FilePath}",
+                            FileName = reply.Media.FileName,
                             MediaType = reply.Media.MediaType
                         };
                     }

@@ -1,49 +1,178 @@
+"use client";
+
+import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { bg } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { CommentDto } from "@frontend/lib/types/comment";
 import { getInitials } from "@frontend/lib/utils";
 import { MediaType } from "@frontend/lib/types/enums";
+import { CommentInput } from "./comment-input"; 
+import { useProfile } from "@frontend/hooks/use-profile"; 
+import { useGetReplies } from "@frontend/hooks/use-comments"; 
+import { Loader2, CornerDownRight, FileText, Download } from "lucide-react";
 
 interface CommentItemProps {
     comment: CommentDto;
 }
 
 export function CommentItem({ comment }: CommentItemProps) {
-    const isVideo = comment.media?.mediaType === MediaType.Video; 
+    const { data: currentUser } = useProfile();
     
+    const isVideo = comment.media?.mediaType === MediaType.Video; 
+    const isDocument = comment.media?.mediaType === MediaType.Document; 
+
+    const [isReplying, setIsReplying] = useState(false);
+    const [areRepliesOpen, setAreRepliesOpen] = useState(false);
+
+    const { 
+        data, 
+        fetchNextPage, 
+        hasNextPage, 
+        isFetchingNextPage, 
+        isLoading 
+    } = useGetReplies(comment.id, areRepliesOpen);
+
+    const fetchedReplies = data?.pages.flatMap((page) => page.data || []) || [];
+
+    const displayReplies = fetchedReplies.length > 0 ? fetchedReplies : (comment.repliesPreview || []);
+    
+    const canReply = comment.depth < 2; 
+    const hasReplies = comment.repliesCount > 0 || displayReplies.length > 0;
+
+    const handleReplySuccess = () => {
+        setIsReplying(false); 
+        setAreRepliesOpen(true); 
+    };
+
     return (
-        <div className="flex gap-2 mb-4 animate-in fade-in duration-300">
-            <Avatar className="w-8 h-8 cursor-pointer hover:opacity-80">
-                <AvatarImage src={comment.authorAvatar || ""} />
-                <AvatarFallback>{getInitials(comment.authorName)}</AvatarFallback>
-            </Avatar>
-            
-            <div className="flex flex-col max-w-[85%]">
-                <div className="bg-muted/40 rounded-2xl p-3 px-4 w-fit min-w-[120px]">
-                    <span className="font-semibold text-sm block text-foreground cursor-pointer hover:underline">
-                        {comment.authorName}
-                    </span>
-                    <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed break-words">
-                        {comment.content}
-                    </p>
-                </div>
+        <div className="flex flex-col w-full group/comment">
+            <div className="flex gap-2 mb-2 animate-in fade-in duration-300">
+                <Avatar className="w-8 h-8 cursor-pointer hover:opacity-80 mt-1">
+                    <AvatarImage src={comment.authorAvatar || ""} />
+                    <AvatarFallback className="bg-primary text-white text-xs">
+                        {getInitials(comment.authorName)}
+                    </AvatarFallback>
+                </Avatar>
                 
-                {comment.media && (
-                    <div className="mt-2 rounded-xl overflow-hidden border bg-black/5 max-w-[300px]">
-                        {isVideo ? (
-                             <video src={comment.media.url} controls className="w-full h-auto" />
-                        ) : (
-                            <img src={comment.media.url} alt="Прикачен файл" className="w-full h-auto object-cover" />
+                <div className="flex flex-col max-w-[90%]">
+                    <div className="bg-muted/40 rounded-2xl p-2 px-3 w-fit min-w-[120px]">
+                        <span className="font-bold text-xs block text-foreground cursor-pointer hover:underline mb-0.5">
+                            {comment.authorName}
+                        </span>
+                        <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed break-words">
+                            {comment.content}
+                        </p>
+                    </div>
+                    
+                    {comment.media && (
+                        <div className="mt-1">
+                            {isDocument ? (
+                                <div className="flex items-center p-2 border rounded-lg bg-background max-w-[250px] group/file hover:bg-muted/50 transition-colors shadow-sm mt-1">
+                                    <div className="h-9 w-9 rounded-full bg-red-100 flex items-center justify-center text-red-600 mr-2 shrink-0 border border-red-200">
+                                        <FileText className="h-5 w-5" />
+                                    </div>
+                                    <div className="flex-1 overflow-hidden min-w-0">
+                                        <p className="text-xs font-semibold truncate text-foreground hover:text-blue-600 cursor-pointer">
+                                            <a href={comment.media.url} target="_blank" rel="noopener noreferrer">
+                                                {comment.media.fileName || comment.media.url.split('/').pop() || "Документ"}
+                                            </a>
+                                        </p>
+                                        <p className="text-[10px] text-muted-foreground uppercase">Файл</p>
+                                    </div>
+                                    <a href={comment.media.url} download className="p-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted/80">
+                                        <Download className="h-4 w-4" />
+                                    </a>
+                                </div>
+                            ) : (
+                                <div className="rounded-xl overflow-hidden border bg-black/5 max-w-[250px] relative group/media mt-1">
+                                    {isVideo ? (
+                                         <div className="relative">
+                                            <video src={comment.media.url} controls className="w-full h-auto" />
+                                         </div>
+                                    ) : (
+                                        <a href={comment.media.url} target="_blank" rel="noreferrer">
+                                            <img src={comment.media.url} alt="Прикачен файл" className="w-full h-auto object-cover hover:opacity-95 transition-opacity cursor-zoom-in" />
+                                        </a>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    <div className="flex gap-3 px-2 mt-1 text-[11px] text-muted-foreground font-medium items-center">
+                        <span>{comment.createdDate ? formatDistanceToNow(new Date(comment.createdDate), { addSuffix: true, locale: bg }) : "наскоро"}</span>
+                        
+                        <button className="hover:underline hover:text-foreground cursor-pointer font-semibold">
+                            Харесване
+                        </button>
+                        
+                        {canReply && (
+                            <button 
+                                className="hover:underline hover:text-foreground cursor-pointer font-semibold"
+                                onClick={() => setIsReplying(!isReplying)}
+                            >
+                                Отговор
+                            </button>
+                        )}
+
+                        {comment.repliesCount > 0 && !areRepliesOpen && (
+                             <button 
+                                className="hover:underline hover:text-foreground cursor-pointer ml-1 flex items-center gap-1 font-semibold"
+                                onClick={() => setAreRepliesOpen(true)}
+                             >
+                                <CornerDownRight className="h-3 w-3" />
+                                {comment.repliesCount} отговора
+                             </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            <div className="pl-10 relative">
+                {hasReplies && areRepliesOpen && (
+                    <div className="absolute left-4 top-0 bottom-4 w-px bg-border/40 hidden sm:block" />
+                )}
+
+                {areRepliesOpen && (
+                    <div className="flex flex-col gap-1">
+                        
+                        {isLoading && fetchedReplies.length === 0 && (
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground py-2 pl-2">
+                                <Loader2 className="h-3 w-3 animate-spin" /> Зареждане...
+                            </div>
+                        )}
+
+                        {displayReplies.map((reply) => (
+                            <CommentItem key={reply.id} comment={reply} />
+                        ))}
+
+                        {hasNextPage && (
+                            <button 
+                                className="text-xs text-blue-600 hover:text-blue-700 hover:underline font-semibold py-2 pl-2 text-left flex items-center gap-2 mt-1"
+                                onClick={() => fetchNextPage()}
+                                disabled={isFetchingNextPage}
+                            >
+                                {isFetchingNextPage ? <Loader2 className="h-3 w-3 animate-spin" /> : <CornerDownRight className="h-3 w-3" />}
+                                Виж още отговори...
+                            </button>
                         )}
                     </div>
                 )}
 
-                <div className="flex gap-4 px-2 mt-1 text-xs text-muted-foreground font-medium">
-                    <span>{formatDistanceToNow(new Date(comment.createdDate), { addSuffix: true, locale: bg })}</span>
-                    <button className="hover:underline hover:text-foreground cursor-pointer">Харесване</button>
-                    <button className="hover:underline hover:text-foreground cursor-pointer">Отговор</button>
-                </div>
+                {isReplying && (
+                    <div className="mt-2 mb-3 animate-in fade-in slide-in-from-top-1">
+                        <CommentInput 
+                            postId={comment.postId} 
+                            currentUserAvatar={currentUser?.authorAvatar}
+                            currentUserName={currentUser?.fullName}
+                            parentCommentId={comment.id}
+                            onCancel={() => setIsReplying(false)}
+                            onSuccess={handleReplySuccess}
+                            autoFocus={true}
+                        />
+                    </div>
+                )}
             </div>
         </div>
     );
