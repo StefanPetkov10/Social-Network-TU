@@ -1,4 +1,4 @@
-import { MediaType } from "./enums"; 
+import { MediaType, ReactionType } from "./enums"; 
 
 export interface CommentMediaDto {
     id: string;
@@ -15,6 +15,8 @@ export interface CommentDto {
     authorAvatar: string | null;
     authorUsername: string;
     content: string;
+    likesCount: number;
+    userReaction: ReactionType | null; 
     isDeleted: boolean;
     depth: number;
     parentCommentId?: string | null;

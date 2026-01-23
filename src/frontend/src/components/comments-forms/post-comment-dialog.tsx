@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@frontend/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { Button } from "@frontend/components/ui/button";
@@ -17,7 +16,6 @@ import {
     Download, 
     MoreHorizontal, 
     X, 
-    ThumbsUp, 
     MessageCircle, 
     Share2, 
     Loader2 
@@ -28,20 +26,14 @@ import { bg } from "date-fns/locale";
 
 import { PostDto } from "@frontend/lib/types/posts";
 import { ProfileDto } from "@frontend/lib/types/profile";
-import { ReactionType } from "@frontend/lib/types/enums";
-import { getInitials, cn } from "@frontend/lib/utils";
+import { getInitials } from "@frontend/lib/utils";
 import { useGetComments } from "@frontend/hooks/use-comments";
-import { reactionService } from "@frontend/services/reaction-service";
 import { CommentInput } from "./comment-input"; 
 import { CommentItem } from "./comment-item";
 
-const REACTION_CONFIG = {
-  [ReactionType.Like]: { icon: "👍", label: "Харесва ми", color: "text-blue-600" },
-  [ReactionType.Love]: { icon: "❤️", label: "Любов", color: "text-red-600" },
-  [ReactionType.Funny]: { icon: "😆", label: "Ха-ха", color: "text-yellow-500" },
-  [ReactionType.Congrats]: { icon: "👏", label: "Браво", color: "text-green-600" },
-  [ReactionType.Support]: { icon: "🤗", label: "Подкрепа", color: "text-purple-600" },
-};
+import { reactionService } from "@frontend/services/reaction-service";
+import { useReaction } from "@frontend/hooks/use-reaction";
+import { ReactionButton, REACTION_CONFIG } from "@frontend/components/ui/reaction-button";
 
 interface PostCommentDialogProps {
   open: boolean;
@@ -54,9 +46,12 @@ export function PostCommentDialog({ open, onOpenChange, post, currentUser }: Pos
   const { data, fetchNextPage, hasNextPage, isLoading, isFetchingNextPage } = useGetComments(post.id);
   const comments = data?.pages.flatMap((page) => page.data) || [];
 
-  const [currentReaction, setCurrentReaction] = useState<ReactionType | null>(post.userReaction ?? null);
-  const [likesCount, setLikesCount] = useState(post.likesCount);
-  const [isReactionMenuOpen, setIsReactionMenuOpen] = useState(false);
+  const { currentReaction, likesCount, handleReaction } = useReaction({
+      initialReaction: post.userReaction ?? null,
+      initialCount: post.likesCount,
+      entityId: post.id,
+      reactApiCall: (id, type) => reactionService.reactToPost(id, type)
+  });
 
   const authorName = post.authorName || "Потребител";
   const authorAvatarUrl = post.authorAvatar || "";
@@ -71,6 +66,7 @@ export function PostCommentDialog({ open, onOpenChange, post, currentUser }: Pos
 
   const documents = post.media?.filter(m => m.mediaType !== 0 && m.mediaType !== 1) || [];
   const visualMedia = post.media?.filter(m => m.mediaType === 0 || m.mediaType === 1) || [];
+  
   const activeReactionConfig = currentReaction !== null ? REACTION_CONFIG[currentReaction] : null;
 
   const getRelativeTime = (dateString: string) => {
@@ -79,31 +75,6 @@ export function PostCommentDialog({ open, onOpenChange, post, currentUser }: Pos
      } catch {
         return "наскоро";
      }
-  };
-
-  const handleReaction = async (type: ReactionType) => {
-    const oldReaction = currentReaction;
-    const oldCount = likesCount;
-
-    setIsReactionMenuOpen(false);
-
-    if (currentReaction === type) {
-        setCurrentReaction(null);
-        setLikesCount(prev => Math.max(0, prev - 1));
-    } else {
-        setCurrentReaction(type);
-        if (oldReaction === null) {
-            setLikesCount(prev => prev + 1);
-        }
-    }
-
-    try {
-        await reactionService.reactToPost(post.id, type);
-    } catch (error) {
-        console.error("Failed to react", error);
-        setCurrentReaction(oldReaction);
-        setLikesCount(oldCount);
-    }
   };
 
   return (
@@ -281,54 +252,13 @@ export function PostCommentDialog({ open, onOpenChange, post, currentUser }: Pos
                     )}
                     
                     <div className="flex justify-between py-1 relative">
-                         <div 
-                            className="flex-1 group relative"
-                            onMouseEnter={() => setIsReactionMenuOpen(true)}
-                            onMouseLeave={() => setIsReactionMenuOpen(false)}
-                         >
-                            {isReactionMenuOpen && (
-                                <div className="absolute bottom-full left-0 flex bg-background border shadow-lg rounded-full p-1 gap-1 animate-in slide-in-from-bottom-2 z-50"> 
-                                    {(Object.keys(REACTION_CONFIG) as unknown as ReactionType[]).map((type) => (
-                                        <button
-                                            key={type}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleReaction(Number(type));
-                                            }}
-                                            className="p-2 hover:bg-muted rounded-full transition-transform hover:scale-125 text-xl leading-none"
-                                        >
-                                            {REACTION_CONFIG[type].icon}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-
-                            <Button 
-                                variant="ghost" 
-                                className={cn(
-                                    "w-full flex gap-2 items-center hover:bg-muted/50 transition-colors h-10 rounded-none", 
-                                    activeReactionConfig ? activeReactionConfig.color : "text-muted-foreground"
-                                )}
-                                onClick={() => {
-                                    if (currentReaction !== null) {
-                                        handleReaction(currentReaction);
-                                    } else {
-                                        handleReaction(ReactionType.Like);
-                                    }
-                                }}
-                            >
-                                {activeReactionConfig ? (
-                                   <>
-                                     <span className="text-lg leading-none">{activeReactionConfig.icon}</span>
-                                     <span className="font-semibold">{activeReactionConfig.label}</span>
-                                   </>
-                                ) : (
-                                   <>
-                                     <ThumbsUp className="h-4 w-4" />
-                                     <span>Харесване</span>
-                                   </>
-                                )}
-                            </Button>
+                         <div className="flex-1">
+                             <ReactionButton 
+                                currentReaction={currentReaction}
+                                likesCount={likesCount}
+                                onReact={handleReaction}
+                                isComment={false}
+                             />
                          </div>
 
                          <Button variant="ghost" className="flex-1 text-muted-foreground hover:text-foreground h-10 rounded-none hover:bg-muted/50">

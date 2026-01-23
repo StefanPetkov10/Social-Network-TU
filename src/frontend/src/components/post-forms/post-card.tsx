@@ -6,7 +6,6 @@ import {
   MessageCircle, 
   Share2, 
   Bookmark, 
-  ThumbsUp, 
   Trash2, 
   Edit2, 
   FileText, 
@@ -32,8 +31,6 @@ import {
 import Link from "next/link";
 import { cn, getInitials } from "@frontend/lib/utils";
 import { PostDto } from "@frontend/lib/types/posts";
-import { ReactionType } from "@frontend/lib/types/enums";
-import { reactionService } from "@frontend/services/reaction-service";
 import { ProfileDto } from "@frontend/lib/types/profile";
 import { useProfile } from "@frontend/hooks/use-profile";
 import { PostCommentDialog } from "../comments-forms/post-comment-dialog"; 
@@ -41,13 +38,9 @@ import { PostCommentDialog } from "../comments-forms/post-comment-dialog";
 import { formatDistanceToNow } from "date-fns";
 import { bg } from "date-fns/locale";
 
-const REACTION_CONFIG = {
-  [ReactionType.Like]: { icon: "👍", label: "Харесва ми", color: "text-blue-600" },
-  [ReactionType.Love]: { icon: "❤️", label: "Любов", color: "text-red-600" },
-  [ReactionType.Funny]: { icon: "😆", label: "Ха-ха", color: "text-yellow-500" },
-  [ReactionType.Congrats]: { icon: "👏", label: "Браво", color: "text-green-600" },
-  [ReactionType.Support]: { icon: "🤗", label: "Подкрепа", color: "text-purple-600" },
-};
+import { reactionService } from "@frontend/services/reaction-service";
+import { useReaction } from "@frontend/hooks/use-reaction";
+import { ReactionButton, REACTION_CONFIG } from "@frontend/components/ui/reaction-button";
 
 interface PostCardProps {
     post: PostDto;
@@ -58,10 +51,14 @@ interface PostCardProps {
 
 export function PostCard({ post, authorProfile, hideGroupInfo, isPreview = false }: PostCardProps) {
   const { data: currentUser } = useProfile();
-  const [currentReaction, setCurrentReaction] = useState<ReactionType | null>(post.userReaction ?? null);
-  const [likesCount, setLikesCount] = useState(post.likesCount);
-  const [isReactionMenuOpen, setIsReactionMenuOpen] = useState(false);
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
+
+  const { currentReaction, likesCount, handleReaction } = useReaction({
+      initialReaction: post.userReaction ?? null,
+      initialCount: post.likesCount,
+      entityId: post.id,
+      reactApiCall: (id, type) => reactionService.reactToPost(id, type)
+  });
 
   const authorName = post.authorName || "Потребител";
   const authorAvatarUrl = post.authorAvatar || "";
@@ -81,31 +78,6 @@ export function PostCard({ post, authorProfile, hideGroupInfo, isPreview = false
  
   const documents = post.media?.filter(m => m.mediaType !== 0 && m.mediaType !== 1) || [];
   const visualMedia = post.media?.filter(m => m.mediaType === 0 || m.mediaType === 1) || [];
-
-  const handleReaction = async (type: ReactionType) => {
-    const oldReaction = currentReaction;
-    const oldCount = likesCount;
-
-    setIsReactionMenuOpen(false);
-
-    if (currentReaction === type) {
-        setCurrentReaction(null);
-        setLikesCount(prev => Math.max(0, prev - 1));
-    } else {
-        setCurrentReaction(type);
-        if (oldReaction === null) {
-            setLikesCount(prev => prev + 1);
-        }
-    }
-
-    try {
-        await reactionService.reactToPost(post.id, type);
-    } catch (error) {
-        console.error("Failed to react", error);
-        setCurrentReaction(oldReaction);
-        setLikesCount(oldCount);
-    }
-  };
 
   const activeReactionConfig = currentReaction !== null ? REACTION_CONFIG[currentReaction] : null;
 
@@ -324,54 +296,13 @@ export function PostCard({ post, authorProfile, hideGroupInfo, isPreview = false
 
       {!isPreview && (
           <div className="flex justify-between pt-1 relative">
-             <div 
-                className="flex-1 group relative"
-                onMouseEnter={() => setIsReactionMenuOpen(true)}
-                onMouseLeave={() => setIsReactionMenuOpen(false)}
-             >
-                {isReactionMenuOpen && (
-                    <div className="absolute bottom-full left-0 flex bg-background border shadow-lg rounded-full p-1 gap-1 animate-in slide-in-from-bottom-2 z-50"> 
-                        {(Object.keys(REACTION_CONFIG) as unknown as ReactionType[]).map((type) => (
-                            <button
-                                key={type}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleReaction(Number(type));
-                                }}
-                                className="p-2 hover:bg-muted rounded-full transition-transform hover:scale-125 text-xl leading-none"
-                            >
-                                {REACTION_CONFIG[type].icon}
-                            </button>
-                        ))}
-                    </div>
-                )}
-    
-                <Button 
-                    variant="ghost" 
-                    className={cn(
-                        "w-full flex gap-2 items-center hover:bg-muted/50 transition-colors py-6", 
-                        activeReactionConfig ? activeReactionConfig.color : "text-muted-foreground"
-                    )}
-                    onClick={() => {
-                        if (currentReaction !== null) {
-                            handleReaction(currentReaction);
-                        } else {
-                            handleReaction(ReactionType.Like);
-                        }
-                    }}
-                >
-                    {activeReactionConfig ? (
-                       <>
-                         <span className="text-lg leading-none">{activeReactionConfig.icon}</span>
-                         <span className="font-semibold">{activeReactionConfig.label}</span>
-                       </>
-                    ) : (
-                       <>
-                         <ThumbsUp className="h-4 w-4" />
-                         <span>Харесване</span>
-                       </>
-                    )}
-                </Button>
+             <div className="flex-1">
+                 <ReactionButton 
+                    currentReaction={currentReaction}
+                    likesCount={likesCount} 
+                    onReact={handleReaction}
+                    isComment={false} 
+                 />
              </div>
     
              <Button 

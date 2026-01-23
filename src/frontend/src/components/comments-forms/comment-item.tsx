@@ -37,6 +37,10 @@ import {
     AlertDialogTitle,
 } from "@frontend/components/ui/alert-dialog"; 
 
+import { reactionService } from "@frontend/services/reaction-service";
+import { ReactionButton } from "@frontend/components/ui/reaction-button";
+import { useReaction } from "@frontend/hooks/use-reaction";
+
 interface CommentItemProps {
     comment: CommentDto;
 }
@@ -50,16 +54,21 @@ export function CommentItem({ comment }: CommentItemProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false); 
 
-    const isOwner = currentUser?.id === comment.postId || currentUser?.id === comment.profileId; 
+    const { currentReaction, likesCount, handleReaction } = useReaction({
+        initialReaction: comment.userReaction || null, 
+        initialCount: comment.likesCount || 0,         
+        entityId: comment.id,
+        reactApiCall: (id, type) => reactionService.reactToComment(id, type) 
+    });
 
-    const isCurrentUser = currentUser?.id === comment.profileId;
+    const isOwner = currentUser?.id === comment.profileId || currentUser?.id === comment.profileId; 
+    const isCurrentUser = currentUser?.id === (comment.profileId || comment.profileId);
     
-    const authorUsername = comment.authorUsername; 
+    const authorUsername = (comment as any).authorUsername; 
     
     const authorProfileUrl = isCurrentUser 
         ? "/profile" 
         : (authorUsername ? `/${authorUsername}` : "#");
-
 
     const isVideo = comment.media?.mediaType === MediaType.Video; 
     const isDocument = comment.media?.mediaType === MediaType.Document; 
@@ -201,9 +210,12 @@ export function CommentItem({ comment }: CommentItemProps) {
                         <div className="flex gap-3 px-2 mt-1 text-[11px] text-muted-foreground font-medium items-center">
                             <span>{comment.createdDate ? formatDistanceToNow(new Date(comment.createdDate), { addSuffix: true, locale: bg }) : "наскоро"}</span>
                             
-                            <button className="hover:underline hover:text-foreground cursor-pointer font-semibold">
-                                Харесване
-                            </button>
+                            <ReactionButton 
+                                currentReaction={currentReaction}
+                                likesCount={likesCount}
+                                onReact={handleReaction}
+                                isComment={true}
+                            />
                             
                             {canReply && (
                                 <button 

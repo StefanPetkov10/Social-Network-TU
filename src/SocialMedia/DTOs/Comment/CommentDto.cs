@@ -1,4 +1,6 @@
-﻿namespace SocialMedia.DTOs.Comment
+﻿using SocialMedia.Database.Models.Enums;
+
+namespace SocialMedia.DTOs.Comment
 {
     public class CommentDto
     {
@@ -9,6 +11,8 @@
         public string? AuthorAvatar { get; set; }
         public string AuthorUsername { get; set; } = null!;
         public string Content { get; set; } = null!;
+        public int LikesCount { get; set; }
+        public ReactionType? UserReaction { get; set; }
         public bool IsDeleted { get; set; }
         public int Depth { get; set; }
         public Guid? ParentCommentId { get; set; }
