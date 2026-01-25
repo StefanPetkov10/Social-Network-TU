@@ -7,9 +7,7 @@ export const useInfiniteFriendRequests = () => {
     queryKey: ["friend-requests-infinite"],
     queryFn: ({ pageParam = null }) => friendsService.getFriendRequests(pageParam as string | null, 10),
     initialPageParam: null,
-    getNextPageParam: (lastPage) => {
-      return lastPage.meta?.nextCursor ?? undefined;
-    },
+    getNextPageParam: (lastPage) => lastPage.meta?.nextCursor ?? undefined,
     select: (data) => data.pages.flatMap((page) => page.data),
     refetchInterval: 5000, 
   });
@@ -34,15 +32,30 @@ export const useInfiniteSuggestions = () => {
 export const useInfiniteFriends = (profileId: string) => {
   return useInfiniteQuery({
     queryKey: ["my-friends-infinite", profileId],
-    queryFn: ({ pageParam = null }) => {
-      return friendsService.getFriendsList(profileId, pageParam as string | null, 10);
-    },
+    queryFn: ({ pageParam = null }) => friendsService.getFriendsList(profileId, pageParam as string | null, 10),
     initialPageParam: null,
-    getNextPageParam: (lastPage) => {
-      return lastPage.meta?.nextCursor ?? undefined;
-    },
+    getNextPageParam: (lastPage) => lastPage.meta?.nextCursor ?? undefined,
     select: (data) => data.pages.flatMap((page) => page.data),
   });
+};
+
+
+const invalidateFriendRelatedQueries = (queryClient: any) => {
+    queryClient.invalidateQueries({ queryKey: ["friend-suggestions-infinite"] });
+    queryClient.invalidateQueries({ queryKey: ["friend-requests-infinite"] });
+    queryClient.invalidateQueries({ queryKey: ["my-friends-infinite"] });
+    
+    queryClient.invalidateQueries({ queryKey: ["posts"] });
+    
+    queryClient.invalidateQueries({ queryKey: ["reactors"] });
+
+    queryClient.invalidateQueries({ queryKey: ["group-members"] });
+    queryClient.invalidateQueries({ queryKey: ["group-admins"] });
+    queryClient.invalidateQueries({ queryKey: ["group-friends"] });
+    queryClient.invalidateQueries({ queryKey: ["group-mutual-friends"] });
+
+    queryClient.invalidateQueries({ queryKey: ["user-profile-by-username"] });
+    queryClient.invalidateQueries({ queryKey: ["profile"] }); 
 };
 
 export const useSendFriendRequest = () => {
@@ -54,8 +67,7 @@ export const useSendFriendRequest = () => {
         toast.error("Грешка", { description: response.message });
         return;
       }
-      queryClient.invalidateQueries({ queryKey: ["friend-suggestions-infinite"] });
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
+      invalidateFriendRelatedQueries(queryClient);
       toast.success("Поканата е изпратена успешно!");
     },
     onError: (error: any) => {
@@ -70,10 +82,7 @@ export const useCancelFriendRequest = () => {
   return useMutation({
     mutationFn: (addresseeId: string) => friendsService.cancelFriendRequest(addresseeId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["friend-requests-infinite"] });
-      queryClient.invalidateQueries({ queryKey: ["friend-suggestions-infinite"] });
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
-
+      invalidateFriendRelatedQueries(queryClient);
       toast.success("Поканата е отменена.");
     },
     onError: (error: any) => {
@@ -88,10 +97,7 @@ export const useAcceptFriendRequest = () => {
   return useMutation({
     mutationFn: (pendingRequestId: string) => friendsService.acceptFriendRequest(pendingRequestId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["friend-requests-infinite"] });
-      queryClient.invalidateQueries({ queryKey: ["my-friends-infinite"] });
-      queryClient.invalidateQueries({ queryKey: ["friend-suggestions-infinite"] });
-      queryClient.invalidateQueries({ queryKey: ["reactors"] });
+      invalidateFriendRelatedQueries(queryClient);
       toast.success("Успешно приехте поканата!");
     },
     onError: (error: any) => {
@@ -106,8 +112,7 @@ export const useDeclineFriendRequest = () => {
   return useMutation({
     mutationFn: (pendingRequestId: string) => friendsService.declineFriendRequest(pendingRequestId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["friend-requests-infinite"] });
-      queryClient.invalidateQueries({ queryKey: ["reactors"] });
+      invalidateFriendRelatedQueries(queryClient);
       toast.success("Поканата е отхвърлена.");
     },
     onError: (error: any) => {
@@ -120,13 +125,9 @@ export const useDeclineFriendRequest = () => {
 export const useRemoveFriend = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (profileId: string) => {
-      return friendsService.removeFriend(profileId);},
+    mutationFn: (profileId: string) => friendsService.removeFriend(profileId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["my-friends-infinite"] });
-      queryClient.invalidateQueries({ queryKey: ["friend-suggestions-infinite"] });
-      queryClient.invalidateQueries({ queryKey: ["reactors"] });
-
+      invalidateFriendRelatedQueries(queryClient);
       toast.success("Приятелят е премахнат.");
     },
     onError: () => {

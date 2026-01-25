@@ -43,7 +43,12 @@ import {
     useGroupMutualFriends,
     useRemoveMember
 } from "@frontend/hooks/use-group-members";
-import { useSendFriendRequest, useCancelFriendRequest } from "@frontend/hooks/use-friends";
+import { 
+    useSendFriendRequest, 
+    useCancelFriendRequest, 
+    useAcceptFriendRequest, 
+    useDeclineFriendRequest 
+} from "@frontend/hooks/use-friends";
 import { MemberDto } from "@frontend/lib/types/groups";
 
 interface GroupMembersViewProps {
@@ -298,24 +303,53 @@ function MemberCard({ member, isCompact = false, groupId, showBadges = false, vi
   const isMe = member.isMe;
   const profileLink = isMe ? "/profile" : `/${member.username}`;
   
-  const [isPending, setIsPending] = useState(member.hasPendingRequest || false);
+  const [status, setStatus] = useState<'none' | 'sent' | 'received' | 'friend'>(
+        member.isFriend ? 'friend' : 
+        member.hasSentRequest ? 'sent' : 
+        member.hasReceivedRequest ? 'received' : 'none'
+  );
 
-  const { mutate: sendRequest } = useSendFriendRequest();
-  const { mutate: removeMember } = useRemoveMember();
+  useEffect(() => {
+    setStatus(
+        member.isFriend ? 'friend' : 
+        member.hasSentRequest ? 'sent' : 
+        member.hasReceivedRequest ? 'received' : 'none'
+    );
+  }, [member.isFriend, member.hasSentRequest, member.hasReceivedRequest]);
+
+  const { mutate: sendRequest, isPending: isSending } = useSendFriendRequest();
   const { mutate: cancelRequest, isPending: isCancelling } = useCancelFriendRequest();
+  const { mutate: acceptRequest, isPending: isAccepting } = useAcceptFriendRequest();
+  const { mutate: declineRequest, isPending: isDeclining } = useDeclineFriendRequest();
+  
+  const { mutate: removeMember } = useRemoveMember();
   
   const handleAddFriend = () => {
-    setIsPending(true);
     sendRequest(member.profileId, {
-      onError: () => setIsPending(false)
+      onSuccess: () => setStatus('sent')
     });
   };
 
   const handleCancel = () => {
-    setIsPending(false); 
     cancelRequest(member.profileId, {
-        onError: () => setIsPending(true) 
+        onSuccess: () => setStatus('none')
     });
+  };
+
+  const handleConfirm = () => {
+      if (member.pendingRequestId) {
+          acceptRequest(member.pendingRequestId, {
+              onSuccess: () => setStatus('friend')
+          });
+      }
+  };
+
+  const handleDecline = () => {
+      if (member.pendingRequestId) {
+          declineRequest(member.pendingRequestId, {
+              onSuccess: () => setStatus('none')
+          });
+      }
   };
 
   let subtitleDetails = null;
@@ -376,7 +410,7 @@ function MemberCard({ member, isCompact = false, groupId, showBadges = false, vi
       {!isMe && (
       <div className="flex items-center gap-2 shrink-0">
         
-        {member.isFriend ? (
+        {status === 'friend' && (
             <Button 
                 variant="secondary" 
                 size="sm" 
@@ -385,33 +419,54 @@ function MemberCard({ member, isCompact = false, groupId, showBadges = false, vi
                 <MessageCircle className="w-4 h-4 mr-2" />
                 Съобщение
             </Button>
-        ) : isPending ? (
-            <Button 
+        )}
+
+        {status === 'sent' && (
+             <Button 
+                variant="ghost" 
                 size="sm" 
                 onClick={handleCancel}
                 disabled={isCancelling}
-                className="hidden md:flex group/pending bg-gray-100 text-gray-500 border border-gray-200 shadow-none hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all font-medium min-w-[110px]"
+                className="hidden md:flex group/pending bg-gray-100 text-gray-500 border border-gray-200 shadow-none hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all font-medium w-[125px] justify-center"
             >
-                {isCancelling ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
+                {isCancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : (
                     <>
-                        <Clock className="w-4 h-4 mr-2 group-hover/pending:hidden" />
-                        <span className="group-hover/pending:hidden">Изпратено</span>
-
-                        <X className="w-4 h-4 mr-2 hidden group-hover/pending:block" />
-                        <span className="hidden group-hover/pending:block">Откажи</span>
+                        <span className="flex items-center group-hover/pending:hidden">
+                            <Clock className="w-4 h-4 mr-2" /> Изпратено
+                        </span>
+                        <span className="hidden group-hover/pending:flex items-center">
+                            <X className="w-4 h-4 mr-2" /> Откажи
+                        </span>
                     </>
                 )}
             </Button>
-        ) : (
-            <Button 
+        )}
+
+        {status === 'received' && (
+            <div className="flex gap-2">
+                 <Button 
+                    size="sm" 
+                    onClick={handleConfirm}
+                    disabled={isAccepting}
+                    className="hidden md:flex bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm"
+                >
+                    {isAccepting ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                        <><UserCheck className="w-4 h-4 mr-2" /> Потвърди</>
+                    )}
+                </Button>
+            </div>
+        )}
+
+        {status === 'none' && (
+             <Button 
                 size="sm" 
                 onClick={handleAddFriend}
+                disabled={isSending}
                 className="hidden md:flex bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 border border-blue-100 shadow-sm font-semibold transition-all"
             >
-                <UserPlus className="w-4 h-4 mr-2" />
-                Добави
+                {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                    <><UserPlus className="w-4 h-4 mr-2" /> Добави</>
+                )}
             </Button>
         )}
 
@@ -429,7 +484,7 @@ function MemberCard({ member, isCompact = false, groupId, showBadges = false, vi
                </Link>
             </DropdownMenuItem>
             
-            {isPending && (
+            {status === 'sent' && (
               <DropdownMenuItem 
                 onClick={handleCancel}
                 className="cursor-pointer font-medium text-red-600 focus:text-red-700 focus:bg-red-50"
@@ -439,7 +494,26 @@ function MemberCard({ member, isCompact = false, groupId, showBadges = false, vi
               </DropdownMenuItem>
             )}
 
-            {!member.isFriend && !isPending && (
+             {status === 'received' && (
+              <>
+                 <DropdownMenuItem 
+                    onClick={handleConfirm}
+                    className="cursor-pointer font-medium text-green-600 focus:text-green-700 focus:bg-green-50"
+                  >
+                    <UserCheck className="w-4 h-4 mr-2" />
+                    Потвърди
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={handleDecline}
+                    className="cursor-pointer font-medium"
+                  >
+                    <X className="w-4 h-4 mr-2 text-gray-500" />
+                    Отхвърли
+                  </DropdownMenuItem>
+              </>
+            )}
+
+            {status === 'none' && (
               <DropdownMenuItem 
                 onClick={handleAddFriend}
                 className="cursor-pointer font-medium"
@@ -455,7 +529,7 @@ function MemberCard({ member, isCompact = false, groupId, showBadges = false, vi
                 className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 font-medium"
               >
                 <AlertCircleIcon className="w-4 h-4 mr-2" />
-                Премахни
+                Премахни от групата
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>

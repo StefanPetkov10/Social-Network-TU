@@ -16,7 +16,10 @@ export interface MemberDto {
   isMe: boolean;
   isFriend: boolean;
   mutualFriendsCount: number;
-  hasPendingRequest: boolean;
+  
+  hasSentRequest: boolean;     
+  hasReceivedRequest: boolean;
+  pendingRequestId?: string;
 }
 
 export interface GroupDto {

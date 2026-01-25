@@ -15,6 +15,8 @@ namespace SocialMedia.DTOs.Group
         public bool IsMe { get; set; }
         public int MutualFriendsCount { get; set; }
 
-        public bool HasPendingRequest { get; set; }
+        public bool HasSentRequest { get; set; }
+        public bool HasReceivedRequest { get; set; }
+        public Guid? PendingRequestId { get; set; }
     }
 }
