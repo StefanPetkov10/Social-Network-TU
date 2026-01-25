@@ -38,5 +38,19 @@ namespace SocialMedia.Controllers
             }
             return Ok(response);
         }
+
+        [HttpGet("{entityId}/reactors")]
+        public async Task<IActionResult> GetReactors(
+            Guid entityId,
+            [FromQuery] bool isComment = false,
+            [FromQuery] ReactionType? type = null,
+            [FromQuery] Guid? lastReactionId = null)
+        {
+            var response = await _reactionService.GetReactorsAsync(User, entityId, isComment, type, lastReactionId);
+
+            if (!response.Success) return BadRequest(response.Errors);
+
+            return Ok(response);
+        }
     }
 }

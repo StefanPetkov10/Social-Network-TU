@@ -6,6 +6,7 @@ import {
   MessageCircle, 
   Share2, 
   Bookmark, 
+  ThumbsUp, 
   Trash2, 
   Edit2, 
   FileText, 
@@ -41,6 +42,7 @@ import { bg } from "date-fns/locale";
 import { reactionService } from "@frontend/services/reaction-service";
 import { useReaction } from "@frontend/hooks/use-reaction";
 import { ReactionButton, REACTION_CONFIG } from "@frontend/components/ui/reaction-button";
+import { ReactionListDialog } from "../reaction-dialog/reaction-list-dialog";
 
 interface PostCardProps {
     post: PostDto;
@@ -52,6 +54,7 @@ interface PostCardProps {
 export function PostCard({ post, authorProfile, hideGroupInfo, isPreview = false }: PostCardProps) {
   const { data: currentUser } = useProfile();
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
+  const [isReactionListOpen, setIsReactionListOpen] = useState(false);
 
   const { currentReaction, likesCount, handleReaction } = useReaction({
       initialReaction: post.userReaction ?? null,
@@ -89,7 +92,6 @@ export function PostCard({ post, authorProfile, hideGroupInfo, isPreview = false
     )}>
       <div className="flex justify-between items-start mb-3">
         <div className="flex gap-3">
-          
           {isGroupPost ? (
             <div className="relative w-10 h-10"> 
                <Link href={groupUrl}>
@@ -99,7 +101,6 @@ export function PostCard({ post, authorProfile, hideGroupInfo, isPreview = false
                     </AvatarFallback>
                  </Avatar>
                </Link>
-
                <Link href={authorProfileUrl}>
                  <Avatar className="absolute -bottom-1.5 -right-1.5 w-6 h-6 border-2 border-background cursor-pointer hover:scale-110 transition-transform ring-1 ring-white">
                     <AvatarImage src={authorAvatarUrl} className="object-cover" />
@@ -203,15 +204,7 @@ export function PostCard({ post, authorProfile, hideGroupInfo, isPreview = false
                            {doc.fileName ? doc.fileName.split('.').pop()?.toUpperCase() : "DOC"}
                         </p>
                     </div>
-                    
-                    <a 
-                        href={doc.url} 
-                        download={doc.fileName || "document"} 
-                        target="_blank" 
-                        rel="noreferrer" 
-                        className="p-2 hover:bg-background rounded-full text-muted-foreground hover:text-foreground cursor-pointer shrink-0"
-                        title="Свали файл"
-                    >
+                    <a href={doc.url} download className="p-2 text-muted-foreground hover:text-foreground">
                         <Download className="h-4 w-4" />
                     </a>
                 </div>
@@ -224,17 +217,9 @@ export function PostCard({ post, authorProfile, hideGroupInfo, isPreview = false
           {visualMedia.length === 1 ? (
             <div className="flex justify-center items-center md:rounded-lg overflow-hidden relative bg-transparent">
               {visualMedia[0].mediaType === 1 ? (
-                <video
-                  controls
-                  src={visualMedia[0].url}
-                  className="w-full h-auto max-h-[60vh] md:rounded-lg border"
-                />
+                <video controls src={visualMedia[0].url} className="w-full h-auto max-h-[60vh] md:rounded-lg border" />
               ) : (
-                <img
-                  src={visualMedia[0].url}
-                  alt="post content"
-                  className="w-auto h-auto max-w-full max-h-[60vh] mx-auto md:rounded-lg border"
-                />
+                <img src={visualMedia[0].url} alt="post content" className="w-auto h-auto max-w-full max-h-[60vh] mx-auto md:rounded-lg border" />
               )}
             </div>
           ) : (
@@ -244,17 +229,9 @@ export function PostCard({ post, authorProfile, hideGroupInfo, isPreview = false
                  <CarouselItem key={index} className="basis-full">
                     <div className="flex items-center justify-center relative w-full h-full bg-transparent">
                         {item.mediaType === 1 ? (
-                        <video 
-                            controls 
-                            src={item.url} 
-                            className="w-full h-auto max-h-[600px] object-contain" 
-                        />
+                        <video controls src={item.url} className="w-full h-auto max-h-[600px] object-contain" />
                         ) : (
-                        <img 
-                            src={item.url} 
-                            alt={`slide-${index}`} 
-                            className="w-full h-auto max-h-[600px] object-contain" 
-                        />
+                        <img src={item.url} alt={`slide-${index}`} className="w-full h-auto max-h-[600px] object-contain" />
                         )}
                     </div>
                 </CarouselItem>
@@ -268,7 +245,10 @@ export function PostCard({ post, authorProfile, hideGroupInfo, isPreview = false
       )}
 
       <div className="flex justify-between text-xs text-muted-foreground mb-2 px-1 min-h-[20px]">
-          <div className="flex items-center gap-1">
+          <div 
+            className="flex items-center gap-1 cursor-pointer hover:text-blue-600 transition-colors"
+            onClick={() => likesCount > 0 && setIsReactionListOpen(true)}
+          >
             {likesCount > 0 && (
                <>
                  {activeReactionConfig 
@@ -283,7 +263,7 @@ export function PostCard({ post, authorProfile, hideGroupInfo, isPreview = false
             <span 
                 className={cn(
                     "transition-colors",
-                    !isPreview && "cursor-pointer hover:underline hover:text-foreground"
+                    !isPreview && "cursor-pointer hover:text-foreground"
                 )}
                 onClick={() => !isPreview && setIsCommentDialogOpen(true)}
             >
@@ -321,34 +301,26 @@ export function PostCard({ post, authorProfile, hideGroupInfo, isPreview = false
     </div>
 
     {!isPreview && currentUser && (
-        <PostCommentDialog 
-            open={isCommentDialogOpen} 
-            onOpenChange={setIsCommentDialogOpen}
-            post={post}
-            currentUser={currentUser}
-        />
+        <>
+            <PostCommentDialog 
+                open={isCommentDialogOpen} 
+                onOpenChange={setIsCommentDialogOpen}
+                post={post}
+                currentUser={currentUser}
+                parentReaction={currentReaction}
+                parentLikesCount={likesCount}
+            />
+            
+            {isReactionListOpen && (
+                <ReactionListDialog 
+                    open={isReactionListOpen}
+                    onOpenChange={setIsReactionListOpen}
+                    entityId={post.id}
+                    isComment={false}
+                />
+            )}
+        </>
     )}
     </>
   );
 }
-
-{/* const getRelativeTime = (dateString: string) => {
-    if (!dateString || dateString.startsWith("0001")) return "Току-що";
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
-    if (diffInSeconds < 5) return "Току-що";
-    if (diffInSeconds < 60) return `преди ${diffInSeconds} сек.`;
-    
-    const minutes = Math.floor(diffInSeconds / 60);
-    if (minutes < 60) return `преди ${minutes} мин.`;
-    
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `преди ${hours} ч.`;
-    
-    const days = Math.floor(hours / 24);
-    if (days < 7) return `преди ${days} дни`;
-    
-    return date.toLocaleDateString("bg-BG", { day: "numeric", month: "long" });
-  }; - old */}

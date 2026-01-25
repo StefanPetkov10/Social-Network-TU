@@ -73,6 +73,7 @@ export const useCancelFriendRequest = () => {
       queryClient.invalidateQueries({ queryKey: ["friend-requests-infinite"] });
       queryClient.invalidateQueries({ queryKey: ["friend-suggestions-infinite"] });
       queryClient.invalidateQueries({ queryKey: ["posts"] });
+
       toast.success("Поканата е отменена.");
     },
     onError: (error: any) => {
@@ -90,6 +91,7 @@ export const useAcceptFriendRequest = () => {
       queryClient.invalidateQueries({ queryKey: ["friend-requests-infinite"] });
       queryClient.invalidateQueries({ queryKey: ["my-friends-infinite"] });
       queryClient.invalidateQueries({ queryKey: ["friend-suggestions-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["reactors"] });
       toast.success("Успешно приехте поканата!");
     },
     onError: (error: any) => {
@@ -105,6 +107,7 @@ export const useDeclineFriendRequest = () => {
     mutationFn: (pendingRequestId: string) => friendsService.declineFriendRequest(pendingRequestId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["friend-requests-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["reactors"] });
       toast.success("Поканата е отхвърлена.");
     },
     onError: (error: any) => {
@@ -122,6 +125,8 @@ export const useRemoveFriend = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-friends-infinite"] });
       queryClient.invalidateQueries({ queryKey: ["friend-suggestions-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["reactors"] });
+
       toast.success("Приятелят е премахнат.");
     },
     onError: () => {

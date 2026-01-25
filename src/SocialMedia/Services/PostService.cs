@@ -102,7 +102,7 @@ namespace SocialMedia.Services
             post.Profile = author;
             post.Group = group;
 
-            return SuccessPostDto(post, author, "Post created successfully.");
+            return SuccessPostDto(post, author, "Post created successfully.", author.Id);
         }
 
         public async Task<ApiResponse<PostDto>> GetPostByIdAsync(ClaimsPrincipal userClaims, Guid postId)
@@ -117,6 +117,7 @@ namespace SocialMedia.Services
                 .Include(p => p.Group)
                 .Include(p => p.Profile)
                 .Include(p => p.Media)
+                .Include(p => p.Reactions)
                 .FirstOrDefaultAsync(p => p.Id == postId);
 
             if (post == null || post.IsDeleted) return NotFoundResponse<PostDto>("Post");
@@ -128,17 +129,17 @@ namespace SocialMedia.Services
                 if (group == null) return NotFoundResponse<PostDto>("Group");
 
                 if (group.Privacy == GroupPrivacy.Public)
-                    return SuccessPostDto(post, authorProfile, "Success.");
+                    return SuccessPostDto(post, authorProfile, "Success.", viewerProfile.Id);
 
                 var isMember = await _groupRepository.IsMemberAsync(group.Id, viewerProfile.Id);
                 if (!isMember) return ApiResponse<PostDto>.ErrorResponse("Not a member.");
 
-                return SuccessPostDto(post, authorProfile, "Success.");
+                return SuccessPostDto(post, authorProfile, "Success.", viewerProfile.Id);
             }
 
-            if (viewerProfile.Id == post.ProfileId) return SuccessPostDto(post, authorProfile, "Success.");
+            if (viewerProfile.Id == post.ProfileId) return SuccessPostDto(post, authorProfile, "Success.", viewerProfile.Id);
 
-            if (post.Visibility == PostVisibility.Public) return SuccessPostDto(post, authorProfile, "Success.");
+            if (post.Visibility == PostVisibility.Public) return SuccessPostDto(post, authorProfile, "Success.", viewerProfile.Id);
 
             if (post.Visibility == PostVisibility.FriendsOnly)
             {
@@ -147,7 +148,7 @@ namespace SocialMedia.Services
                    ((f.RequesterId == viewerProfile.Id && f.AddresseeId == post.ProfileId) ||
                    (f.RequesterId == post.ProfileId && f.AddresseeId == viewerProfile.Id)));
 
-                if (isFriend) return SuccessPostDto(post, authorProfile, "Success.");
+                if (isFriend) return SuccessPostDto(post, authorProfile, "Success.", viewerProfile.Id);
             }
 
             return ApiResponse<PostDto>.ErrorResponse("You are not authorized to view this post.");
@@ -183,6 +184,7 @@ namespace SocialMedia.Services
                 .Include(p => p.Group)
                 .Include(p => p.Profile)
                 .ThenInclude(p => p.User)
+                .Include(p => p.Reactions)
                 .Where(p => !p.IsDeleted)
                 .Where(p =>
                     (p.GroupId.HasValue && myGroupIds.Contains(p.GroupId.Value))
@@ -206,7 +208,7 @@ namespace SocialMedia.Services
             }
 
             var posts = await query.Take(take).ToListAsync();
-            var dtos = posts.Select(p => SuccessPostDto(p, p.Profile, "").Data).ToList();
+            var dtos = posts.Select(p => SuccessPostDto(p, p.Profile, "", viewerProfile.Id).Data).ToList();
             var last = posts.LastOrDefault()?.Id;
 
             return ApiResponse<IEnumerable<PostDto>>.SuccessResponse(dtos, "Feed retrieved.", new { lastPostId = last });
@@ -231,6 +233,7 @@ namespace SocialMedia.Services
                 .Include(p => p.Group)
                 .Include(p => p.Profile)
                 .ThenInclude(p => p.User)
+                .Include(p => p.Reactions)
                 .Where(p => !p.IsDeleted && p.ProfileId == profileId)
                 .Where(p =>
                     p.Visibility == PostVisibility.Public ||
@@ -247,18 +250,7 @@ namespace SocialMedia.Services
 
             var posts = await query.Take(take).ToListAsync();
 
-            var postIds = posts.Select(p => p.Id).ToList();
-            var userReactions = await _reactionRepository.QueryNoTracking()
-                .Where(r => postIds.Contains((Guid)r.PostId) && r.ProfileId == viewerProfile.Id)
-                .Select(r => new { r.PostId, r.Type }).ToListAsync();
-            var reactionsDict = userReactions.ToDictionary(k => k.PostId, v => v.Type);
-
-            var dtos = posts.Select(p =>
-            {
-                var dto = SuccessPostDto(p, p.Profile, "").Data;
-                dto.UserReaction = reactionsDict.TryGetValue(p.Id, out var type) ? type : null;
-                return dto;
-            }).ToList();
+            var dtos = posts.Select(p => SuccessPostDto(p, p.Profile, "", viewerProfile.Id).Data).ToList();
 
             var last = posts.LastOrDefault()?.Id;
             return ApiResponse<IEnumerable<PostDto>>.SuccessResponse(dtos, "User posts retrieved.", new { lastPostId = last });
@@ -274,6 +266,7 @@ namespace SocialMedia.Services
 
             var post = _postRepository.Query()
                 .Include(p => p.Media)
+                .Include(p => p.Reactions)
                 .FirstOrDefault(p => p.Id == postId && !p.IsDeleted);
 
             if (post == null) return NotFoundResponse<PostDto>("Post");
@@ -313,7 +306,7 @@ namespace SocialMedia.Services
             }
             await _postRepository.SaveChangesAsync();
             var profile = await _profileRepository.GetByIdAsync(post.ProfileId);
-            return SuccessPostDto(post, profile, "Post updated successfully.");
+            return SuccessPostDto(post, profile, "Post updated successfully.", viewerProfile.Id);
         }
 
         public async Task<ApiResponse<object>> DeletePostAsync(ClaimsPrincipal userId, Guid postId)
@@ -490,7 +483,7 @@ namespace SocialMedia.Services
             return ApiResponse<IEnumerable<PostMediaDto>>.SuccessResponse(mediaList, "Group media retrieved.");
         }
 
-        private ApiResponse<PostDto> SuccessPostDto(Post post, Database.Models.Profile profile, string message)
+        private ApiResponse<PostDto> SuccessPostDto(Post post, Database.Models.Profile profile, string message, Guid? currentUserId = null)
         {
             var dto = _mapper.Map<PostDto>(post);
             dto.CreatedAt = post.CreatedDate;
@@ -499,6 +492,18 @@ namespace SocialMedia.Services
             dto.Username = profile.User.UserName;
             dto.GroupId = post.GroupId;
             dto.GroupName = post.Group != null ? post.Group.Name : null;
+
+            if (post.Reactions != null)
+            {
+                dto.LikesCount = post.Reactions.Count;
+            }
+
+            if (currentUserId.HasValue && post.Reactions != null)
+            {
+                var myReaction = post.Reactions.FirstOrDefault(r => r.ProfileId == currentUserId.Value);
+                dto.UserReaction = myReaction?.Type;
+            }
+
             var baseUrl = $"{_httpContextAccessor.HttpContext!.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}";
             dto.Media = post.Media.Select(m => new PostMediaDto
             {

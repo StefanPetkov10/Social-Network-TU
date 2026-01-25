@@ -1,9 +1,11 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using SocialMedia.Common;
 using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database.Models;
 using SocialMedia.Database.Models.Enums;
+using SocialMedia.DTOs.Reaction;
 using SocialMedia.Services.Interfaces;
 
 namespace SocialMedia.Services
@@ -14,17 +16,20 @@ namespace SocialMedia.Services
         private readonly IRepository<Profile, Guid> _profileRepository;
         private readonly IRepository<Post, Guid> _postRepository;
         private readonly IRepository<Comment, Guid> _commentRepository;
+        private readonly IRepository<Friendship, Guid> _friendshipRepository;
 
         public ReactionService(IRepository<Reaction, Guid> reactionRepository,
             IRepository<Profile, Guid> profileRepository,
             IRepository<Post, Guid> postRepository,
             IRepository<Comment, Guid> commentRepository,
-            UserManager<ApplicationUser> userManager) : base(userManager)
+            UserManager<ApplicationUser> userManager,
+            IRepository<Friendship, Guid> friendshipRepository) : base(userManager)
         {
             _reactionRepository = reactionRepository;
             _profileRepository = profileRepository;
             _postRepository = postRepository;
             _commentRepository = commentRepository;
+            _friendshipRepository = friendshipRepository;
         }
 
         public async Task<ApiResponse<string>> ReactToPostAsync(ClaimsPrincipal userClaim, Guid postId, ReactionType type)
@@ -127,6 +132,89 @@ namespace SocialMedia.Services
                     return ApiResponse<string>.SuccessResponse("Reaction updated successfully.");
                 }
             }
+        }
+
+        public async Task<ApiResponse<ReactorListResponse>> GetReactorsAsync(
+            ClaimsPrincipal userClaims,
+            Guid entityId,
+            bool isComment,
+            ReactionType? typeFilter = null,
+            Guid? lastReactionId = null,
+            int take = 20)
+        {
+            var invalidUserResponse = GetUserIdOrUnauthorized<ReactorListResponse>(userClaims, out var currentUserId);
+            if (invalidUserResponse != null) return invalidUserResponse;
+
+            var currentProfile = await _profileRepository.GetByApplicationIdAsync(currentUserId);
+            if (currentProfile == null) return NotFoundResponse<ReactorListResponse>("Profile");
+
+            var query = _reactionRepository.QueryNoTracking()
+                .Include(r => r.Profile).ThenInclude(p => p.User)
+                .Where(r => isComment ? r.CommentId == entityId : r.PostId == entityId);
+
+            Dictionary<ReactionType, int> counts = new();
+            if (lastReactionId == null)
+            {
+                counts = await _reactionRepository.QueryNoTracking()
+                    .Where(r => isComment ? r.CommentId == entityId : r.PostId == entityId)
+                    .GroupBy(r => r.Type)
+                    .Select(g => new { Type = g.Key, Count = g.Count() })
+                    .ToDictionaryAsync(x => x.Type, x => x.Count);
+            }
+
+            if (typeFilter.HasValue)
+            {
+                query = query.Where(r => r.Type == typeFilter.Value);
+            }
+
+            query = query.OrderByDescending(r => r.CreatedAt);
+
+            if (lastReactionId.HasValue)
+            {
+                var lastReaction = await _reactionRepository.GetByIdAsync(lastReactionId.Value);
+                if (lastReaction != null)
+                {
+                    query = query.Where(r => r.CreatedAt < lastReaction.CreatedAt);
+                }
+            }
+
+            var reactions = await query.Take(take).ToListAsync();
+
+            var reactorProfileIds = reactions.Select(r => r.ProfileId).ToList();
+            var friendships = await _friendshipRepository.QueryNoTracking()
+                .Where(f => (f.RequesterId == currentProfile.Id && reactorProfileIds.Contains(f.AddresseeId)) ||
+                            (f.AddresseeId == currentProfile.Id && reactorProfileIds.Contains(f.RequesterId)))
+                .ToListAsync();
+
+            var dtos = reactions.Select(r =>
+            {
+                var friendship = friendships.FirstOrDefault(f => f.RequesterId == r.ProfileId || f.AddresseeId == r.ProfileId);
+
+                bool isFriend = friendship?.Status == FriendshipStatus.Accepted;
+                bool hasSentRequest = friendship?.Status == FriendshipStatus.Pending && friendship.RequesterId == currentProfile.Id;
+                bool hasReceivedRequest = friendship?.Status == FriendshipStatus.Pending && friendship.AddresseeId == currentProfile.Id;
+
+                return new ReactionDto
+                {
+                    ProfileId = r.ProfileId,
+                    Username = r.Profile.User.UserName,
+                    FullName = r.Profile.FullName ?? "Unknown",
+                    AuthorAvatar = r.Profile.Photo,
+                    Type = r.Type,
+                    ReactedDate = r.CreatedAt,
+                    IsMe = r.ProfileId == currentProfile.Id,
+                    IsFriend = isFriend,
+                    HasSentRequest = hasSentRequest,
+                    HasReceivedRequest = hasReceivedRequest,
+                    PendingRequestId = hasSentRequest || hasReceivedRequest ? friendship?.Id : null
+                };
+            }).ToList();
+
+            return ApiResponse<ReactorListResponse>.SuccessResponse(new ReactorListResponse
+            {
+                Reactors = dtos,
+                ReactionCounts = counts
+            });
         }
     }
 }

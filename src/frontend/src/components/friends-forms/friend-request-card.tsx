@@ -32,7 +32,7 @@ export function FriendRequestCard({ request, onConfirm, onDelete }: FriendReques
         </h3>
         
         <p className="text-sm text-gray-500 mb-3">
-           Покана от @{request.userName}
+           Покана от @{request.username}
         </p>
         
         <div className="mt-auto flex flex-col gap-2">

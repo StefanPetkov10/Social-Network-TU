@@ -41,6 +41,7 @@ namespace SocialMedia.Services
             _httpContextAccessor = httpContextAccessor;
             _mapper = mapper;
         }
+
         public async Task<ApiResponse<GroupDto>> CreateGroupAsync(ClaimsPrincipal userClaims, CreateGroupDto dto)
         {
             var invalidUserResponse = GetUserIdOrUnauthorized<GroupDto>(userClaims, out var userId);
@@ -272,6 +273,7 @@ namespace SocialMedia.Services
                     .ThenInclude(u => u.User)
                 .Include(p => p.Group)
                 .Include(p => p.Media)
+                .Include(p => p.Reactions)
                 .OrderByDescending(p => p.CreatedDate)
                 .AsQueryable();
 
@@ -286,7 +288,7 @@ namespace SocialMedia.Services
 
             var posts = await queryPosts.Take(take).ToListAsync();
 
-            var dtos = posts.Select(p => SuccessPostDto(p, p.Profile, "").Data).ToList();
+            var dtos = posts.Select(p => SuccessPostDto(p, p.Profile, "", profile.Id).Data).ToList();
 
             var lastId = posts.LastOrDefault()?.Id;
 
@@ -331,6 +333,7 @@ namespace SocialMedia.Services
                 .Include(p => p.Media)
                 .Include(p => p.Profile)
                     .ThenInclude(p => p.User)
+                .Include(p => p.Reactions)
                 .OrderByDescending(p => p.CreatedDate)
                 .AsQueryable();
 
@@ -345,7 +348,7 @@ namespace SocialMedia.Services
 
             var posts = await queryPosts.Take(take).ToListAsync();
 
-            var dtos = posts.Select(p => SuccessPostDto(p, p.Profile, "").Data).ToList();
+            var dtos = posts.Select(p => SuccessPostDto(p, p.Profile, "", profile.Id).Data).ToList();
 
             var lastId = posts.LastOrDefault()?.Id;
 
@@ -454,7 +457,7 @@ namespace SocialMedia.Services
             return ApiResponse<object>.SuccessResponse(null, "Group deleted successfully.");
         }
 
-        private ApiResponse<PostDto> SuccessPostDto(Post post, Database.Models.Profile profile, string message)
+        private ApiResponse<PostDto> SuccessPostDto(Post post, Database.Models.Profile profile, string message, Guid? currentUserId = null)
         {
             var dto = _mapper.Map<PostDto>(post);
             dto.CreatedAt = post.CreatedDate;
@@ -463,6 +466,18 @@ namespace SocialMedia.Services
             dto.Username = profile.User.UserName;
             dto.GroupId = post.GroupId;
             dto.GroupName = post.Group != null ? post.Group.Name : null;
+
+            if (post.Reactions != null)
+            {
+                dto.LikesCount = post.Reactions.Count;
+            }
+
+            if (currentUserId.HasValue && post.Reactions != null)
+            {
+                var myReaction = post.Reactions.FirstOrDefault(r => r.ProfileId == currentUserId.Value);
+                dto.UserReaction = myReaction?.Type;
+            }
+
             var baseUrl = $"{_httpContextAccessor.HttpContext!.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}";
             dto.Media = post.Media.Select(m => new PostMediaDto
             {

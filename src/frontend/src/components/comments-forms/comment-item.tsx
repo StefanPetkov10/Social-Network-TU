@@ -11,6 +11,8 @@ import { MediaType } from "@frontend/lib/types/enums";
 import { CommentInput } from "./comment-input"; 
 import { useProfile } from "@frontend/hooks/use-profile"; 
 import { useGetReplies, useDeleteComment } from "@frontend/hooks/use-comments"; 
+import { ReactionListDialog } from "../reaction-dialog/reaction-list-dialog";
+
 import { 
     Loader2, 
     CornerDownRight, 
@@ -38,7 +40,7 @@ import {
 } from "@frontend/components/ui/alert-dialog"; 
 
 import { reactionService } from "@frontend/services/reaction-service";
-import { ReactionButton } from "@frontend/components/ui/reaction-button";
+import { ReactionButton, REACTION_CONFIG } from "@frontend/components/ui/reaction-button";
 import { useReaction } from "@frontend/hooks/use-reaction";
 
 interface CommentItemProps {
@@ -53,16 +55,17 @@ export function CommentItem({ comment }: CommentItemProps) {
     const [areRepliesOpen, setAreRepliesOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false); 
+    const [isReactionListOpen, setIsReactionListOpen] = useState(false);
 
     const { currentReaction, likesCount, handleReaction } = useReaction({
         initialReaction: comment.userReaction || null, 
-        initialCount: comment.likesCount || 0,         
+        initialCount: comment.likesCount || 0,        
         entityId: comment.id,
         reactApiCall: (id, type) => reactionService.reactToComment(id, type) 
     });
 
-    const isOwner = currentUser?.id === comment.profileId || currentUser?.id === comment.profileId; 
-    const isCurrentUser = currentUser?.id === (comment.profileId || comment.profileId);
+    const isOwner = currentUser?.id === comment.profileId; 
+    const isCurrentUser = currentUser?.id === comment.profileId;
     
     const authorUsername = (comment as any).authorUsername; 
     
@@ -72,6 +75,8 @@ export function CommentItem({ comment }: CommentItemProps) {
 
     const isVideo = comment.media?.mediaType === MediaType.Video; 
     const isDocument = comment.media?.mediaType === MediaType.Document; 
+
+    const activeReactionConfig = currentReaction !== null ? REACTION_CONFIG[currentReaction] : null;
 
     const { 
         data, 
@@ -137,7 +142,7 @@ export function CommentItem({ comment }: CommentItemProps) {
                         </div>
                     ) : (
                         <div className="group/bubble relative flex items-start gap-2">
-                             <div className="bg-muted/40 rounded-2xl p-2 px-3 w-fit min-w-[120px]">
+                             <div className="bg-muted/40 rounded-2xl p-2 px-3 w-fit min-w-[120px] relative">
                                 <Link href={authorProfileUrl} className="font-bold text-xs block text-foreground cursor-pointer hover:underline mb-0.5 w-fit">
                                     {comment.authorName}
                                 </Link>
@@ -145,6 +150,23 @@ export function CommentItem({ comment }: CommentItemProps) {
                                 <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed break-words">
                                     {comment.content}
                                 </p>
+
+                                {likesCount > 0 && (
+                                    <div 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setIsReactionListOpen(true);
+                                        }}
+                                        className="absolute -bottom-2 -right-1 z-10 bg-background border shadow-sm rounded-full px-1.5 py-0.5 flex items-center gap-1 cursor-pointer hover:bg-muted/80 transition-colors"
+                                    >
+                                        <span className="text-[10px] leading-none filter drop-shadow-sm">
+                                            {activeReactionConfig ? activeReactionConfig.icon : "👍"}
+                                        </span>
+                                        <span className="text-[10px] font-bold text-muted-foreground leading-none">
+                                            {likesCount}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
 
                             {isOwner && (
@@ -310,6 +332,15 @@ export function CommentItem({ comment }: CommentItemProps) {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {isReactionListOpen && (
+                <ReactionListDialog 
+                    open={isReactionListOpen}
+                    onOpenChange={setIsReactionListOpen}
+                    entityId={comment.id}
+                    isComment={true} 
+                />
+            )}
         </div>
     );
 }

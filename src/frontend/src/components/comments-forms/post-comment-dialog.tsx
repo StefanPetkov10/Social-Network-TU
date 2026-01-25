@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@frontend/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { Button } from "@frontend/components/ui/button";
@@ -26,7 +27,7 @@ import { bg } from "date-fns/locale";
 
 import { PostDto } from "@frontend/lib/types/posts";
 import { ProfileDto } from "@frontend/lib/types/profile";
-import { getInitials } from "@frontend/lib/utils";
+import { getInitials, cn } from "@frontend/lib/utils"; 
 import { useGetComments } from "@frontend/hooks/use-comments";
 import { CommentInput } from "./comment-input"; 
 import { CommentItem } from "./comment-item";
@@ -34,21 +35,38 @@ import { CommentItem } from "./comment-item";
 import { reactionService } from "@frontend/services/reaction-service";
 import { useReaction } from "@frontend/hooks/use-reaction";
 import { ReactionButton, REACTION_CONFIG } from "@frontend/components/ui/reaction-button";
+import { ReactionType } from "@frontend/lib/types/enums";
+import { ReactionListDialog } from "../reaction-dialog/reaction-list-dialog";
 
 interface PostCommentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   post: PostDto;
   currentUser: ProfileDto;
+  parentReaction?: ReactionType | null;
+  parentLikesCount?: number;
 }
 
-export function PostCommentDialog({ open, onOpenChange, post, currentUser }: PostCommentDialogProps) {
+export function PostCommentDialog({ 
+    open, 
+    onOpenChange, 
+    post, 
+    currentUser,
+    parentReaction,
+    parentLikesCount
+}: PostCommentDialogProps) {
+
+  const [isReactionListOpen, setIsReactionListOpen] = useState(false);
+
   const { data, fetchNextPage, hasNextPage, isLoading, isFetchingNextPage } = useGetComments(post.id);
   const comments = data?.pages.flatMap((page) => page.data) || [];
 
+  const effectiveReaction = parentReaction !== undefined ? parentReaction : (post.userReaction ?? null);
+  const effectiveCount = parentLikesCount !== undefined ? parentLikesCount : post.likesCount;
+
   const { currentReaction, likesCount, handleReaction } = useReaction({
-      initialReaction: post.userReaction ?? null,
-      initialCount: post.likesCount,
+      initialReaction: effectiveReaction,
+      initialCount: effectiveCount,
       entityId: post.id,
       reactApiCall: (id, type) => reactionService.reactToPost(id, type)
   });
@@ -70,14 +88,15 @@ export function PostCommentDialog({ open, onOpenChange, post, currentUser }: Pos
   const activeReactionConfig = currentReaction !== null ? REACTION_CONFIG[currentReaction] : null;
 
   const getRelativeTime = (dateString: string) => {
-     try {
-        return formatDistanceToNow(new Date(dateString), { addSuffix: true, locale: bg });
-     } catch {
-        return "наскоро";
-     }
+      try {
+         return formatDistanceToNow(new Date(dateString), { addSuffix: true, locale: bg });
+      } catch {
+         return "наскоро";
+      }
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl md:max-w-2xl h-[85vh] p-0 gap-0 bg-background flex flex-col overflow-hidden shadow-2xl border-none outline-none">
         
@@ -234,7 +253,13 @@ export function PostCommentDialog({ open, onOpenChange, post, currentUser }: Pos
                     {(likesCount > 0 || post.commentsCount > 0) && (
                         <>
                             <div className="flex justify-between items-center text-xs text-muted-foreground py-2">
-                                <div className="flex items-center gap-1">
+                                <div 
+                                    className={cn(
+                                        "flex items-center gap-1 transition-colors",
+                                        likesCount > 0 && "cursor-pointer hover:text-blue-600"
+                                    )}
+                                    onClick={() => likesCount > 0 && setIsReactionListOpen(true)}
+                                >
                                     {likesCount > 0 && (
                                         <>
                                             {activeReactionConfig 
@@ -326,5 +351,15 @@ export function PostCommentDialog({ open, onOpenChange, post, currentUser }: Pos
 
       </DialogContent>
     </Dialog>
+
+    {isReactionListOpen && (
+        <ReactionListDialog 
+            open={isReactionListOpen}
+            onOpenChange={setIsReactionListOpen}
+            entityId={post.id}
+            isComment={false}
+        />
+    )}
+    </>
   );
 }
