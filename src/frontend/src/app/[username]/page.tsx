@@ -412,8 +412,12 @@ export default function UserProfilePage({ params }: PageProps) {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
-                    
-                    <div className="lg:col-span-1 space-y-5 sticky top-24">
+                    <div className={cn(
+                        "lg:col-span-1 space-y-6",
+                        "sticky bottom-6", 
+                        "self-end",      
+                        "h-fit"        
+                    )}>
                         {activeTab !== "Приятели" && (
                                     <ProfileFriendsCard 
                                     profileId={profile.id} 
