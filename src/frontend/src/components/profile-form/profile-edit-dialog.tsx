@@ -23,7 +23,7 @@ export function EditProfileDialog({ isOpen, onClose, profile }: EditProfileDialo
     const [formData, setFormData] = useState<UpdateProfileDto>({
         firstName: "",
         lastName: "",
-        userName: "",
+        username: "",
         bio: "",
         sex: Gender.Male,
         photoBase64: null
@@ -39,7 +39,7 @@ export function EditProfileDialog({ isOpen, onClose, profile }: EditProfileDialo
             setFormData({
                 firstName: profile.firstName || "",
                 lastName: profile.lastName || "",
-                userName: profile.userName || "", 
+                username: profile.username || "", 
                 bio: profile.bio || "",
                 sex: profile.sex === Gender.Female ? Gender.Female : Gender.Male, 
                 photoBase64: null
@@ -141,11 +141,11 @@ export function EditProfileDialog({ isOpen, onClose, profile }: EditProfileDialo
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="userName">Потребителско име</Label>
+                        <Label htmlFor="username">Потребителско име</Label>
                         <Input 
-                            id="userName" 
-                            value={formData.userName} 
-                            onChange={(e) => setFormData({...formData, userName: e.target.value})}
+                            id="username" 
+                            value={formData.username} 
+                            onChange={(e) => setFormData({...formData, username: e.target.value})}
                             required
                         />
                         <p className="text-[10px] text-muted-foreground">

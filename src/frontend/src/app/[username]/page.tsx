@@ -15,10 +15,13 @@ import {
   ArrowLeft,
   Clock,
   X,
-  FileText 
+  FileText,
+  Edit, 
+  Save 
 } from "lucide-react";
 
 import { Button } from "@frontend/components/ui/button";
+import { Input } from "@frontend/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { Skeleton } from "@frontend/components/ui/skeleton";
 import { PostCard } from "@frontend/components/post-forms/post-card";
@@ -35,11 +38,10 @@ import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@frontend/components/ui/dropdown-menu";
 
-import { useProfileByUsername, useProfile } from "@frontend/hooks/use-profile";
+import { useProfileByUsername, useProfile, useUpdateBio } from "@frontend/hooks/use-profile"; 
 import { useUserPosts } from "@frontend/hooks/use-post";
 import { useIntersection } from "@mantine/hooks";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-
 import { friendsService } from "@frontend/services/friends-service";
 import { followersService } from "@frontend/services/followers-servise";
 import { cn, getInitials, getUserDisplayName, getUserUsername } from "@frontend/lib/utils";
@@ -51,6 +53,8 @@ import { MediaGalleryView } from "@frontend/components/media/media-gallery-view"
 import { DocumentsListView } from "@frontend/components/media/documents-list-view";
 import { FriendsListView } from "@frontend/components/profile-form/friends-list-view";
 import { FollowersListDialog, FollowingListDialog } from "@frontend/components/profile-form/follows-lists";
+import { EditProfileDialog } from "@frontend/components/profile-form/profile-edit-dialog"; 
+
 type RequestStatusUI = "pending_received" | "pending_sent" | "friend" | "none";
 
 const TAB_MAP: Record<string, string> = {
@@ -93,11 +97,16 @@ export default function UserProfilePage({ params }: PageProps) {
   
   const [showUnfollowDialog, setShowUnfollowDialog] = useState(false);
   const [showUnfriendDialog, setShowUnfriendDialog] = useState(false);
-
   const [showFollowersDialog, setShowFollowersDialog] = useState(false);
   const [showFollowingDialog, setShowFollowingDialog] = useState(false);
 
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAddingBio, setIsAddingBio] = useState(false);
+  const [bioInput, setBioInput] = useState("");
+
   const queryClient = useQueryClient();
+
+  const { data: myProfile, isLoading: isMeLoading } = useProfile();
 
   const { 
     data: response, 
@@ -105,9 +114,26 @@ export default function UserProfilePage({ params }: PageProps) {
     isError 
   } = useProfileByUsername(username);
 
-  const { data: myProfile } = useProfile();
-  
+  const { mutate: updateBio, isPending: isUpdatingBio } = useUpdateBio(); 
+
   const profile = response?.data; 
+
+  useEffect(() => {
+    if (!isMeLoading && myProfile) {
+        const isMyOwnProfile = 
+            myProfile.username.toLowerCase() === username.toLowerCase() || 
+            (profile && myProfile.id === profile.id);
+
+        if (isMyOwnProfile) {
+            router.replace("/profile"); 
+        }
+    }
+  }, [isMeLoading, myProfile, username, profile, router]);
+
+  if (isMeLoading) return <ProfilePageSkeleton />;
+  if (myProfile && myProfile.username.toLowerCase() === username.toLowerCase()) {
+      return <ProfilePageSkeleton />;
+  }
 
   const getComputedStatus = (): RequestStatusUI => {
       if (profile && typeof profile.friendshipStatus === 'number') {
@@ -134,6 +160,16 @@ export default function UserProfilePage({ params }: PageProps) {
 
   const activeRequestId = profile?.friendshipRequestId;
   const profileId = profile?.id || "";
+
+  const handleSaveBio = () => {
+    if (!bioInput.trim()) return;
+    updateBio(bioInput, {
+        onSuccess: () => {
+            setIsAddingBio(false);
+            queryClient.invalidateQueries({ queryKey: ["user-profile-by-username", username] });
+        }
+    });
+  };
 
   const { mutate: sendRequest, isPending: isSendPending } = useMutation({
       mutationFn: async () => {
@@ -276,40 +312,80 @@ export default function UserProfilePage({ params }: PageProps) {
                                 </p>
 
                                 <div className="max-w-lg mx-auto md:mx-0 mt-2 min-h-[40px]">
-                                    {profile.bio && (
+                                    {profile.bio ? (
                                         <p className="text-sm text-foreground/90 leading-relaxed break-words">
                                             {profile.bio}
                                         </p>
-                                    )}
+                                    ) : isMe && isAddingBio ? (
+                                        <div className="flex items-center gap-2">
+                                            <Input 
+                                                value={bioInput}
+                                                onChange={(e) => setBioInput(e.target.value)}
+                                                placeholder="Напишете нещо за себе си..."
+                                                className="h-8 text-sm"
+                                                maxLength={500}
+                                                autoFocus
+                                            />
+                                            <Button 
+                                                size="icon" 
+                                                className="h-8 w-8 bg-green-600 hover:bg-green-700"
+                                                onClick={handleSaveBio}
+                                                disabled={isUpdatingBio}
+                                            >
+                                                {isUpdatingBio ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4" />}
+                                            </Button>
+                                            <Button 
+                                                size="icon" 
+                                                variant="ghost" 
+                                                className="h-8 w-8 text-muted-foreground"
+                                                onClick={() => setIsAddingBio(false)}
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ) : isMe ? (
+                                        <div 
+                                            onClick={() => setIsAddingBio(true)}
+                                            className="cursor-pointer group flex items-center justify-center md:justify-start gap-2"
+                                        >
+                                            <p className="text-sm text-muted-foreground/60 italic border-b border-transparent group-hover:border-muted-foreground/60 transition-all">
+                                                Добавете кратко описание за себе си...
+                                            </p>
+                                            <Edit className="h-3 w-3 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        </div>
+                                    ) : null}
                                 </div>
 
                                 <div className="flex items-center justify-center md:justify-start gap-5 text-sm font-medium pt-2 text-muted-foreground">
                                     <span 
-                                        className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors"
-                                        onClick={() => handleTabChange("Приятели")}
+                                            className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors"
+                                            onClick={() => handleTabChange("Приятели")}
                                     >
-                                        <Users className="h-4 w-4" />
-                                        <strong className="text-foreground">{profile.friendsCount}</strong> Приятели
+                                            <Users className="h-4 w-4" />
+                                            <strong className="text-foreground">{profile.friendsCount}</strong> Приятели
                                     </span>
                                     <span 
-                                        className="cursor-pointer hover:text-foreground transition-colors"
-                                        onClick={() => setShowFollowersDialog(true)}
+                                            className="cursor-pointer hover:text-foreground transition-colors"
+                                            onClick={() => setShowFollowersDialog(true)}
                                     >
-                                        <strong className="text-foreground">{profile.followersCount}</strong> Последователи
+                                            <strong className="text-foreground">{profile.followersCount}</strong> Последователи
                                     </span>
                                     <span 
-                                        className="cursor-pointer hover:text-foreground transition-colors"
-                                        onClick={() => setShowFollowingDialog(true)}
+                                            className="cursor-pointer hover:text-foreground transition-colors"
+                                            onClick={() => setShowFollowingDialog(true)}
                                     >
-                                        <strong className="text-foreground">{profile.followingCount}</strong> Последвани
+                                            <strong className="text-foreground">{profile.followingCount}</strong> Последвани
                                     </span>
                                 </div>
                             </div>
 
                             <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto mt-2 md:mt-0 min-w-[160px]">
                                 {isMe ? (
-                                    <Button className="bg-primary hover:bg-primary/90 text-white w-full sm:w-auto h-9 px-4">
-                                        Редактирай профил
+                                    <Button 
+                                        className="bg-primary hover:bg-primary/90 text-white w-full sm:w-auto h-9 px-4 gap-2"
+                                        onClick={() => setIsEditModalOpen(true)}
+                                    >
+                                        <Edit className="h-4 w-4" /> Редактирай профил
                                     </Button>
                                 ) : (
                                     <div className="flex flex-col gap-2 w-full">
@@ -410,6 +486,14 @@ export default function UserProfilePage({ params }: PageProps) {
                         ))}
                     </div>
                 </div>
+                
+                {isMe && profile && (
+                    <EditProfileDialog 
+                        isOpen={isEditModalOpen} 
+                        onClose={() => setIsEditModalOpen(false)} 
+                        profile={profile} 
+                    />
+                )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
                     <div className={cn(

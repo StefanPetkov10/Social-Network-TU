@@ -223,7 +223,7 @@ export default function ProfilePage() {
                                         className="w-full md:w-auto gap-2 bg-primary hover:bg-primary/90 h-9 px-4"
                                         onClick={() => setIsEditModalOpen(true)}
                                     >
-                                        <Edit className="h-4 w-4" /> Редактиране
+                                        <Edit className="h-4 w-4" /> Редактирай профил
                                     </Button>
                                 </div>
                             </div>

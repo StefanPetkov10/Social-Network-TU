@@ -47,7 +47,7 @@ namespace SocialMedia.Controllers
         }
 
         [HttpPost("update-bio")]
-        public async Task<IActionResult> UpdateBio([FromBody] string bio)
+        public async Task<IActionResult> UpdateBio([FromBody] UpdateBioRequest request)
         {
             if (!ModelState.IsValid)
             {
@@ -57,7 +57,7 @@ namespace SocialMedia.Controllers
                     .ToArray();
                 return BadRequest(ApiResponse<object>.ErrorResponse("Validation failed", errors));
             }
-            var response = await _profileService.UpdateBioAsync(User, bio);
+            var response = await _profileService.UpdateBioAsync(User, request.Bio);
             return Ok(response);
         }
 
