@@ -27,7 +27,7 @@ export default function AllFriendsPage() {
   const { data: profile } = useProfile();
   
   const { 
-    data: rawFriends,
+    data,
     fetchNextPage, 
     hasNextPage, 
     isFetchingNextPage,
@@ -38,9 +38,19 @@ export default function AllFriendsPage() {
   const removeFriendMutation = useRemoveFriend();
 
   const friendsList = useMemo(() => {
-      const list = rawFriends as unknown as FriendDto[]; 
-      return list?.filter((f): f is FriendDto => !!f) || [];
-  }, [rawFriends]);
+      if (!data || !data.pages) return [];
+      
+      return data.pages.flatMap((page: any) => {
+          return page.data || page.friends || (Array.isArray(page) ? page : []) || [];
+      }) as FriendDto[];
+  }, [data]);
+
+  const totalCount = useMemo(() => {
+      if (!data || !data.pages || data.pages.length === 0) return 0;
+      
+      const firstPage = data.pages[0] as any;
+      return firstPage.meta?.totalCount ?? firstPage.totalCount ?? friendsList.length;
+  }, [data, friendsList.length]);
 
   const filteredFriends = useMemo(() => {
     if (!searchQuery) return friendsList;
@@ -78,6 +88,7 @@ export default function AllFriendsPage() {
                 setSelectedProfile(null);
             }
             queryClient.invalidateQueries({ queryKey: ["friends-list"] });
+            queryClient.invalidateQueries({ queryKey: ["my-friends-infinite"] });
         }
     });
   };
@@ -117,7 +128,7 @@ export default function AllFriendsPage() {
                                     <Users className="h-7 w-7 text-primary" />
                                     Всички приятели
                                     <span className="text-gray-400 font-normal text-lg ml-2">
-                                        ({filteredFriends.length})
+                                        ({searchQuery ? filteredFriends.length : totalCount})
                                     </span>
                                 </h1>
                                 <p className="text-gray-500 mt-1">Управлявайте списъка си с приятели тук.</p>

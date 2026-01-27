@@ -29,7 +29,7 @@ export default function FriendRequestsPage() {
   const { data: profile } = useProfile();
   
   const { 
-    data: rawRequests = [], 
+    data, 
     isLoading: isLoadingRequests,
     fetchNextPage,
     hasNextPage,
@@ -37,9 +37,12 @@ export default function FriendRequestsPage() {
   } = useInfiniteFriendRequests();
 
   const requests = useMemo(() => {
-      const list = rawRequests as unknown as FriendRequest[];
-      return list?.filter((r): r is FriendRequest => !!r) || [];
-  }, [rawRequests]);
+      if (!data || !data.pages) return [];
+      
+      return data.pages.flatMap((page: any) => {
+          return page.data || [];
+      }) as FriendRequest[];
+  }, [data]);
 
   const acceptRequest = useAcceptFriendRequest();
   const declineRequest = useDeclineFriendRequest();

@@ -41,25 +41,31 @@ export default function FriendsPage() {
   const { ref: suggestionsRef, inView: suggestionsInView } = useInView();
 
   const { 
-      data: rawRequests = [], 
+      data: rawRequests, 
       isLoading: isLoadingRequests 
   } = useInfiniteFriendRequests();
   
   const { 
-    data: rawSuggestions = [], 
+    data: rawSuggestions, 
     fetchNextPage: fetchNextSuggestions, 
     hasNextPage: hasNextSuggestions, 
     isFetchingNextPage: isFetchingNextSuggestions 
   } = useInfiniteSuggestions();
   
   const requests = useMemo(() => {
-      const list = rawRequests as unknown as FriendRequest[];
-      return list?.filter((r): r is FriendRequest => !!r) || [];
+      if (!rawRequests || !rawRequests.pages) return [];
+      
+      return rawRequests.pages.flatMap((page: any) => {
+          return page.data || [];
+      }) as FriendRequest[];
   }, [rawRequests]);
 
   const suggestions = useMemo(() => {
-      const list = rawSuggestions as unknown as FriendSuggestion[];
-      return list?.filter((s): s is FriendSuggestion => !!s) || [];
+      if (!rawSuggestions || !rawSuggestions.pages) return [];
+
+      return rawSuggestions.pages.flatMap((page: any) => {
+          return page.data || [];
+      }) as FriendSuggestion[];
   }, [rawSuggestions]);
 
   const sendFriendRequestMutation = useSendFriendRequest();

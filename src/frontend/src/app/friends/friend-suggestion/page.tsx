@@ -31,12 +31,20 @@ export default function FriendSuggestionsPage() {
   const { ref, inView } = useInView();
 
   const { 
-    data: suggestions, 
+    data, 
     fetchNextPage, 
     hasNextPage, 
     isFetchingNextPage,
     isLoading 
   } = useInfiniteSuggestions();
+
+  const suggestions = useMemo(() => {
+      if (!data || !data.pages) return [];
+      
+      return data.pages.flatMap((page: any) => {
+          return page.data || [];
+      }) as FriendSuggestion[];
+  }, [data]);
 
   const sendFriendRequestMutation = useSendFriendRequest();
 
@@ -122,7 +130,7 @@ export default function FriendSuggestionsPage() {
 
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-4">
-        {suggestions.filter((p): p is FriendSuggestion => p !== undefined).map((person: FriendSuggestion) => (
+        {suggestions.map((person: FriendSuggestion) => (
           <div
             key={person.profileId}
             onClick={() => handleViewProfile(person)}
