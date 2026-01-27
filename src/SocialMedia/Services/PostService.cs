@@ -309,10 +309,13 @@ namespace SocialMedia.Services
             return SuccessPostDto(post, profile, "Post updated successfully.", viewerProfile.Id);
         }
 
-        public async Task<ApiResponse<object>> DeletePostAsync(ClaimsPrincipal userId, Guid postId)
+        public async Task<ApiResponse<object>> DeletePostAsync(ClaimsPrincipal userClaims, Guid postId)
         {
-            var invalidUserResponse = GetUserIdOrUnauthorized<object>(userId, out var userIdValue);
+            var invalidUserResponse = GetUserIdOrUnauthorized<object>(userClaims, out var userId);
             if (invalidUserResponse != null) return invalidUserResponse;
+
+            var profile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (profile == null) return NotFoundResponse<object>("Profile");
 
             var post = await _postRepository.GetByIdAsync(postId);
             if (post == null) return NotFoundResponse<object>("Post");
@@ -320,13 +323,30 @@ namespace SocialMedia.Services
             if (post.IsDeleted)
                 return ApiResponse<object>.ErrorResponse("Already deleted.");
 
-            var profile = await _profileRepository.GetByApplicationIdAsync(userIdValue);
-            if (profile == null || profile.Id != post.ProfileId)
-                return ApiResponse<object>.ErrorResponse("Unauthorized delete.");
+            bool isAuthor = post.ProfileId == profile.Id;
+            bool isAuthorized = isAuthor;
+
+            if (!isAuthorized && post.GroupId.HasValue)
+            {
+                var groupMember = await _groupRepository.QueryNoTracking()
+                    .Where(g => g.Id == post.GroupId.Value)
+                    .SelectMany(g => g.Members)
+                    .FirstOrDefaultAsync(m => m.ProfileId == profile.Id);
+
+                if (groupMember != null &&
+                   (groupMember.Role == GroupRole.Owner || groupMember.Role == GroupRole.Admin))
+                {
+                    isAuthorized = true;
+                }
+            }
+
+            if (!isAuthorized)
+                return ApiResponse<object>.ErrorResponse("Unauthorized delete. You are not the author or a group administrator.");
 
             post.IsDeleted = true;
             await _postRepository.UpdateAsync(post);
             await _postRepository.SaveChangesAsync();
+
             return ApiResponse<object>.SuccessResponse(true, "Post deleted successfully.");
         }
 
@@ -492,6 +512,11 @@ namespace SocialMedia.Services
             dto.Username = profile.User.UserName;
             dto.GroupId = post.GroupId;
             dto.GroupName = post.Group != null ? post.Group.Name : null;
+
+            if (currentUserId.HasValue)
+            {
+                dto.IsOwner = post.ProfileId == currentUserId.Value;
+            }
 
             if (post.Reactions != null)
             {

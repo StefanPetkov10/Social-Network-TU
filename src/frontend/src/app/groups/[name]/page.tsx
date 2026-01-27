@@ -134,6 +134,8 @@ export default function GroupPage() {
     const isAdmin = group?.isAdmin;
     const isPending = group?.hasRequestedJoin;
 
+    const canModerate = isOwner || isAdmin;
+
     const shouldFetchRequests = !!group?.id && group.isPrivate && (isOwner || isAdmin);
     
     const { data: requestsData } = useGroupRequests(group?.id || "", { 
@@ -357,6 +359,7 @@ export default function GroupPage() {
                                                                         post={post}
                                                                         authorProfile={currentUser || undefined}
                                                                         hideGroupInfo={true} 
+                                                                        isGroupAdmin={canModerate} 
                                                                     />
                                                                 ))
                                                             )}

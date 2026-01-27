@@ -10,7 +10,8 @@ import {
   Trash2, 
   Edit2, 
   FileText, 
-  Download 
+  Download,
+  Loader2 
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { Button } from "@frontend/components/ui/button";
@@ -44,17 +45,39 @@ import { useReaction } from "@frontend/hooks/use-reaction";
 import { ReactionButton, REACTION_CONFIG } from "@frontend/components/ui/reaction-button";
 import { ReactionListDialog } from "../reaction-dialog/reaction-list-dialog";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@frontend/components/ui/alert-dialog";
+import { useDeletePost } from "@frontend/hooks/use-post";
+
 interface PostCardProps {
     post: PostDto;
     authorProfile?: ProfileDto; 
     hideGroupInfo?: boolean; 
     isPreview?: boolean;
+    isGroupAdmin?: boolean; 
 }
 
-export function PostCard({ post, authorProfile, hideGroupInfo, isPreview = false }: PostCardProps) {
+export function PostCard({ 
+    post, 
+    authorProfile, 
+    hideGroupInfo, 
+    isPreview = false,
+    isGroupAdmin = false 
+}: PostCardProps) {
   const { data: currentUser } = useProfile();
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
   const [isReactionListOpen, setIsReactionListOpen] = useState(false);
+
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const { mutate: deletePost, isPending: isDeleting } = useDeletePost();
 
   const { currentReaction, likesCount, handleReaction } = useReaction({
       initialReaction: post.userReaction ?? null,
@@ -79,6 +102,9 @@ export function PostCard({ post, authorProfile, hideGroupInfo, isPreview = false
 
   const isOwner = post.isOwner || false;
  
+  const canDelete = isOwner || isGroupAdmin;
+  console.log("PostCard - canDelete:", canDelete, "isOwner:", isOwner, "isGroupAdmin:", isGroupAdmin);
+
   const documents = post.media?.filter(m => m.mediaType !== 0 && m.mediaType !== 1) || [];
   const visualMedia = post.media?.filter(m => m.mediaType === 0 || m.mediaType === 1) || [];
 
@@ -165,13 +191,22 @@ export function PostCard({ post, authorProfile, hideGroupInfo, isPreview = false
               <Bookmark className="mr-2 h-4 w-4" /> Запази
             </DropdownMenuItem>
             
-            {isOwner && (
+            {canDelete && (
                 <>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="cursor-pointer">
-                        <Edit2 className="mr-2 h-4 w-4" /> Редактиране
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10">
+                    {isOwner && (
+                        <DropdownMenuItem className="cursor-pointer">
+                            <Edit2 className="mr-2 h-4 w-4" /> Редактиране
+                        </DropdownMenuItem>
+                    )}
+                    
+                    <DropdownMenuItem 
+                        className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+                        onSelect={(e) => {
+                            e.preventDefault(); 
+                            setIsDeleteDialogOpen(true);
+                        }}
+                    >
                         <Trash2 className="mr-2 h-4 w-4" /> Изтриване
                     </DropdownMenuItem>
                 </>
@@ -321,6 +356,33 @@ export function PostCard({ post, authorProfile, hideGroupInfo, isPreview = false
             )}
         </>
     )}
+
+    <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent className="rounded-2xl">
+            <AlertDialogHeader>
+                <AlertDialogTitle>Изтриване на публикация?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Сигурни ли сте, че искате да изтриете тази публикация? Това действие е необратимо.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel disabled={isDeleting} className="rounded-xl">Отказ</AlertDialogCancel>
+                <AlertDialogAction 
+                    onClick={(e) => {
+                        e.preventDefault();
+                        deletePost(post.id, {
+                            onSuccess: () => setIsDeleteDialogOpen(false)
+                        });
+                    }}
+                    className="bg-red-600 hover:bg-red-700 text-white rounded-xl"
+                    disabled={isDeleting}
+                >
+                    {isDeleting ? <Loader2 className="w-4 h-4 animate-spin mr-2"/> : null}
+                    Изтрий
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }

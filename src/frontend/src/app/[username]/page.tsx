@@ -500,7 +500,7 @@ export default function UserProfilePage({ params }: PageProps) {
                         "lg:col-span-1 space-y-6",
                         "h-fit",
                         activeTab === "Публикации"
-                            ? "sticky bottom-6 self-end"   
+                            ? "sticky bottom-36 self-end"   
                             : "sticky top-28 self-start"  
                     )}>
                         {activeTab !== "Приятели" && (

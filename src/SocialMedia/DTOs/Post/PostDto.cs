@@ -24,5 +24,7 @@ namespace SocialMedia.DTOs.Post
         public string? GroupName { get; set; }
 
         public DateTime CreatedAt { get; set; }
+
+        public bool IsOwner { get; set; }
     }
 }

@@ -58,5 +58,10 @@ export const postService = {
 
     const { data } = await api.get<ApiResponse<PostMediaDto[]>>(`/api/Posts/media/group/${groupId}/paginated`, { params });
     return data;
-  }
+  },
+
+  deletePost: async (postId: string) => {
+    const { data } = await api.delete<ApiResponse<any>>(`/api/Posts/${postId}`);
+    return data;
+  },
 };

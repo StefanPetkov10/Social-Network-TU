@@ -257,8 +257,8 @@ export default function ProfilePage() {
                                 "lg:col-span-1 space-y-6",
                                 "h-fit",
                                 activeTab === "Публикации" 
-                                    ? "sticky bottom-6 self-end"  
-                                    : "sticky top-24 self-start"  
+                                    ? "sticky bottom-36 self-end"  
+                                    : "sticky top-28 self-start"  
                             )}>
                                 {activeTab !== "Приятели" && (
                                     <ProfileFriendsCard 

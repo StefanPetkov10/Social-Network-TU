@@ -81,8 +81,6 @@ export function FriendsListView({ profileId }: FriendsListViewProps) {
       }) as FriendDto[];
   }, [data]);
 
-  console.log("All Friends:", allFriends);
-
   const totalCount = useMemo(() => {
       if (!data || !data.pages || data.pages.length === 0) return 0;
       
@@ -184,7 +182,6 @@ export function FriendsListView({ profileId }: FriendsListViewProps) {
           )}
         </div>
 
-        {/* Лоудър за следваща страница */}
         {hasNextPage && (
             <div ref={ref} className="py-6 flex flex-col items-center justify-center text-gray-400 gap-2">
             {isFetchingNextPage ? (

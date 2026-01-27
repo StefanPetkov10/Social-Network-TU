@@ -101,3 +101,28 @@ export const useMediaInfinite = ({ id, sourceType, mediaType }: UseMediaProps) =
         enabled: !!id,
     });
 };
+
+export const useDeletePost = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (postId: string) => postService.deletePost(postId),
+    onSuccess: (response, postId) => {
+       if (!response.success) {
+           toast.error("Грешка", { description: response.message || "Неуспешно изтриване." });
+           return;
+       }
+       toast.success("Изтрито", { description: "Постът беше премахнат успешно." });
+
+       queryClient.invalidateQueries({ queryKey: ["posts"] });
+       queryClient.invalidateQueries({ queryKey: ["group-posts"] });
+       queryClient.invalidateQueries({ queryKey: ["profile-media"] });
+       queryClient.invalidateQueries({ queryKey: ["group-media"] });
+    },
+    onError: (error: any) => {
+        toast.error("Грешка", { 
+            description: error?.response?.data?.message || "Възникна грешка при изтриването." 
+        });
+    }
+  });
+};

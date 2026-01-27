@@ -391,13 +391,13 @@ export function FriendProfileView({
                         "lg:col-span-1 space-y-6",
                         "h-fit",
                         activeTab === "Публикации"
-                            ? "sticky bottom-6 self-end"  
+                            ? "sticky bottom-28 self-end"  
                             : "sticky top-0 self-start"  
                     )}>
                         {activeTab !== "Приятели" && (
                             <ProfileFriendsCard profileId={profileId} />
                         )}
-                    
+
                         {activeTab !== "Медия" && activeTab !== "Документи" && (
                             <ProfileMediaCard profileId={profileId} />
                         )}
