@@ -21,7 +21,9 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
-  X
+  X,
+  UserCog,         
+  ArrowRightLeft   
 } from "lucide-react";
 
 import { Button } from "@frontend/components/ui/button";
@@ -32,8 +34,20 @@ import {
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
-  DropdownMenuTrigger 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator, 
+  DropdownMenuLabel      
 } from "@frontend/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@frontend/components/ui/alert-dialog"; 
 import { getInitials } from "@frontend/lib/utils";
 
 import { 
@@ -41,7 +55,8 @@ import {
     useGroupAdmins, 
     useGroupFriends, 
     useGroupMutualFriends,
-    useRemoveMember
+    useRemoveMember,
+    useChangeRole
 } from "@frontend/hooks/use-group-members";
 import { 
     useSendFriendRequest, 
@@ -50,6 +65,7 @@ import {
     useDeclineFriendRequest 
 } from "@frontend/hooks/use-friends";
 import { MemberDto } from "@frontend/lib/types/groups";
+import { GroupRole } from "@frontend/lib/types/enums"; 
 
 interface GroupMembersViewProps {
   groupId: string;
@@ -308,6 +324,14 @@ function MemberCard({ member, isCompact = false, groupId, showBadges = false, vi
         member.hasSentRequest ? 'sent' : 
         member.hasReceivedRequest ? 'received' : 'none'
   );
+  const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
+
+  const { mutate: sendRequest, isPending: isSending } = useSendFriendRequest();
+  const { mutate: cancelRequest, isPending: isCancelling } = useCancelFriendRequest();
+  const { mutate: acceptRequest, isPending: isAccepting } = useAcceptFriendRequest();
+  const { mutate: declineRequest, isPending: isDeclining } = useDeclineFriendRequest();
+  const { mutate: removeMember } = useRemoveMember();
+  const { mutate: changeRole, isPending: isChangingRole } = useChangeRole();
 
   useEffect(() => {
     setStatus(
@@ -317,39 +341,37 @@ function MemberCard({ member, isCompact = false, groupId, showBadges = false, vi
     );
   }, [member.isFriend, member.hasSentRequest, member.hasReceivedRequest]);
 
-  const { mutate: sendRequest, isPending: isSending } = useSendFriendRequest();
-  const { mutate: cancelRequest, isPending: isCancelling } = useCancelFriendRequest();
-  const { mutate: acceptRequest, isPending: isAccepting } = useAcceptFriendRequest();
-  const { mutate: declineRequest, isPending: isDeclining } = useDeclineFriendRequest();
+  const handleAddFriend = () => sendRequest(member.profileId, { onSuccess: () => setStatus('sent') });
+  const handleCancel = () => cancelRequest(member.profileId, { onSuccess: () => setStatus('none') });
+  const handleConfirm = () => { if (member.pendingRequestId) acceptRequest(member.pendingRequestId, { onSuccess: () => setStatus('friend') }); };
+  const handleDecline = () => { if (member.pendingRequestId) declineRequest(member.pendingRequestId, { onSuccess: () => setStatus('none') }); };
+
+  const isOwner = member.role === GroupRole.Owner; 
+  const isAdmin = member.role === GroupRole.Admin;
+  const isRegularMember = member.role === GroupRole.Member;
   
-  const { mutate: removeMember } = useRemoveMember();
-  
-  const handleAddFriend = () => {
-    sendRequest(member.profileId, {
-      onSuccess: () => setStatus('sent')
-    });
+  const iAmOwner = viewerRole === GroupRole.Owner;
+  const iAmAdmin = viewerRole === GroupRole.Admin;
+
+  const canRemoveMember = !isMe && (
+      (iAmOwner) || 
+      (iAmAdmin && isRegularMember)
+  );
+
+  const canManageRoles = iAmOwner && !isMe;
+
+  const handleChangeRole = (newRole: GroupRole) => {
+    changeRole({ groupId, profileId: member.profileId, newRole });
   };
 
-  const handleCancel = () => {
-    cancelRequest(member.profileId, {
-        onSuccess: () => setStatus('none')
-    });
+  const handleTransferOwnership = () => {
+    setIsTransferDialogOpen(true);
   };
 
-  const handleConfirm = () => {
-      if (member.pendingRequestId) {
-          acceptRequest(member.pendingRequestId, {
-              onSuccess: () => setStatus('friend')
-          });
-      }
-  };
-
-  const handleDecline = () => {
-      if (member.pendingRequestId) {
-          declineRequest(member.pendingRequestId, {
-              onSuccess: () => setStatus('none')
-          });
-      }
+  const confirmTransferOwnership = () => {
+      changeRole({ groupId, profileId: member.profileId, newRole: GroupRole.Owner }, {
+          onSuccess: () => setIsTransferDialogOpen(false)
+      });
   };
 
   let subtitleDetails = null;
@@ -361,15 +383,8 @@ function MemberCard({ member, isCompact = false, groupId, showBadges = false, vi
     );
   }
 
-  const isOwner = member.role === 0; 
-  const isAdmin = member.role === 1;
-  const isRegularMember = member.role === 2;
-
-  const canRemoveMember = 
-    (viewerRole === 0 || viewerRole === 1) && 
-    isRegularMember;
-
   return (
+    <>
     <div className={`flex items-center justify-between gap-3 p-3 rounded-lg transition-all duration-200 ${isMe ? 'bg-blue-50/30' : 'hover:bg-gray-50'} group`}>
       
       <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
@@ -476,14 +491,48 @@ function MemberCard({ member, isCompact = false, groupId, showBadges = false, vi
               <MoreHorizontal className="w-5 h-5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem className="cursor-pointer font-medium" asChild>
                <Link href={profileLink}>
                  <UserCheck className="w-4 h-4 mr-2 text-gray-500" />
                  Преглед на профил
                </Link>
             </DropdownMenuItem>
+
+            {canManageRoles && (
+                <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>Управление на роля</DropdownMenuLabel>
+                    
+                    {isRegularMember && (
+                        <DropdownMenuItem 
+                            onClick={() => handleChangeRole(GroupRole.Admin)} 
+                            className="cursor-pointer font-medium text-indigo-600 focus:text-indigo-700 focus:bg-indigo-50"
+                        >
+                            <ShieldCheck className="w-4 h-4 mr-2" /> Направи Админ
+                        </DropdownMenuItem>
+                    )}
+
+                    {isAdmin && (
+                        <DropdownMenuItem 
+                            onClick={() => handleChangeRole(GroupRole.Member)} 
+                            className="cursor-pointer font-medium text-amber-600 focus:text-amber-700 focus:bg-amber-50"
+                        >
+                            <UserCog className="w-4 h-4 mr-2" /> Премахни права
+                        </DropdownMenuItem>
+                    )}
+
+                    <DropdownMenuItem 
+                        onClick={handleTransferOwnership} 
+                        className="cursor-pointer font-medium text-orange-600 focus:text-orange-700 focus:bg-orange-50"
+                    >
+                        <ArrowRightLeft className="w-4 h-4 mr-2" /> Направи Собственик
+                    </DropdownMenuItem>
+                </>
+            )}
             
+            <DropdownMenuSeparator />
+
             {status === 'sent' && (
               <DropdownMenuItem 
                 onClick={handleCancel}
@@ -537,5 +586,26 @@ function MemberCard({ member, isCompact = false, groupId, showBadges = false, vi
       </div>
       )}
     </div>
+
+    <AlertDialog open={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Прехвърляне на собственост</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Сигурни ли сте, че искате да направите <span className="font-bold text-black">{member.fullName}</span> новият собственик на групата?
+                    <br/><br/>
+                    <span className="font-medium text-red-600">Внимание:</span> Вие ще станете Администратор и ще загубите правата на Собственик. Това действие е необратимо от ваша страна.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Отказ</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmTransferOwnership} className="bg-orange-600 hover:bg-orange-700 text-white">
+                    {isChangingRole ? <Loader2 className="w-4 h-4 animate-spin mr-2"/> : null}
+                    Потвърди прехвърлянето
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

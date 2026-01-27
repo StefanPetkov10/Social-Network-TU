@@ -13,12 +13,13 @@ import {
   Clock,
   Info,
   FileText, 
-  Image as ImageIcon 
+  Image as ImageIcon,
+  ShieldAlert
 } from "lucide-react";
 import { useIntersection } from "@mantine/hooks";
 
 import { Button } from "@frontend/components/ui/button";
-import { Avatar, AvatarFallback } from "@frontend/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar"; 
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -42,7 +43,12 @@ import { LoadingScreen } from "@frontend/components/common/loading-screen";
 import { ErrorScreen } from "@frontend/components/common/error-screen";
 
 import { useGroupByName, useGroupPosts } from "@frontend/hooks/use-groups";
-import { useJoinGroup, useLeaveGroup, useGroupRequests } from "@frontend/hooks/use-group-members";
+import { 
+    useJoinGroup, 
+    useLeaveGroup, 
+    useGroupRequests,
+    useGroupMembers 
+} from "@frontend/hooks/use-group-members";
 import { useProfile } from "@frontend/hooks/use-profile"; 
 import { getInitials, getUserDisplayName } from "@frontend/lib/utils";
 import ProtectedRoute from "@frontend/components/protected-route";
@@ -93,6 +99,10 @@ export default function GroupPage() {
 
     const { mutate: joinGroup, isPending: isJoining } = useJoinGroup();
     const { mutate: leaveGroup, isPending: isLeaving } = useLeaveGroup();
+
+    const { data: membersData } = useGroupMembers(group?.id || "");
+    
+    const previewMembers = membersData?.pages[0]?.data?.slice(0, 6) || [];
 
     const {
         data: postsData,
@@ -439,15 +449,29 @@ export default function GroupPage() {
                                             <h3 className="font-bold text-gray-900 text-lg">Членове</h3>
                                             <span className="text-xs text-gray-500">{group.membersCount} общо</span>
                                         </div>
-                                        <Link href="#" className="text-sm text-blue-600 font-medium hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">
+                                        <button 
+                                            onClick={() => handleTabChange("Хора")} 
+                                            className="text-sm text-blue-600 font-medium hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors"
+                                        >
                                             Виж всички
-                                        </Link>
+                                        </button>
                                      </div>
                                      
                                      <div className="flex flex-wrap gap-2">
-                                        {[1,2,3,4,5,6].map((i) => (
-                                            <div key={i} className="h-11 w-11 rounded-full bg-gray-200 border-2 border-white shadow-sm" />
-                                        ))}
+                                        {previewMembers.length > 0 ? (
+                                            previewMembers.map((member) => (
+                                                <Link key={member.profileId} href={`/${member.username}`}>
+                                                    <Avatar className="h-11 w-11 border-2 border-white shadow-sm cursor-pointer transition-transform hover:scale-105">
+                                                        <AvatarImage src={member.authorAvatar || ""} className="object-cover" />
+                                                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white text-xs font-bold">
+                                                            {getInitials(member.fullName)}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                </Link>
+                                            ))
+                                        ) : (
+                                            <span className="text-gray-400 text-sm">Няма намерени членове.</span>
+                                        )}
                                      </div>
                                 </div>
                             )}
@@ -464,29 +488,57 @@ export default function GroupPage() {
 
           <AlertDialog open={isLeaveDialogOpen} onOpenChange={setIsLeaveDialogOpen}>
             <AlertDialogContent className="rounded-2xl">
-                <AlertDialogHeader>
-                    <AlertDialogTitle className="text-xl font-bold">Напускане на групата?</AlertDialogTitle>
-                    <AlertDialogDescription className="text-base text-gray-600">
-                        Сигурни ли сте, че искате да напуснете <span className="font-semibold text-gray-900">{group.name}</span>? 
-                        Вече няма да имате достъп до съдържанието и дискусиите в тази група.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter className="mt-4">
-                    <AlertDialogCancel className="rounded-xl font-medium border-gray-200 hover:bg-gray-50 hover:text-gray-900">
-                        Отказ
-                    </AlertDialogCancel>
-                    <AlertDialogAction
-                        className="rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white shadow-sm shadow-red-200"
-                        onClick={() => {
-                            leaveGroup(group.id);
-                            setIsLeaveDialogOpen(false);
-                        }}
-                        disabled={isLeaving}
-                    >
-                        {isLeaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                        Напусни
-                    </AlertDialogAction>
-                </AlertDialogFooter>
+                {isOwner ? (
+                     <>
+                        <AlertDialogHeader>
+                            <div className="flex items-center gap-2 text-amber-600 mb-2">
+                                <ShieldAlert className="w-6 h-6" />
+                                <span className="font-bold text-sm uppercase tracking-wide">Изисква се действие</span>
+                            </div>
+                            <AlertDialogTitle className="text-xl font-bold">Не можете да напуснете групата</AlertDialogTitle>
+                            <AlertDialogDescription className="text-base text-gray-600 mt-2">
+                                Като <strong>Собственик</strong> на тази група, вие не можете да я напуснете директно.
+                                <br/><br/>
+                                Трябва първо да направите някой друг член <strong>Собственик (Owner)</strong> от менюто "Хора", или да изтриете групата.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="mt-4">
+                            <AlertDialogCancel className="w-full sm:w-auto bg-gray-100 hover:bg-gray-200 text-gray-900 border-0">
+                                Разбрах
+                            </AlertDialogCancel>
+                        </AlertDialogFooter>
+                    </>
+                ) : (
+                    <>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle className="text-xl font-bold">Напускане на групата?</AlertDialogTitle>
+                            <AlertDialogDescription className="text-base text-gray-600">
+                                Сигурни ли сте, че искате да напуснете <span className="font-semibold text-gray-900">{group.name}</span>?
+                                <br/><br/>
+                                {group.isPrivate 
+                                    ? "Тъй като групата е частна, вече няма да имате достъп до съдържанието, файловете и дискусиите в нея."
+                                    : "Тъй като групата е публична, все още ще виждате съдържанието, но няма да можете да публикувате."
+                                }
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="mt-4">
+                            <AlertDialogCancel className="rounded-xl font-medium border-gray-200 hover:bg-gray-50 hover:text-gray-900">
+                                Отказ
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                                className="rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white shadow-sm shadow-red-200"
+                                onClick={() => {
+                                    leaveGroup(group.id);
+                                    setIsLeaveDialogOpen(false);
+                                }}
+                                disabled={isLeaving}
+                            >
+                                {isLeaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                Напусни
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </>
+                )}
             </AlertDialogContent>
           </AlertDialog>
 

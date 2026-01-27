@@ -180,6 +180,9 @@ export const useChangeRole = () => {
             toast.success("Ролята е обновена");
             queryClient.invalidateQueries({ queryKey: ["group-members", groupId] });
             queryClient.invalidateQueries({ queryKey: ["group-admins", groupId] });
+
+            queryClient.invalidateQueries({ queryKey: ["group-by-name"] });
+            queryClient.invalidateQueries({ queryKey: ["my-groups"] });
         },
         onError: (error: any) => {
              toast.error("Грешка", { description: error?.response?.data?.message || "Грешка при смяна на роля." });
