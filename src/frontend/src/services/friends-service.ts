@@ -37,13 +37,22 @@ export const friendsService = {
         return data;
     },
 
-    getFriendsList: async (profileId: string, cursor: string | null = null, take: number = 20) => {
+    getFriendsList: async (profileId: string, pageParam: any, take: number) => {
         const params = new URLSearchParams();
-        if (cursor) params.append("lastFriendshipDate", cursor);
         params.append("take", take.toString());
 
-        const { data } = await api.get<ApiResponse<FriendDto[]>>(`/api/Friendship/friends/${profileId}?${params.toString()}`);
-        return data;
+        if (pageParam) {
+            if (pageParam.lastFriendId) {
+                params.append("lastFriendId", pageParam.lastFriendId);
+            }
+            if (pageParam.lastFriendshipDate) {
+                params.append("lastFriendshipDate", pageParam.lastFriendshipDate);
+            }
+        }
+        const response = await api.get<{ data: FriendDto[], meta: any }>(
+            `/api/Friendship/friends/${profileId}?${params.toString()}`
+        );
+        return response.data;
     },
 
     removeFriend: async (friendProfileId: string) => {

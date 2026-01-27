@@ -255,9 +255,10 @@ export default function ProfilePage() {
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
                             <div className={cn(
                                 "lg:col-span-1 space-y-6",
-                                "sticky bottom-6", 
-                                "self-end",    
-                                "h-fit"        
+                                "h-fit",
+                                activeTab === "Публикации" 
+                                    ? "sticky bottom-6 self-end"  
+                                    : "sticky top-24 self-start"  
                             )}>
                                 {activeTab !== "Приятели" && (
                                     <ProfileFriendsCard 

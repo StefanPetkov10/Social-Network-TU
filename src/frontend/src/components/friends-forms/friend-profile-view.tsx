@@ -387,16 +387,19 @@ export function FriendProfileView({
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start"> 
-                      <div className={cn(
+                    <div className={cn(
                         "lg:col-span-1 space-y-6",
-                        "sticky bottom-6", 
-                        "self-end",       // Allows the content to scroll up to the bottom
-                        "h-fit"        
+                        "h-fit",
+                        activeTab === "Публикации"
+                            ? "sticky bottom-6 self-end"  
+                            : "sticky top-0 self-start"  
                     )}>
-                        <ProfileFriendsCard profileId={profileId} />
-                        
-                        {activeTab !== "Медия" && activeTab !== "Документи" && activeTab !== "Приятели" && (
-                                <ProfileMediaCard profileId={profileId} />
+                        {activeTab !== "Приятели" && (
+                            <ProfileFriendsCard profileId={profileId} />
+                        )}
+                    
+                        {activeTab !== "Медия" && activeTab !== "Документи" && (
+                            <ProfileMediaCard profileId={profileId} />
                         )}
                     </div>
                     <div className="lg:col-span-2 space-y-4 pb-10">

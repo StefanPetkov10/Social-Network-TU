@@ -130,11 +130,6 @@ export default function UserProfilePage({ params }: PageProps) {
     }
   }, [isMeLoading, myProfile, username, profile, router]);
 
-  if (isMeLoading) return <ProfilePageSkeleton />;
-  if (myProfile && myProfile.username.toLowerCase() === username.toLowerCase()) {
-      return <ProfilePageSkeleton />;
-  }
-
   const getComputedStatus = (): RequestStatusUI => {
       if (profile && typeof profile.friendshipStatus === 'number') {
           const status = profile.friendshipStatus;
@@ -265,6 +260,11 @@ export default function UserProfilePage({ params }: PageProps) {
     name: myProfile ? getUserDisplayName(myProfile) : "Потребител",
     avatar: myProfile?.authorAvatar || ""
   }), [myProfile]);
+
+  if (isMeLoading) return <ProfilePageSkeleton />;
+  if (myProfile && myProfile.username.toLowerCase() === username.toLowerCase()) {
+      return <ProfilePageSkeleton />;
+  }
 
   if (isProfileLoading) return <ProfilePageSkeleton />;
   if (isError || !profile) return notFound();
@@ -498,9 +498,10 @@ export default function UserProfilePage({ params }: PageProps) {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
                     <div className={cn(
                         "lg:col-span-1 space-y-6",
-                        "sticky bottom-6", 
-                        "self-end",      
-                        "h-fit"        
+                        "h-fit",
+                        activeTab === "Публикации"
+                            ? "sticky bottom-6 self-end"   
+                            : "sticky top-28 self-start"  
                     )}>
                         {activeTab !== "Приятели" && (
                                     <ProfileFriendsCard 

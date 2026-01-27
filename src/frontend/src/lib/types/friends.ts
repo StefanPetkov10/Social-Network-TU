@@ -23,4 +23,12 @@ export interface FriendDto {
     displayFullName: string;
     username: string;
     authorAvatar?: string;
+
+    isMe: boolean;
+    isFriend: boolean;
+    hasSentRequest: boolean;
+    hasReceivedRequest: boolean;
+    pendingRequestId?: string;
+    
+    mutualFriendsCount: number;
 }

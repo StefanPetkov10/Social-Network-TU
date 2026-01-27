@@ -67,6 +67,10 @@ export const useUnfollowUser = () => {
             toast.success("Успешно премахване на последовател!");
             queryClient.invalidateQueries({ queryKey: ["followers-list"] });
             queryClient.invalidateQueries({ queryKey: ["following-list"] });
+
+            queryClient.invalidateQueries({ queryKey: ["user-profile-by-username"] });
+            queryClient.invalidateQueries({ queryKey: ["user-profile-by-id"] });
+            queryClient.invalidateQueries({ queryKey: ["user"] }); 
         },
         onError: (error: any) => {
             toast.error("Грешка при премахване на последовател.", { description: error.message });
@@ -80,9 +84,13 @@ export const useRemoveFollower = () => {
         mutationFn: (followerId: string) => followersService.removeFollower(followerId),
         onSuccess: () => {
             toast.success("Последователят е премахнат.");
+            
             queryClient.invalidateQueries({ queryKey: ["followers-list"] });
             queryClient.invalidateQueries({ queryKey: ["following-list"] });
 
+            queryClient.invalidateQueries({ queryKey: ["user-profile-by-username"] });
+            queryClient.invalidateQueries({ queryKey: ["user-profile-by-id"] });
+            queryClient.invalidateQueries({ queryKey: ["user"] }); 
         },
         onError: (error: any) => {
             toast.error("Грешка при премахване.", { description: error.message });

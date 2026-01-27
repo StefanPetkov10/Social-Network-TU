@@ -8,7 +8,6 @@ export const useInfiniteFriendRequests = () => {
     queryFn: ({ pageParam = null }) => friendsService.getFriendRequests(pageParam as string | null, 10),
     initialPageParam: null,
     getNextPageParam: (lastPage) => lastPage.meta?.nextCursor ?? undefined,
-    select: (data) => data.pages.flatMap((page) => page.data),
     refetchInterval: 5000, 
   });
 };
@@ -20,28 +19,35 @@ export const useInfiniteSuggestions = () => {
     initialPageParam: 0,
     getNextPageParam: (lastPage) => {
       const meta = lastPage.meta as { nextSkip: number; totalLoaded: number } | undefined;
-      if (!lastPage.data || lastPage.data.length < 20 || (meta && meta.totalLoaded >= 100)) {
+      if (!lastPage.data || lastPage.data.length === 0 || (meta && meta.totalLoaded >= 100)) {
         return undefined;
       }
       return meta?.nextSkip;
     },
-    select: (data) => data.pages.flatMap((page) => page.data),
   });
 };
 
 export const useInfiniteFriends = (profileId: string) => {
   return useInfiniteQuery({
     queryKey: ["my-friends-infinite", profileId],
-    queryFn: ({ pageParam = null }) => friendsService.getFriendsList(profileId, pageParam as string | null, 10),
-    initialPageParam: null,
-    getNextPageParam: (lastPage) => lastPage.meta?.nextCursor ?? undefined,
-    select: (data) => data.pages.flatMap((page) => page.data),
+    queryFn: ({ pageParam }) => friendsService.getFriendsList(profileId, pageParam, 20),
+    initialPageParam: { lastFriendId: null, lastFriendshipDate: null } as { lastFriendId: any; lastFriendshipDate: any } | null,
+    
+    getNextPageParam: (lastPage) => {
+        const meta = lastPage.meta as any;
+        
+        if (!meta?.lastFriendshipDate || !meta?.lastFriendId) return undefined;
+        
+        return { 
+            lastFriendId: meta.lastFriendId,
+            lastFriendshipDate: meta.lastFriendshipDate
+        };
+    },
   });
 };
 
-
 const invalidateFriendRelatedQueries = (queryClient: any) => {
-    queryClient.invalidateQueries({ queryKey: ["friend-suggestions-infinite"] });
+     queryClient.invalidateQueries({ queryKey: ["friend-suggestions-infinite"] });
     queryClient.invalidateQueries({ queryKey: ["friend-requests-infinite"] });
     queryClient.invalidateQueries({ queryKey: ["my-friends-infinite"] });
     
