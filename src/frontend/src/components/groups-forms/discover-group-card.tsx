@@ -49,7 +49,7 @@ export function DiscoverGroupCard({ group, isTopResult = false }: DiscoverGroupC
       <CardContent className="pt-7 flex-1">
         
         <div className="flex justify-between items-start mb-4">
-            <Link href={`/groups/${group.name}`}>
+            <Link href={`/groups/${encodeURIComponent(group.name)}`}>
                 <div className="relative group-hover:scale-105 transition-transform duration-300 ease-out cursor-pointer">
                     <div className="h-16 w-16 shrink-0 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-sm bg-gradient-to-br from-blue-500 to-purple-600">
                         {getInitials(group.name)}
@@ -70,7 +70,7 @@ export function DiscoverGroupCard({ group, isTopResult = false }: DiscoverGroupC
         </div>
 
         <div className="space-y-3">
-          <Link href={`/groups/${group.name}`} className="block">
+          <Link href={`/groups/${encodeURIComponent(group.name)}`} className="block">
             <h3 className="font-bold text-lg leading-tight text-gray-900 line-clamp-1 group-hover:text-blue-600 transition-colors" title={group.name}>
                 {group.name}
             </h3>

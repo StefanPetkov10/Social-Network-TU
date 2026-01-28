@@ -26,7 +26,9 @@ export const groupsService = {
     },
 
     getGroupByName: async (name: string) => {
-        const { data } = await api.get<ApiResponse<GroupDto>>(`/api/Group/${name}`);
+        const encodedName = encodeURIComponent(name);
+
+        const { data } = await api.get<ApiResponse<GroupDto>>(`/api/Group/${encodedName}`);
         return data;
     },
 
@@ -41,6 +43,11 @@ export const groupsService = {
     
     createGroup: async (group: CreateGroupDto) => {
         const { data } = await api.post<ApiResponse<GroupDto>>("/api/Group", group);
+        return data;
+    },
+
+    deleteGroup: async (groupId: string) => {
+        const { data } = await api.delete<ApiResponse<object>>(`/api/Group/${groupId}`);
         return data;
     },
 }

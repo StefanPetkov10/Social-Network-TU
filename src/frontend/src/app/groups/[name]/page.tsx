@@ -14,7 +14,8 @@ import {
   Info,
   FileText, 
   Image as ImageIcon,
-  ShieldAlert
+  ShieldAlert,
+  Trash2 
 } from "lucide-react";
 import { useIntersection } from "@mantine/hooks";
 
@@ -24,7 +25,8 @@ import {
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
-  DropdownMenuTrigger 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator 
 } from "@frontend/components/ui/dropdown-menu";
 import {
   AlertDialog,
@@ -42,7 +44,7 @@ import { CreatePost } from "@frontend/components/post-forms/create-post-form";
 import { LoadingScreen } from "@frontend/components/common/loading-screen";
 import { ErrorScreen } from "@frontend/components/common/error-screen";
 
-import { useGroupByName, useGroupPosts } from "@frontend/hooks/use-groups";
+import { useGroupByName, useGroupPosts, useDeleteGroup } from "@frontend/hooks/use-groups";
 import { 
     useJoinGroup, 
     useLeaveGroup, 
@@ -91,6 +93,7 @@ export default function GroupPage() {
     const [activeTab, setActiveTab] = useState(initialTab);
 
     const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     const { data: groupData, isLoading: isGroupLoading, isError } = useGroupByName(groupName);
     const group = groupData?.data;
@@ -99,6 +102,7 @@ export default function GroupPage() {
 
     const { mutate: joinGroup, isPending: isJoining } = useJoinGroup();
     const { mutate: leaveGroup, isPending: isLeaving } = useLeaveGroup();
+    const { mutate: deleteGroup, isPending: isDeleting } = useDeleteGroup();
 
     const { data: membersData } = useGroupMembers(group?.id || "");
     
@@ -232,11 +236,12 @@ export default function GroupPage() {
                                                 <DropdownMenuTrigger asChild>
                                                     <Button variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-100 gap-2 font-semibold px-6 h-11 rounded-lg transition-all shadow-sm">
                                                         <Users className="w-5 h-5" />
-                                                        Присъединил се
+                                                        {isOwner ? "Собственик" : "Присъединил се"}
                                                         <ChevronDown className="w-4 h-4 ml-1 opacity-50" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
+                                                    
                                                     <DropdownMenuItem 
                                                         className="text-red-600 cursor-pointer font-medium focus:bg-red-50 focus:text-red-700"
                                                         onSelect={(e) => {
@@ -247,6 +252,23 @@ export default function GroupPage() {
                                                         <LogOut className="w-4 h-4 mr-2" />
                                                         Напусни групата
                                                     </DropdownMenuItem>
+
+                                                    {isOwner && (
+                                                        <>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem 
+                                                                className="text-red-600 cursor-pointer font-bold focus:bg-red-50 focus:text-red-700 mt-1"
+                                                                onSelect={(e) => {
+                                                                    e.preventDefault();
+                                                                    setIsDeleteDialogOpen(true);
+                                                                }}
+                                                            >
+                                                                <Trash2 className="w-4 h-4 mr-2" />
+                                                                Изтрий групата
+                                                            </DropdownMenuItem>
+                                                        </>
+                                                    )}
+
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         ) : (
@@ -275,7 +297,7 @@ export default function GroupPage() {
                                     </div>
                                 </div>
                             </div>
-
+                            
                             <div className="max-w-4xl mx-auto pt-6 border-t mt-6 border-gray-100">
                                 <p className="text-gray-700 text-base md:text-lg text-center font-medium leading-relaxed max-w-2xl mx-auto">
                                      {group.description || "Няма добавено описание за тази група."}
@@ -542,6 +564,40 @@ export default function GroupPage() {
                         </AlertDialogFooter>
                     </>
                 )}
+            </AlertDialogContent>
+          </AlertDialog>
+
+          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialogContent className="rounded-2xl">
+                <AlertDialogHeader>
+                    <div className="flex items-center gap-2 text-red-600 mb-2">
+                        <Trash2 className="w-6 h-6" />
+                        <span className="font-bold text-sm uppercase tracking-wide">Внимание: Необратимо действие</span>
+                    </div>
+                    <AlertDialogTitle className="text-xl font-bold">Изтриване на групата?</AlertDialogTitle>
+                    <AlertDialogDescription className="text-base text-gray-600 mt-2">
+                        Сигурни ли сте, че искате да изтриете <span className="font-bold text-gray-900">{group.name}</span>?
+                        <br/><br/>
+                        Това действие ще премахне завинаги всички публикации, снимки, файлове и членове свързани с тази група. <br/>
+                        <span className="font-semibold text-red-600">Това действие не може да бъде отменено.</span>
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="mt-4">
+                    <AlertDialogCancel className="rounded-xl font-medium border-gray-200 hover:bg-gray-50 hover:text-gray-900">
+                        Отказ
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                        className="rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white shadow-sm shadow-red-200"
+                        onClick={() => {
+                            deleteGroup(group.id);
+                            setIsDeleteDialogOpen(false);
+                        }}
+                        disabled={isDeleting}
+                    >
+                        {isDeleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                        Изтрий завинаги
+                    </AlertDialogAction>
+                </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
 

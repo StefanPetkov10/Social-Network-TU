@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { PlusCircle, Loader2 } from "lucide-react"; 
 import { toast } from "sonner";
-
+import { useRouter } from "next/navigation"; 
 
 import { useCreateGroup } from "@frontend/hooks/use-groups";
 import { GroupPrivacy } from "@frontend/lib/types/enums";
@@ -42,13 +42,14 @@ import {
 const createGroupSchema = z.object({
   name: z.string().min(3, "Името трябва да е поне 3 символа").max(50),
   description: z.string().max(200).optional(),
-  groupPrivacy: z.enum(GroupPrivacy),
+  groupPrivacy: z.string(), 
 });
 
 type CreateGroupFormValues = z.infer<typeof createGroupSchema>;
 
 export function CreateGroupDialog() {
   const [open, setOpen] = useState(false);
+  const router = useRouter(); 
   const { mutate: createGroup, isPending } = useCreateGroup();
 
   const form = useForm<CreateGroupFormValues>({
@@ -56,15 +57,31 @@ export function CreateGroupDialog() {
     defaultValues: {
       name: "",
       description: "",
-      groupPrivacy: GroupPrivacy.Public,
+      groupPrivacy: GroupPrivacy.Public.toString(), 
     },
   });
 
  const onSubmit = (data: CreateGroupFormValues) => {
-  createGroup(data, {
-    onSuccess: () => {
+  const payload = {
+      ...data,
+      groupPrivacy: Number(data.groupPrivacy)
+  };
+
+  createGroup(payload, {
+    onSuccess: (response) => { 
       setOpen(false);
       form.reset();
+      
+      if (!response?.data) {
+        toast.error("Групата беше създадена, но възникна грешка при зареждането.");
+        return;
+      }
+
+      const createdGroupName = response.data.name;
+
+      const encodedName = encodeURIComponent(createdGroupName);
+            
+      router.push(`/groups/${encodedName}`);
     },
     onError: (error: any) => {
       const validationErrors = error.response?.data?.errors;
@@ -73,7 +90,6 @@ export function CreateGroupDialog() {
           type: "manual", 
           message: "Това име вече е заето. Моля, изберете друго." 
         });
-
       } else {
         toast.error("Възникна грешка при създаването на групата.");
       }
@@ -110,7 +126,7 @@ export function CreateGroupDialog() {
                 <FormItem>
                   <FormLabel>Име на групата</FormLabel>
                   <FormControl>
-                    <Input placeholder="Напр: Програмисти в България" {...field} />
+                    <Input placeholder="Напр: C# Developers Bulgaria" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -142,8 +158,8 @@ export function CreateGroupDialog() {
                 <FormItem>
                   <FormLabel>Поверителност</FormLabel>
                   <Select 
-                    onValueChange={(value) => field.onChange(Number(value))} 
-                    defaultValue={field.value.toString()}
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>

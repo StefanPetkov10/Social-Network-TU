@@ -50,7 +50,7 @@ export function GroupCard({ group }: GroupCardProps) {
         </div>
 
         <div className="space-y-2">
-          <Link href={`/groups/${group.name}`} className="block">
+          <Link href={`/groups/${encodeURIComponent(group.name)}`} className="block">
             <h3 className="font-bold text-lg leading-tight text-gray-900 line-clamp-1 group-hover:text-primary transition-colors" title={group.name}>
                 {group.name}
             </h3>
@@ -69,7 +69,7 @@ export function GroupCard({ group }: GroupCardProps) {
       </CardContent>
 
       <CardFooter className="pt-2 pb-5 px-6 border-t bg-gray-50/30">
-        <Link href={`/groups/${group.name}`} className="w-full">
+        <Link href={`/groups/${encodeURIComponent(group.name)}`} className="w-full">
             <Button variant="outline" className="w-full font-semibold border-primary/20 text-primary hover:bg-primary hover:text-white transition-all">
                 Към групата
             </Button>

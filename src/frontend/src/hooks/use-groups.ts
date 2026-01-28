@@ -5,6 +5,7 @@ import { GroupPrivacy } from "@frontend/lib/types/enums";
 import { CreateGroupDto, GroupDto } from "@frontend/lib/types/groups";
 import { useQuery } from "@tanstack/react-query";
 import { ApiResponse } from "@frontend/lib/types/api";
+import { useRouter } from "next/dist/client/components/navigation";
 
 export const useFeedGroups = () => {
   return useInfiniteQuery({
@@ -81,5 +82,25 @@ export const useGroupPosts = (groupId: string) => {
     initialPageParam: undefined,
     enabled: !!groupId, 
   });
+};
+
+export const useDeleteGroup = () => {
+    const queryClient = useQueryClient();
+    const router = useRouter();
+
+    return useMutation({
+        mutationFn: (groupId: string) => groupsService.deleteGroup(groupId),
+        onSuccess: () => {
+            toast.success("Групата е изтрита", { description: "Групата и цялото ѝ съдържание бяха премахнати успешно." });
+            
+            queryClient.invalidateQueries({ queryKey: ["my-groups"] });
+            queryClient.invalidateQueries({ queryKey: ["groups-discover"] });
+            
+            router.push("/groups/my-groups"); 
+        },
+        onError: (error: any) => {
+            toast.error("Възникна грешка при изтриването на групата.");
+        }
+    });
 };
 
