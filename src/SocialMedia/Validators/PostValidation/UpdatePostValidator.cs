@@ -14,12 +14,11 @@ namespace SocialMedia.Validators.PostValidation
                 .WithMessage("Content cannot be empty.")
                 .MaximumLength(500)
                 .WithMessage("Content cannot exceed 500 characters.");
-            //add rule for equal content
 
             RuleFor(x => x.NewFiles)
                 .Must(files => files == null || files.Count <= 5)
                 .WithMessage("You can upload a maximum of 5 files.")
-                .Must(files => files == null || files.All(file => file.Length <= 10 * 1024 * 1024))
+                .Must(files => files == null || files.All(file => file.Length <= 100 * 1024 * 1024))
                 .WithMessage("Each file must be less than 10MB.");
 
         }

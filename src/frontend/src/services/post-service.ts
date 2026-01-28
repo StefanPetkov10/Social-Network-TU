@@ -60,8 +60,15 @@ export const postService = {
     return data;
   },
 
+  updatePost: async (postId: string, formData: FormData) => {
+    const { data } = await api.put<ApiResponse<PostDto>>(`/api/Posts/${postId}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+    });
+    return data;
+  },
+
   deletePost: async (postId: string) => {
     const { data } = await api.delete<ApiResponse<any>>(`/api/Posts/${postId}`);
     return data;
-  },
+  }
 };

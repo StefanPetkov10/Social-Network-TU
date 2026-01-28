@@ -12,7 +12,6 @@ import {
   Users, 
   Lock, 
   Loader2,
-  Download
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
@@ -33,11 +32,11 @@ import {
 
 import { useCreatePost } from "@frontend/hooks/use-post";
 import { validateFile } from "@frontend/lib/file-validation";
-import { getInitials, getUserDisplayName } from "@frontend/lib/utils";
+import { getInitials, getUserDisplayName, getFileDetails } from "@frontend/lib/utils";
 
 const createPostSchema = z.object({
   content: z.string()
-    .min(1, "Моля, напишете нещо.")
+    .min(1, "Моля, напишете нещо.") 
     .max(500, "Текстът не може да надвишава 500 символа."),
   visibility: z.string(),
 });
@@ -144,12 +143,6 @@ export function CreatePost({ user, groupId }: CreatePostProps) {
 
     const formData = new FormData();
     formData.append("Content", data.content);
-    
-    // Ако имаме groupId, не пращаме visibility (или бекенда го игнорира/сетва на Public)
-    // Но C# валидатора иска Visibility да е null ако има GroupId.
-    // Тъй като formData праща всичко като string, трябва да внимаваме.
-    // В C# кода: post.Visibility = dto.GroupId.HasValue ? PostVisibility.Public : dto.Visibility;
-    // Най-сигурно е да пратим Public (0) или каквото е избрано, бекендът ще го оправи.
     formData.append("Visibility", data.visibility);
 
     if (groupId) {
@@ -227,7 +220,7 @@ export function CreatePost({ user, groupId }: CreatePostProps) {
                 <div className="p-4 flex gap-3">
                 <Avatar>
                     <AvatarImage src={user.photo || ""} />
-                    <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
+                    <AvatarFallback className="bg-primary text-white">{getInitials(displayName)}</AvatarFallback>
                 </Avatar>
                 <div>
                     <div className="font-semibold text-sm">{displayName}</div>
@@ -299,30 +292,34 @@ export function CreatePost({ user, groupId }: CreatePostProps) {
                             </Button>
 
                             <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
-                                {files.filter(isDoc).map((file, i) => (
-                                    <div key={`doc-${i}`} className="relative group rounded-md overflow-hidden border bg-muted/50 hover:bg-muted transition-colors">
-                                        <div className="flex items-center p-3 gap-3">
-                                            <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 shrink-0">
-                                                <FileText className="h-5 w-5"/>
-                                            </div>
-                                            <div className="flex-1 overflow-hidden">
-                                                <div className="text-sm font-medium truncate">{file.name}</div>
-                                                <div className="text-xs text-muted-foreground">
-                                                    {(file.size / 1024 / 1024).toFixed(2)} MB • {file.name.split('.').pop()?.toUpperCase()}
+                                {files.filter(isDoc).map((file, i) => {
+                                    const { Icon, colorClass } = getFileDetails(file.name);
+                                    
+                                    return (
+                                        <div key={`doc-${i}`} className="relative group rounded-md overflow-hidden border bg-muted/50 hover:bg-muted transition-colors">
+                                            <div className="flex items-center p-3 gap-3">
+                                                <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${colorClass}`}>
+                                                    <Icon className="h-5 w-5"/>
                                                 </div>
+                                                <div className="flex-1 overflow-hidden">
+                                                    <div className="text-sm font-medium truncate">{file.name}</div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        {(file.size / 1024 / 1024).toFixed(2)} MB • {file.name.split('.').pop()?.toUpperCase()}
+                                                    </div>
+                                                </div>
+                                                <Button 
+                                                    type="button"
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-8 w-8 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                                    onClick={() => removeFile(file)}
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </Button>
                                             </div>
-                                            <Button 
-                                                type="button"
-                                                variant="ghost" 
-                                                size="icon" 
-                                                className="h-8 w-8 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                                onClick={() => removeFile(file)}
-                                            >
-                                                <X className="h-4 w-4" />
-                                            </Button>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
 
                                 {files.filter(isMedia).map((file, i) => (
                                     <div key={`media-${i}`} className="relative group rounded-md overflow-hidden border bg-muted/20 flex justify-center items-center">
@@ -346,7 +343,7 @@ export function CreatePost({ user, groupId }: CreatePostProps) {
                                             <X className="h-3 w-3" />
                                         </Button>
                                     </div>
-            ))}
+                                ))}
                             </div>
                         </div>
                     )}
@@ -406,7 +403,7 @@ export function CreatePost({ user, groupId }: CreatePostProps) {
             type="file" 
             ref={docInputRef} 
             className="hidden" 
-            accept=".pdf,.doc,.docx,.txt" 
+            accept=".pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx,.csv,.zip,.rar,.7z" 
             multiple 
             onChange={handleFileChange} 
         />

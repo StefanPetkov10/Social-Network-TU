@@ -1,7 +1,12 @@
 export const ALLOWED_EXTENSIONS = [
-  "jpg", "jpeg", "png", "webp", 
+  "jpg", "jpeg", "png", "webp",
+
   "mp4", "avi", "mov", 
-  "pdf", "docx", "txt", "doc", "ppt", "pptx",
+
+  "pdf", "doc", "docx", "txt", "rtf",
+  "ppt", "pptx", "odp",
+  "xls", "xlsx", "csv", "ods",
+  "zip", "rar", "7z",
   "gif"
 ];
 

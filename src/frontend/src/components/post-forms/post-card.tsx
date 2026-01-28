@@ -11,7 +11,12 @@ import {
   Edit2, 
   FileText, 
   Download,
-  Loader2 
+  Loader2,
+  FileSpreadsheet,
+  FilePieChart,
+  FileArchive,
+  FileIcon,
+  File
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { Button } from "@frontend/components/ui/button";
@@ -31,7 +36,7 @@ import {
   CarouselPrevious,
 } from "@frontend/components/ui/carousel";
 import Link from "next/link";
-import { cn, getInitials } from "@frontend/lib/utils";
+import { cn, getInitials, getFileDetails } from "@frontend/lib/utils";
 import { PostDto } from "@frontend/lib/types/posts";
 import { ProfileDto } from "@frontend/lib/types/profile";
 import { useProfile } from "@frontend/hooks/use-profile";
@@ -56,6 +61,7 @@ import {
   AlertDialogTitle,
 } from "@frontend/components/ui/alert-dialog";
 import { useDeletePost } from "@frontend/hooks/use-post";
+import { EditPostDialog } from "./edit-post-dialog";
 
 interface PostCardProps {
     post: PostDto;
@@ -77,6 +83,9 @@ export function PostCard({
   const [isReactionListOpen, setIsReactionListOpen] = useState(false);
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  
+  const [isEditOpen, setIsEditOpen] = useState(false);
+
   const { mutate: deletePost, isPending: isDeleting } = useDeletePost();
 
   const { currentReaction, likesCount, handleReaction } = useReaction({
@@ -103,7 +112,6 @@ export function PostCard({
   const isOwner = post.isOwner || false;
  
   const canDelete = isOwner || isGroupAdmin;
-  console.log("PostCard - canDelete:", canDelete, "isOwner:", isOwner, "isGroupAdmin:", isGroupAdmin);
 
   const documents = post.media?.filter(m => m.mediaType !== 0 && m.mediaType !== 1) || [];
   const visualMedia = post.media?.filter(m => m.mediaType === 0 || m.mediaType === 1) || [];
@@ -194,8 +202,14 @@ export function PostCard({
             {canDelete && (
                 <>
                     <DropdownMenuSeparator />
+                    
                     {isOwner && (
-                        <DropdownMenuItem className="cursor-pointer">
+                        <DropdownMenuItem 
+                            className="cursor-pointer"
+                            onSelect={() => {
+                                setTimeout(() => setIsEditOpen(true), 0); 
+                            }}
+                        >
                             <Edit2 className="mr-2 h-4 w-4" /> Редактиране
                         </DropdownMenuItem>
                     )}
@@ -226,24 +240,27 @@ export function PostCard({
 
       {documents.length > 0 && (
         <div className="flex flex-col gap-2 mb-4">
-            {documents.map((doc, idx) => (
-                <div key={idx} className="flex items-center p-3 border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group/file">
-                    <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 mr-3 shrink-0">
-                        <FileText className="h-5 w-5" />
+            {documents.map((doc, idx) => {
+                const { Icon, colorClass } = getFileDetails(doc.fileName);
+                return (
+                    <div key={idx} className="flex items-center p-3 border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group/file">
+                        <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${colorClass}`}>
+                            <Icon />
+                        </div>
+                        <div className="flex-1 overflow-hidden min-w-0 ml-3">
+                            <p className="text-sm font-medium truncate text-foreground">
+                                {doc.fileName || `Document-${idx + 1}`} 
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                            {doc.fileName ? doc.fileName.split('.').pop()?.toUpperCase() : "DOC"}
+                            </p>
+                        </div>
+                        <a href={doc.url} download className="p-2 text-muted-foreground hover:text-foreground">
+                            <Download className="h-4 w-4" />
+                        </a>
                     </div>
-                    <div className="flex-1 overflow-hidden min-w-0">
-                        <p className="text-sm font-medium truncate text-foreground">
-                            {doc.fileName || `Document-${idx + 1}`} 
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                           {doc.fileName ? doc.fileName.split('.').pop()?.toUpperCase() : "DOC"}
-                        </p>
-                    </div>
-                    <a href={doc.url} download className="p-2 text-muted-foreground hover:text-foreground">
-                        <Download className="h-4 w-4" />
-                    </a>
-                </div>
-            ))}
+                );
+            })}
         </div>
       )}
 
@@ -383,6 +400,14 @@ export function PostCard({
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
+
+    {isOwner && (
+        <EditPostDialog 
+            open={isEditOpen} 
+            onOpenChange={setIsEditOpen} 
+            post={post} 
+        />
+    )}
     </>
   );
 }

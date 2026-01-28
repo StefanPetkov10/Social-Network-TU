@@ -4,9 +4,20 @@ import { useEffect } from "react";
 import { useMediaInfinite } from "@frontend/hooks/use-post";
 import { MediaTypeGroup } from "@frontend/lib/types/enums";
 import { useIntersection } from "@mantine/hooks";
-import { FileText, Download, File, FileSpreadsheet, FileIcon, FolderOpen, Loader2 } from "lucide-react";
+import { 
+    FileText, 
+    Download, 
+    File, 
+    FileSpreadsheet, 
+    FileIcon, 
+    FolderOpen, 
+    Loader2, 
+    FilePieChart, 
+    FileArchive 
+} from "lucide-react";
 import { Button } from "@frontend/components/ui/button";
 import { Skeleton } from "@frontend/components/ui/skeleton";
+import { cn, getFileDetails } from "@frontend/lib/utils";
 
 interface DocumentsListViewProps {
   id: string;
@@ -33,14 +44,6 @@ export function DocumentsListView({ id, type }: DocumentsListViewProps) {
 
   const documents = data?.pages.flatMap((page) => page.data || []) || [];
 
-  const getFileIcon = (fileName: string) => {
-      const ext = fileName?.split('.').pop()?.toLowerCase();
-      if (['pdf'].includes(ext!)) return <FileText className="h-6 w-6 text-red-500" />;
-      if (['xls', 'xlsx', 'csv'].includes(ext!)) return <FileSpreadsheet className="h-6 w-6 text-green-500" />;
-      if (['doc', 'docx'].includes(ext!)) return <FileIcon className="h-6 w-6 text-blue-500" />;
-      return <File className="h-6 w-6 text-gray-500" />;
-  };
-
   if (isLoading) return <DocumentsSkeleton />;
 
   if (documents.length === 0) {
@@ -48,7 +51,7 @@ export function DocumentsListView({ id, type }: DocumentsListViewProps) {
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground bg-muted/10 rounded-xl border border-dashed">
             <FolderOpen className="h-12 w-12 mb-3 opacity-20" />
             <h3 className="font-semibold text-lg">Няма документи</h3>
-            <p className="text-sm">Тук ще се покажат качените файлове.</p>
+            <p className="text-sm">Тук ще се покажат качените файлове (PDF, Word, Excel, PPT и др.).</p>
         </div>
     );
   }
@@ -56,36 +59,41 @@ export function DocumentsListView({ id, type }: DocumentsListViewProps) {
   return (
     <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
         <div className="divide-y">
-            {documents.map((doc) => (
-                <div key={doc.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors group">
-                    <div className="flex items-center gap-4 overflow-hidden">
-                        <div className="h-12 w-12 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                            {getFileIcon(doc.fileName || "")}
-                        </div>
-                        <div className="min-w-0">
-                            <p className="font-semibold text-gray-900 truncate pr-4" title={doc.fileName}>
-                                {doc.fileName || "Document"}
-                            </p>
-                            <div className="flex items-center text-xs text-gray-500 gap-2 mt-0.5">
-                                <span className="uppercase font-medium bg-gray-100 px-1.5 py-0.5 rounded">
-                                    {doc.fileName?.split('.').pop() || "FILE"}
-                                </span>
+            {documents.map((doc) => {
+                const { Icon, colorClass, label } = getFileDetails(doc.fileName || "");
+                
+                return (
+                    <div key={doc.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors group">
+                        <div className="flex items-center gap-4 overflow-hidden">
+                            <div className={cn("h-12 w-12 rounded-lg flex items-center justify-center shrink-0", colorClass)}>
+                                <Icon />
+                            </div>
+                            
+                            <div className="min-w-0">
+                                <p className="font-semibold text-gray-900 truncate pr-4" title={doc.fileName}>
+                                    {doc.fileName || "Document"}
+                                </p>
+                                <div className="flex items-center text-xs text-gray-500 gap-2 mt-0.5">
+                                    <span className={cn("uppercase font-bold px-1.5 py-0.5 rounded text-[10px]", colorClass)}>
+                                        {doc.fileName?.split('.').pop() || label}
+                                    </span>
+                                </div>
                             </div>
                         </div>
+                        
+                        <Button asChild variant="ghost" size="icon" className="shrink-0 text-gray-400 hover:text-primary hover:bg-blue-50">
+                            <a 
+                                href={doc.url} 
+                                download={doc.fileName} 
+                                target="_blank" 
+                                rel="noreferrer"
+                            >
+                                <Download className="h-5 w-5" />
+                            </a>
+                        </Button>
                     </div>
-                    
-                    <Button asChild variant="ghost" size="icon" className="shrink-0 text-gray-400 hover:text-primary hover:bg-blue-50">
-                        <a 
-                            href={doc.url} 
-                            download={doc.fileName} 
-                            target="_blank" 
-                            rel="noreferrer"
-                        >
-                            <Download className="h-5 w-5" />
-                        </a>
-                    </Button>
-                </div>
-            ))}
+                );
+            })}
         </div>
         
         {isFetchingNextPage && (

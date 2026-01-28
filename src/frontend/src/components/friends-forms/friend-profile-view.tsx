@@ -397,7 +397,7 @@ export function FriendProfileView({
                         {activeTab !== "Приятели" && (
                             <ProfileFriendsCard profileId={profileId} />
                         )}
-
+                                                        
                         {activeTab !== "Медия" && activeTab !== "Документи" && (
                             <ProfileMediaCard profileId={profileId} />
                         )}

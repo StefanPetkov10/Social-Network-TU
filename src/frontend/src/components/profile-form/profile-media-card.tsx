@@ -2,9 +2,19 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { postService } from "@frontend/services/post-service";
-import { FileText, Download, Image as ImageIcon } from "lucide-react";
+import { 
+  FileText, 
+  Download, 
+  Image as ImageIcon,
+  FileSpreadsheet,
+  FilePieChart,
+  FileArchive,
+  FileIcon,
+  File
+} from "lucide-react";
 import { Button } from "@frontend/components/ui/button";
 import { Skeleton } from "@frontend/components/ui/skeleton";
+import { cn, getFileDetails } from "@frontend/lib/utils";
 
 interface ProfileMediaFormProps {
   profileId: string;
@@ -67,30 +77,33 @@ export function ProfileMediaCard({ profileId }: ProfileMediaFormProps) {
                 <div>
                     <h4 className="font-semibold text-base mb-3">Последни документи</h4>
                     <div className="space-y-3">
-                        {mediaData.documents.map((doc: any) => (
-                            <div key={doc.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 border border-transparent hover:border-border transition-all group cursor-pointer bg-muted/10">
-                                <div className="bg-red-100 p-2.5 rounded-lg shrink-0">
-                                    <FileText className="h-5 w-5 text-red-600" />
+                        {mediaData.documents.map((doc: any) => {
+                            const { Icon, colorClass } = getFileDetails(doc.fileName);
+                            return (
+                                <div key={doc.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 border border-transparent hover:border-border transition-all group cursor-pointer bg-muted/10">
+                                    <div className={cn("p-2.5 rounded-lg shrink-0 flex items-center justify-center", colorClass)}>
+                                        <Icon />
+                                    </div>
+                                    <div className="overflow-hidden flex-1">
+                                        <p className="text-sm font-semibold truncate text-foreground" title={doc.fileName}>
+                                            {doc.fileName || "Document"}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground font-medium uppercase mt-0.5">
+                                            {doc.fileName?.split('.').pop() || "DOC"}
+                                        </p>
+                                    </div>
+                                    <a 
+                                        href={doc.url}
+                                        download={doc.fileName || "download"}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-background rounded-full"
+                                    >
+                                        <Download className="h-5 w-5" />
+                                    </a>
                                 </div>
-                                <div className="overflow-hidden flex-1">
-                                    <p className="text-sm font-semibold truncate text-foreground" title={doc.fileName}>
-                                        {doc.fileName || "Document"}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground font-medium uppercase mt-0.5">
-                                        {doc.fileName?.split('.').pop() || "DOC"}
-                                    </p>
-                                </div>
-                                <a 
-                                    href={doc.url}
-                                    download={doc.fileName || "download"}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-background rounded-full"
-                                >
-                                    <Download className="h-5 w-5" />
-                                </a>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             )}

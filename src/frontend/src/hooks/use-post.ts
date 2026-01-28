@@ -34,7 +34,6 @@ export const useCreatePost = () => {
           queryClient.invalidateQueries({ queryKey: ["group-media", groupId] });
       } else {
           if (myProfileId) {
-              queryClient.invalidateQueries({ queryKey: ["posts"] }); 
               queryClient.invalidateQueries({ queryKey: ["posts", myProfileId] });
               queryClient.invalidateQueries({ queryKey: ["profile-media", myProfileId] });
           }
@@ -52,7 +51,7 @@ export const useFeedPosts = () => {
     getNextPageParam: (lastPageResponse) => {
       return lastPageResponse.meta?.lastPostId || undefined;
     },
-    
+
     initialPageParam: undefined,
     staleTime: 1000 * 60 * 5,
   });
@@ -60,15 +59,14 @@ export const useFeedPosts = () => {
 
 export const useUserPosts = (profileId: string) => {
   return useInfiniteQuery<ApiResponse<PostDto[]>, Error>({
-    queryKey: ["posts", profileId],
-    
+    queryKey: ["posts", profileId], 
     queryFn: async ({ pageParam = undefined }) => {
       return await postService.getUserPosts(profileId, pageParam as string | undefined);
     },
     getNextPageParam: (lastPageResponse) => {
       return lastPageResponse.meta?.lastPostId || undefined;
     },
-    
+
     initialPageParam: undefined,
     enabled: !!profileId 
   });
@@ -100,6 +98,46 @@ export const useMediaInfinite = ({ id, sourceType, mediaType }: UseMediaProps) =
         initialPageParam: 0,
         enabled: !!id,
     });
+};
+
+export const useUpdatePost = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ postId, formData }: { postId: string; formData: FormData }) => 
+      postService.updatePost(postId, formData),
+
+    onSuccess: (response) => {
+      if (!response.success) {
+        toast.error("Грешка при обновяване", {
+          description: response.message || "Възникна проблем.",
+        });
+        return;
+      }
+      
+      const updatedPost = response.data;
+
+      toast.success("Успех", { description: "Постът е обновен успешно." });
+
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+
+      if (updatedPost?.profileId) {
+          queryClient.invalidateQueries({ queryKey: ["profile-media", updatedPost.profileId] });
+      }
+
+      if (updatedPost?.groupId) {
+          queryClient.invalidateQueries({ queryKey: ["group-posts", updatedPost.groupId] });
+          queryClient.invalidateQueries({ queryKey: ["group-media", updatedPost.groupId] });
+      } else {
+           queryClient.invalidateQueries({ queryKey: ["group-posts"] });
+      }
+    },
+    onError: (error: any) => {
+        toast.error("Грешка", { 
+            description: error?.response?.data?.message || "Неуспешна редакция." 
+        });
+    }
+  });
 };
 
 export const useDeletePost = () => {

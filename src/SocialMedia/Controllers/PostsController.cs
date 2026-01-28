@@ -18,6 +18,7 @@ namespace SocialMedia.Controllers
 
         [HttpPost]
         [Consumes("multipart/form-data")]
+        [RequestSizeLimit(104_857_600)]
         public async Task<IActionResult> CreatePost([FromForm] CreatePostDto dto)
         {
             if (!ModelState.IsValid)
@@ -100,6 +101,7 @@ namespace SocialMedia.Controllers
         }
 
         [HttpPut("{postId}")]
+        [RequestSizeLimit(104_857_600)]
         public async Task<IActionResult> UpdatePost(Guid postId, [FromForm] UpdatePostDto dto)
         {
             if (!ModelState.IsValid)

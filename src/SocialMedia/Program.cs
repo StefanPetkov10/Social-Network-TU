@@ -102,6 +102,16 @@ namespace SocialMedia
                  });
             });
 
+            builder.WebHost.ConfigureKestrel(options =>
+            {
+                options.Limits.MaxRequestBodySize = 104_857_600;
+            });
+
+            builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+            {
+                options.MultipartBodyLengthLimit = 104_857_600;
+            });
+
             builder.Services.AddMemoryCache();
 
             builder.Services.RegisterRepositories(typeof(ApplicationUser).Assembly);
