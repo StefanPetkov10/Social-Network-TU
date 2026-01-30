@@ -1,15 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { PlusCircle, Loader2 } from "lucide-react"; 
+import { Settings, Loader2 } from "lucide-react"; 
 import { toast } from "sonner";
 import { useRouter } from "next/navigation"; 
+import { useQueryClient } from "@tanstack/react-query"; 
 
-import { useCreateGroup } from "@frontend/hooks/use-groups";
+import { useUpdateGroup } from "@frontend/hooks/use-groups";
 import { GroupPrivacy } from "@frontend/lib/types/enums";
+import { GroupDto } from "@frontend/lib/types/groups";
+import { ApiResponse } from "@frontend/lib/types/api"; 
 
 import { Button } from "@frontend/components/ui/button";
 import {
@@ -39,9 +42,9 @@ import {
   SelectValue,
 } from "@frontend/components/ui/select";
 
-const createGroupSchema = z.object({
+const updateGroupSchema = z.object({
   name: z.string()
-    .min(3, "Името на групата е задължително и трябва да съдържа поне 3 символа") 
+    .min(1, "Името на групата е задължително") 
     .max(100, "Името не може да надвишава 100 символа"), 
   description: z.string()
     .max(500, "Описанието не може да надвишава 500 символа") 
@@ -49,53 +52,113 @@ const createGroupSchema = z.object({
   groupPrivacy: z.string(), 
 });
 
-type CreateGroupFormValues = z.infer<typeof createGroupSchema>;
+type UpdateGroupFormValues = z.infer<typeof updateGroupSchema>;
 
-export function CreateGroupDialog() {
+interface EditGroupDialogProps {
+    group: GroupDto;
+    trigger?: React.ReactNode; 
+}
+
+export function EditGroupDialog({ group, trigger }: EditGroupDialogProps) {
   const [open, setOpen] = useState(false);
   const router = useRouter(); 
-  const { mutate: createGroup, isPending } = useCreateGroup();
+  const queryClient = useQueryClient();
+  const { mutate: updateGroup, isPending } = useUpdateGroup();
 
-  const form = useForm<CreateGroupFormValues>({
-    resolver: zodResolver(createGroupSchema),
+  const form = useForm<UpdateGroupFormValues>({
+    resolver: zodResolver(updateGroupSchema),
     defaultValues: {
-      name: "",
-      description: "",
-      groupPrivacy: GroupPrivacy.Public.toString(), 
+      name: group.name || "",
+      description: group.description || "",
+      groupPrivacy: group.isPrivate ? GroupPrivacy.Private.toString() : GroupPrivacy.Public.toString(), 
     },
   });
 
- const onSubmit = (data: CreateGroupFormValues) => {
+  useEffect(() => {
+    if (open) {
+        form.reset({
+            name: group.name || "",
+            description: group.description || "",
+            groupPrivacy: group.isPrivate ? GroupPrivacy.Private.toString() : GroupPrivacy.Public.toString(),
+        });
+    }
+  }, [open, group, form]);
+
+ const onSubmit = (data: UpdateGroupFormValues) => {
+  const privacyEnumValue = Number(data.groupPrivacy);
+  
   const payload = {
-      ...data,
-      groupPrivacy: Number(data.groupPrivacy)
+      name: data.name,
+      description: data.description,
+      groupPrivacy: privacyEnumValue
   };
 
-  createGroup(payload, {
-    onSuccess: (response) => { 
-      setOpen(false);
-      form.reset();
+  updateGroup({ groupId: group.id, data: payload }, {
+    onSuccess: (response: ApiResponse<any>) => { 
       
-      if (!response?.data) {
-        toast.error("Групата беше създадена, но възникна грешка при зареждането.");
-        return;
+      if (!response.success) {
+          const message = response.message || "";
+          const errors = response.errors || [];
+          
+          if (message.includes("already taken") || errors.some(e => e.includes("unique"))) {
+             form.setError("name", { 
+                type: "manual", 
+                message: "Това име вече е заето. Опитайте с друго." 
+             });
+          } else {
+             toast.error("Възникна грешка: " + message);
+          }
+          return;
       }
 
-      const createdGroupName = response.data.name;
+      setOpen(false);
+      
+      const updatedGroupData: GroupDto = {
+          ...group,
+          name: data.name,
+          description: data.description || undefined,
+          isPrivate: privacyEnumValue === GroupPrivacy.Private, 
+      };
 
-      const encodedName = encodeURIComponent(createdGroupName);
-            
-      router.push(`/groups/${encodedName}`);
+      if (group.name !== data.name) {
+          const encodedName = encodeURIComponent(data.name);
+          
+          queryClient.setQueryData<ApiResponse<GroupDto>>(
+              ["group-by-name", data.name], 
+              (old) => ({ data: updatedGroupData, success: true, message: "Updated" }) 
+          );
+          queryClient.removeQueries({ queryKey: ["group-by-name", group.name] });
+
+          router.replace(`/groups/${encodedName}`);
+      } 
+      else {
+          queryClient.setQueryData<ApiResponse<GroupDto>>(
+              ["group-by-name", group.name],
+              (oldData) => {
+                  if (!oldData) return { data: updatedGroupData, success: true, message: "" };
+                  return {
+                      ...oldData,
+                      data: {
+                          ...oldData.data,
+                          ...updatedGroupData
+                      }
+                  };
+              }
+          );
+          queryClient.invalidateQueries({ queryKey: ["my-groups"] });
+      }
+
+      toast.success("Промените са запазени успешно!");
     },
     onError: (error: any) => {
       const validationErrors = error.response?.data?.errors;
       if (validationErrors && validationErrors["Name"]) {
         form.setError("name", { 
           type: "manual", 
-          message: "Това име вече е заето. Моля, изберете друго." 
+          message: "Това име вече е заето. Опитайте с друго." 
         });
       } else {
-        toast.error("Възникна грешка при създаването на групата.");
+        toast.error("Възникна грешка при обновяването.");
       }
     }
   });
@@ -104,19 +167,19 @@ export function CreateGroupDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button 
-           className="flex items-center justify-center w-full gap-2 bg-primary/10 text-primary hover:bg-primary/20 font-semibold py-3 rounded-xl transition-colors mb-6"
-        >
-            <PlusCircle className="size-5" />
-            <span>Създаване на нова група</span>
-        </button>
+        {trigger ? trigger : (
+            <Button variant="outline" size="sm" className="gap-2">
+                <Settings className="w-4 h-4" />
+                Настройки
+            </Button>
+        )}
       </DialogTrigger>
       
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Създаване на нова група</DialogTitle>
+          <DialogTitle>Редактиране на група</DialogTitle>
           <DialogDescription>
-            Създайте общност за вашите интереси.
+            Променете настройките и информацията за групата.
           </DialogDescription>
         </DialogHeader>
 
@@ -130,7 +193,7 @@ export function CreateGroupDialog() {
                 <FormItem>
                   <FormLabel>Име на групата</FormLabel>
                   <FormControl>
-                    <Input placeholder="Напр: C# Developers Bulgaria" {...field} />
+                    <Input placeholder="Напр: C# Developers" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -142,10 +205,10 @@ export function CreateGroupDialog() {
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Описание (опционално)</FormLabel>
+                  <FormLabel>Описание</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="За какво е тази група?" 
+                      placeholder="Описание на групата..." 
                       className="resize-none" 
                       {...field} 
                     />
@@ -190,7 +253,7 @@ export function CreateGroupDialog() {
               </Button>
               <Button type="submit" disabled={isPending}>
                 {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Създай
+                Запази промените
               </Button>
             </DialogFooter>
           </form>

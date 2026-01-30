@@ -12,7 +12,8 @@ namespace AutoMapper
             CreateMap<CreateGroupDto, Group>()
                 .ForMember(dest => dest.Privacy, opt => opt.Ignore());
 
-            CreateMap<UpdateGroupDto, Group>();
+            CreateMap<UpdateGroupDto, Group>()
+                .ForMember(dest => dest.Privacy, opt => opt.Ignore());
         }
     }
 }

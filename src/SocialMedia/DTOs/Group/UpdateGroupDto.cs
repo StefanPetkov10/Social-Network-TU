@@ -1,9 +1,11 @@
-﻿namespace SocialMedia.DTOs.Group
+﻿using SocialMedia.Database.Models.Enums;
+
+namespace SocialMedia.DTOs.Group
 {
     public class UpdateGroupDto
     {
         public string Name { get; set; } = null!;
         public string? Description { get; set; }
-        public bool IsPrivate { get; set; }
+        public GroupPrivacy GroupPrivacy { get; set; }
     }
 }

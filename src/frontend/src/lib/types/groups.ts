@@ -50,5 +50,5 @@ export interface CreateGroupDto {
 export interface UpdateGroupDto {
   name: string;
   description?: string;
-  isPrivate: boolean;
+  groupPrivacy: GroupPrivacy; 
 }

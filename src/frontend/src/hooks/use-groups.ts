@@ -2,7 +2,7 @@ import { useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-q
 import { groupsService } from "@frontend/services/groups-service";
 import { toast } from "sonner";
 import { GroupPrivacy } from "@frontend/lib/types/enums";
-import { CreateGroupDto, GroupDto } from "@frontend/lib/types/groups";
+import { CreateGroupDto, GroupDto, UpdateGroupDto } from "@frontend/lib/types/groups";
 import { useQuery } from "@tanstack/react-query";
 import { ApiResponse } from "@frontend/lib/types/api";
 import { useRouter } from "next/dist/client/components/navigation";
@@ -83,6 +83,22 @@ export const useGroupPosts = (groupId: string) => {
     enabled: !!groupId, 
   });
 };
+
+export const useUpdateGroup = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ groupId, data }: { groupId: string, data: UpdateGroupDto }) => 
+             groupsService.updateGroup(groupId, data),
+        onSuccess: (response, variables) => {
+           toast.success("Групата е обновена успешно!");
+           
+          // queryClient.invalidateQueries({ queryKey: ["group-by-name"] }); 
+           queryClient.invalidateQueries({ queryKey: ["my-groups"] });
+           queryClient.invalidateQueries({ queryKey: ["groups-discover"] });
+        },
+    });
+}
 
 export const useDeleteGroup = () => {
     const queryClient = useQueryClient();

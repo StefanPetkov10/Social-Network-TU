@@ -15,7 +15,8 @@ import {
   FileText, 
   Image as ImageIcon,
   ShieldAlert,
-  Trash2 
+  Trash2,
+  Settings 
 } from "lucide-react";
 import { useIntersection } from "@mantine/hooks";
 
@@ -43,6 +44,7 @@ import { PostCard } from "@frontend/components/post-forms/post-card";
 import { CreatePost } from "@frontend/components/post-forms/create-post-form";
 import { LoadingScreen } from "@frontend/components/common/loading-screen";
 import { ErrorScreen } from "@frontend/components/common/error-screen";
+import { EditGroupDialog } from "@frontend/components/groups-forms/edit-group-dialog"; 
 
 import { useGroupByName, useGroupPosts, useDeleteGroup } from "@frontend/hooks/use-groups";
 import { 
@@ -236,12 +238,30 @@ export default function GroupPage() {
                                                 <DropdownMenuTrigger asChild>
                                                     <Button variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-100 gap-2 font-semibold px-6 h-11 rounded-lg transition-all shadow-sm">
                                                         <Users className="w-5 h-5" />
-                                                        {isOwner ? "Собственик" : "Присъединил се"}
+                                                        {isOwner ? "Собственик" : (isAdmin ? "Админ" : "Присъединил се")}
                                                         <ChevronDown className="w-4 h-4 ml-1 opacity-50" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
+                                                <DropdownMenuContent align="end" className="w-56">
                                                     
+                                                    {canModerate && (
+                                                        <>
+                                                            <EditGroupDialog 
+                                                                group={group} 
+                                                                trigger={
+                                                                    <DropdownMenuItem 
+                                                                        onSelect={(e) => e.preventDefault()} 
+                                                                        className="cursor-pointer font-medium"
+                                                                    >
+                                                                        <Settings className="w-4 h-4 mr-2 text-gray-500" />
+                                                                        Настройки на групата
+                                                                    </DropdownMenuItem>
+                                                                } 
+                                                            />
+                                                            <DropdownMenuSeparator />
+                                                        </>
+                                                    )}
+
                                                     <DropdownMenuItem 
                                                         className="text-red-600 cursor-pointer font-medium focus:bg-red-50 focus:text-red-700"
                                                         onSelect={(e) => {
@@ -254,19 +274,16 @@ export default function GroupPage() {
                                                     </DropdownMenuItem>
 
                                                     {isOwner && (
-                                                        <>
-                                                            <DropdownMenuSeparator />
-                                                            <DropdownMenuItem 
-                                                                className="text-red-600 cursor-pointer font-bold focus:bg-red-50 focus:text-red-700 mt-1"
-                                                                onSelect={(e) => {
-                                                                    e.preventDefault();
-                                                                    setIsDeleteDialogOpen(true);
-                                                                }}
-                                                            >
-                                                                <Trash2 className="w-4 h-4 mr-2" />
-                                                                Изтрий групата
-                                                            </DropdownMenuItem>
-                                                        </>
+                                                        <DropdownMenuItem 
+                                                            className="text-red-600 cursor-pointer font-bold focus:bg-red-50 focus:text-red-700 mt-1"
+                                                            onSelect={(e) => {
+                                                                e.preventDefault();
+                                                                setIsDeleteDialogOpen(true);
+                                                            }}
+                                                        >
+                                                            <Trash2 className="w-4 h-4 mr-2" />
+                                                            Изтрий групата
+                                                        </DropdownMenuItem>
                                                     )}
 
                                                 </DropdownMenuContent>

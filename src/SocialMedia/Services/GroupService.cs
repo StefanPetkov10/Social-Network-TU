@@ -53,6 +53,7 @@ namespace SocialMedia.Services
                 return NotFoundResponse<GroupDto>("Profile");
 
             var group = _mapper.Map<Group>(dto);
+            group.Privacy = dto.GroupPrivacy;
             group.Id = Guid.NewGuid();
             group.OwnerId = profile.Id;
 
@@ -422,7 +423,17 @@ namespace SocialMedia.Services
                 && membership.Role != GroupRole.Owner))
                 return ApiResponse<object>.ErrorResponse("Forbidden.", new[] { "You do not have permission to update this group." });
 
+            if (!string.Equals(group.Name, dto.Name, StringComparison.OrdinalIgnoreCase))
+            {
+                var existingGroup = await _groupRepository
+                    .FirstOrDefaultAsync(g => g.Name.ToUpper() == dto.Name.ToUpper() && g.Id != group.Id);
+                if (existingGroup != null)
+                {
+                    return ApiResponse<object>.ErrorResponse("Group name already taken.", new[] { "Group name must be unique." });
+                }
+            }
             var updateGroup = _mapper.Map(dto, group);
+            updateGroup.Privacy = dto.GroupPrivacy;
 
             _groupRepository.UpdateAsync(updateGroup);
             await _groupRepository.SaveChangesAsync();

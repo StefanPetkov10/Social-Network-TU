@@ -46,6 +46,11 @@ export const groupsService = {
         return data;
     },
 
+    updateGroup: async (groupId: string, group: UpdateGroupDto) => {
+        const { data } = await api.put<ApiResponse<GroupDto>>(`/api/Group/${groupId}`, group);
+        return data;
+    },
+
     deleteGroup: async (groupId: string) => {
         const { data } = await api.delete<ApiResponse<object>>(`/api/Group/${groupId}`);
         return data;
