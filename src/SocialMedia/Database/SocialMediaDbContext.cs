@@ -11,13 +11,14 @@ namespace SocialMedia.Database
         public SocialMediaDbContext(DbContextOptions<SocialMediaDbContext> options)
             : base(options) { }
 
-        public DbSet<Post> Posts { get; set; }
         public DbSet<Profile> Profiles { get; set; }
         public DbSet<Friendship> Friendships { get; set; }
         public DbSet<Follow> Follows { get; set; }
         public DbSet<Group> Groups { get; set; }
         public DbSet<GroupMembership> GroupMemberships { get; set; }
+        public DbSet<Post> Posts { get; set; }
         public DbSet<PostMedia> PostMedias { get; set; }
+        public DbSet<SavedPosts> SavedPosts { get; set; }
         public DbSet<Comment> Comments { get; set; }
         public DbSet<CommentMedia> CommentMedias { get; set; }
         public DbSet<Reaction> Reactions { get; set; }
