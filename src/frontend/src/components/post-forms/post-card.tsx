@@ -49,6 +49,7 @@ import { reactionService } from "@frontend/services/reaction-service";
 import { useReaction } from "@frontend/hooks/use-reaction";
 import { ReactionButton, REACTION_CONFIG } from "@frontend/components/ui/reaction-button";
 import { ReactionListDialog } from "../reaction-dialog/reaction-list-dialog";
+import { SavePostDialog } from "@frontend/components/saved-posts-form/save-post-dialog";
 
 import {
   AlertDialog,
@@ -85,6 +86,8 @@ export function PostCard({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   const [isEditOpen, setIsEditOpen] = useState(false);
+
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
 
   const { mutate: deletePost, isPending: isDeleting } = useDeletePost();
 
@@ -195,8 +198,9 @@ export function PostCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem className="cursor-pointer">
-              <Bookmark className="mr-2 h-4 w-4" /> Запази
+            <DropdownMenuItem onClick={() => setIsSaveDialogOpen(true)} className="cursor-pointer">
+                <Bookmark className="mr-2 h-4 w-4" />
+                <span>Запази</span>
             </DropdownMenuItem>
             
             {canDelete && (
@@ -408,6 +412,12 @@ export function PostCard({
             post={post} 
         />
     )}
+
+    <SavePostDialog 
+        open={isSaveDialogOpen} 
+        onOpenChange={setIsSaveDialogOpen} 
+        postId={post.id} 
+      />
     </>
   );
 }

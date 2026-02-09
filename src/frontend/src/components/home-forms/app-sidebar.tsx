@@ -36,7 +36,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
    const navMainItems = [
     { title: "Приятели", url: "/friends", icon: UserPlus },
     { title: "Последователи", url: "/followers", icon: Users },
-    { title: "Запазени", url: "/saved", icon: Bookmark },
+    { title: "Запазени", url: "/saved-posts", icon: Bookmark },
     {
       title: "Моите Групи",
       url: "/groups",

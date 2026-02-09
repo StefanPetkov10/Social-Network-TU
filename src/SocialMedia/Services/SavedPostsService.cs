@@ -14,6 +14,8 @@ namespace SocialMedia.Services
 {
     public class SavedPostsService : BaseService, ISavedPostsService
     {
+        private const string SystemDefaultCollection = "SYSTEM_DEFAULT_GENERAL";
+
         private readonly IRepository<SavedPosts, Guid> _savedPostsRepository;
         private readonly IRepository<Database.Models.Profile, Guid> _profileRepository;
         private readonly IHttpContextAccessor _httpContextAccessor;
@@ -45,12 +47,11 @@ namespace SocialMedia.Services
                 .GroupBy(sp => sp.CollectionName)
                 .Select(g => new
                 {
-                    Name = g.Key,
+                    Name = g.Key ?? SystemDefaultCollection,
                     Count = g.Count(),
                     LatestMedia = g.OrderByDescending(sp => sp.SavedAt)
                                    .SelectMany(sp => sp.Post.Media)
                                    .Where(m => m.MediaType == MediaType.Image || m.MediaType == MediaType.Video)
-                                   .OrderBy(m => m.Order)
                                    .FirstOrDefault()
                 })
                 .ToListAsync();
@@ -59,11 +60,12 @@ namespace SocialMedia.Services
 
             var result = collectionsData.Select(c => new SavedCollectionDto
             {
-                Name = string.IsNullOrEmpty(c.Name) ? "General" : c.Name,
+                Name = c.Name,
                 Count = c.Count,
                 CoverImageUrl = c.LatestMedia != null ? $"{baseUrl}/{c.LatestMedia.FilePath}" : null
             })
-            .OrderByDescending(x => x.Count)
+            .OrderByDescending(x => x.Name == SystemDefaultCollection)
+            .ThenByDescending(x => x.Count)
             .ToList();
 
             return ApiResponse<IEnumerable<SavedCollectionDto>>.SuccessResponse(result, "Collections retrieved.");
@@ -81,6 +83,10 @@ namespace SocialMedia.Services
 
             var profile = await _profileRepository.GetByApplicationIdAsync(userId);
 
+            string targetCollection = string.IsNullOrWhiteSpace(collectionName) || collectionName == "General"
+                ? SystemDefaultCollection
+                : collectionName;
+
             var query = _savedPostsRepository.QueryNoTracking()
                 .Include(sp => sp.Post).ThenInclude(p => p.Profile).ThenInclude(pr => pr.User)
                 .Include(sp => sp.Post).ThenInclude(p => p.Media)
@@ -88,13 +94,8 @@ namespace SocialMedia.Services
                 .Include(sp => sp.Post).ThenInclude(p => p.Group)
                 .Where(sp => sp.ProfileId == profile.Id && !sp.Post.IsDeleted);
 
-            if (!string.IsNullOrEmpty(collectionName))
-            {
-                if (collectionName == "General")
-                    query = query.Where(sp => sp.CollectionName == null || sp.CollectionName == "" || sp.CollectionName == "General");
-                else
-                    query = query.Where(sp => sp.CollectionName == collectionName);
-            }
+            query = query.Where(sp => sp.CollectionName == targetCollection ||
+                                     (targetCollection == SystemDefaultCollection && (sp.CollectionName == null || sp.CollectionName == "")));
 
             var savedPosts = await query
                 .OrderByDescending(sp => sp.SavedAt)
@@ -134,6 +135,13 @@ namespace SocialMedia.Services
             var invalidUserResponse = GetUserIdOrUnauthorized<string>(userClaims, out var userId);
             if (invalidUserResponse != null) return invalidUserResponse;
 
+            if (dto.CollectionName != null && dto.CollectionName.Trim().Equals(SystemDefaultCollection, StringComparison.OrdinalIgnoreCase))
+            {
+                return ApiResponse<string>.ErrorResponse("Invalid collection name.");
+            }
+
+            string targetCollection = string.IsNullOrWhiteSpace(dto.CollectionName) ? SystemDefaultCollection : dto.CollectionName.Trim();
+
             var profile = await _profileRepository.GetByApplicationIdAsync(userId);
             if (profile == null) return ApiResponse<string>.ErrorResponse("Profile not found.");
 
@@ -142,12 +150,12 @@ namespace SocialMedia.Services
 
             if (existingSave != null)
             {
-                if (existingSave.CollectionName != dto.CollectionName)
+                if (existingSave.CollectionName != targetCollection)
                 {
-                    existingSave.CollectionName = dto.CollectionName;
+                    existingSave.CollectionName = targetCollection;
                     existingSave.SavedAt = DateTime.UtcNow;
                     await _savedPostsRepository.SaveChangesAsync();
-                    return ApiResponse<string>.SuccessResponse(dto.CollectionName ?? "General", "Post moved to collection.");
+                    return ApiResponse<string>.SuccessResponse(targetCollection, "Post moved to collection.");
                 }
                 return ApiResponse<string>.SuccessResponse(existingSave.CollectionName, "Post is already saved.");
             }
@@ -157,14 +165,14 @@ namespace SocialMedia.Services
                 Id = Guid.NewGuid(),
                 ProfileId = profile.Id,
                 PostId = dto.PostId,
-                CollectionName = dto.CollectionName,
+                CollectionName = targetCollection,
                 SavedAt = DateTime.UtcNow
             };
 
             await _savedPostsRepository.AddAsync(newSave);
             await _savedPostsRepository.SaveChangesAsync();
 
-            return ApiResponse<string>.SuccessResponse(dto.CollectionName ?? "General", "Post saved successfully.");
+            return ApiResponse<string>.SuccessResponse(targetCollection, "Post saved successfully.");
         }
 
         public async Task<ApiResponse<object>> RemoveFromSavedAsync(ClaimsPrincipal userClaims, Guid savedPostId)
@@ -178,15 +186,12 @@ namespace SocialMedia.Services
                 .FirstOrDefaultAsync(sp => sp.Id == savedPostId);
 
             if (savedEntry == null) return NotFoundResponse<object>("Saved post not found.");
-
-            if (savedEntry.ProfileId != profile.Id)
-                return ApiResponse<object>.ErrorResponse("Unauthorized action.");
+            if (savedEntry.ProfileId != profile.Id) return ApiResponse<object>.ErrorResponse("Unauthorized action.");
 
             await _savedPostsRepository.DeleteAsync(savedEntry);
             await _savedPostsRepository.SaveChangesAsync();
 
             return ApiResponse<object>.SuccessResponse(true, "Post removed from saved.");
         }
-
     }
 }
