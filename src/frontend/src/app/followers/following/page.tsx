@@ -46,7 +46,7 @@ export default function FollowingPage() {
     if (!searchQuery) return followingList;
     return followingList.filter((person) => 
       (person.displayFullName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (person.userName || "").toLowerCase().includes(searchQuery.toLowerCase())
+      (person.username || "").toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [followingList, searchQuery]);
 

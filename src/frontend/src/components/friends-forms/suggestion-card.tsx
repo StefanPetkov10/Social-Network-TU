@@ -21,7 +21,7 @@ export function SuggestionCard({ person, onAdd, onRemove }: SuggestionCardProps)
         <Avatar className="h-full w-full rounded-none">
           <AvatarImage src={person.authorAvatar || ""} className="object-cover" />
           {/*<AvatarFallback className="bg-primary text-white text-3xl font-bold rounded-none">*/}
-          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-3xl font-bold rounded-none">
+          <AvatarFallback className="bg-gradient-to-br from-violet-600 to-blue-600 text-white text-3xl font-bold rounded-none">
             {initials}
           </AvatarFallback>
         </Avatar>

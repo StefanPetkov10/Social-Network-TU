@@ -20,7 +20,7 @@ export function FriendRequestCard({ request, onConfirm, onDelete }: FriendReques
       <div className="h-48 w-full relative bg-gray-50 cursor-pointer group">
         <Avatar className="h-full w-full rounded-none">
           <AvatarImage src={avatarUrl || ""} className="object-cover group-hover:opacity-95 transition" />
-          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-3xl font-bold rounded-none">
+          <AvatarFallback className="bg-gradient-to-br from-violet-600 to-blue-600 text-white text-3xl font-bold rounded-none">
             {initials}
           </AvatarFallback>
         </Avatar>

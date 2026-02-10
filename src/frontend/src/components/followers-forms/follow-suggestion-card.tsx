@@ -35,7 +35,7 @@ export function FollowSuggestionCard({ person, onFollow, onRemove }: FollowSugge
         <div className="relative mb-3">
             <Avatar className="h-24 w-24 border-4 border-white shadow-sm">
             <AvatarImage src={avatarUrl} className="object-cover" />
-            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xl font-bold">
+            <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-cyan-500 text-white text-xl font-bold">
                 {initials}
             </AvatarFallback>
             </Avatar>
@@ -46,7 +46,7 @@ export function FollowSuggestionCard({ person, onFollow, onRemove }: FollowSugge
         </h3>
         
         <p className="text-sm text-gray-500 text-center mb-1">
-          @{person.userName}
+          @{person.username}
         </p>
 
         <p className="text-xs text-indigo-600 font-medium text-center mt-1 px-2 line-clamp-2 min-h-[2.5em]">

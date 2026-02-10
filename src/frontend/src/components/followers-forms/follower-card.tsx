@@ -29,7 +29,7 @@ export function FollowerCard({
 }: FollowerCardProps) {
   const displayName = follower.displayFullName || "Unknown";
   const initials = getInitials(displayName);
-  const username = follower.userName;
+  const username = follower.username;
   const profileId = follower.profileId;
   const avatarUrl = follower.authorAvatar;
 
@@ -58,7 +58,7 @@ export function FollowerCard({
 
       <Avatar className="h-20 w-20 shadow-sm rounded-full mb-3 border-2 border-gray-50 mt-2">
         <AvatarImage src={avatarUrl || ""} className="object-cover" />
-        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xl font-bold">
+        <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-cyan-500 text-white text-xl font-bold">
             {initials}
         </AvatarFallback>
       </Avatar>
