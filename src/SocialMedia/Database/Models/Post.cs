@@ -12,8 +12,6 @@ namespace SocialMedia.Database.Models
         [Required]
         public string Content { get; set; } = null!;
 
-        public ICollection<PostMedia>? Media { get; set; } = new List<PostMedia>();
-
         [Required]
         public Guid ProfileId { get; set; }
         [ForeignKey(nameof(ProfileId))]
@@ -33,5 +31,7 @@ namespace SocialMedia.Database.Models
         public ICollection<Comment> Comments { get; set; } = new List<Comment>();
 
         public ICollection<Reaction> Reactions { get; set; } = new List<Reaction>();
+
+        public ICollection<PostMedia>? Media { get; set; } = new List<PostMedia>();
     }
 }

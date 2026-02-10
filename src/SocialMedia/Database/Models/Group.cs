@@ -25,5 +25,6 @@ namespace SocialMedia.Database.Models
 
         public ICollection<GroupMembership> Members { get; set; } = new List<GroupMembership>();
         public ICollection<Post> Posts { get; set; } = new List<Post>();
+        public ICollection<Message> Messages { get; set; } = new List<Message>();
     }
 }

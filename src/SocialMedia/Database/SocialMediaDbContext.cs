@@ -22,8 +22,39 @@ namespace SocialMedia.Database
         public DbSet<Comment> Comments { get; set; }
         public DbSet<CommentMedia> CommentMedias { get; set; }
         public DbSet<Reaction> Reactions { get; set; }
+        public DbSet<Message> Messages { get; set; }
+        public DbSet<MessageMedia> MessageMedias { get; set; }
         public DbSet<EmailOtpCode> EmailOtpCodes { get; set; }
         public DbSet<PasswordResetSession> PasswordResetSessions { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder builder)
+        {
+            base.OnModelCreating(builder);
+
+            builder.Entity<Message>()
+            .HasOne(m => m.Sender)
+            .WithMany(p => p.MessagesSent)
+            .HasForeignKey(m => m.SenderId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Message>()
+                .HasOne(m => m.Receiver)
+                .WithMany(p => p.MessagesReceived)
+                .HasForeignKey(m => m.ReceiverId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Message>()
+                .HasOne(m => m.Group)
+                .WithMany(g => g.Messages)
+                .HasForeignKey(m => m.GroupId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Reaction>()
+                .HasOne(r => r.Message)
+                .WithMany(m => m.Reactions)
+                .HasForeignKey(r => r.MessageId)
+                .OnDelete(DeleteBehavior.Cascade);
+        }
 
         public override int SaveChanges()
         {

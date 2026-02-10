@@ -48,5 +48,11 @@ namespace SocialMedia.Database.Models
         public ICollection<Group> GroupsOwned { get; set; } = new List<Group>();
         public ICollection<GroupMembership> GroupMemberships { get; set; } = new List<GroupMembership>();
 
+        [InverseProperty(nameof(Message.Sender))]
+        public ICollection<Message> MessagesSent { get; set; } = new List<Message>();
+
+        [InverseProperty(nameof(Message.Receiver))]
+        public ICollection<Message> MessagesReceived { get; set; } = new List<Message>();
+
     }
 }

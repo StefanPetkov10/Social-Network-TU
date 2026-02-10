@@ -25,6 +25,10 @@ namespace SocialMedia.Database.Models
         [ForeignKey(nameof(CommentId))]
         public Comment? Comment { get; set; }
 
+        public Guid? MessageId { get; set; }
+        [ForeignKey(nameof(MessageId))]
+        public Message? Message { get; set; }
+
         [Required]
         public DateTime CreatedAt { get; set; }
     }
