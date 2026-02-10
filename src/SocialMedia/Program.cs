@@ -13,6 +13,7 @@ using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database;
 using SocialMedia.Database.Models;
 using SocialMedia.Extensions;
+using SocialMedia.Hubs;
 using SocialMedia.Services.Interfaces;
 using SocialMedia.Validators;
 using SocialMedia.Validators.CommentValidation;
@@ -33,6 +34,8 @@ namespace SocialMedia
             builder.Host.UseNLog();
 
             builder.Services.AddDataProtection();
+
+            builder.Services.AddSignalR();
 
             builder.Services.AddDbContext<SocialMediaDbContext>(options =>
                 options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -65,6 +68,21 @@ namespace SocialMedia
                         System.Text.Encoding.UTF8.GetBytes(builder.Configuration["JWT:SecretKey"])
                     ),
                     ValidateLifetime = true
+                };
+
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+
+                        var path = context.HttpContext.Request.Path;
+                        if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/chat"))
+                        {
+                            context.Token = accessToken;
+                        }
+                        return Task.CompletedTask;
+                    }
                 };
             });
 
@@ -132,7 +150,8 @@ namespace SocialMedia
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("LocalDev", p => p
-                    .WithOrigins("http://localhost:3000")
+                    //.WithOrigins("http://localhost:3000")
+                    .SetIsOriginAllowed(origin => true)
                     .AllowAnyHeader()
                     .AllowAnyMethod()
                     .AllowCredentials()
@@ -191,6 +210,8 @@ namespace SocialMedia
             });
 
             app.MapControllers();
+
+            app.MapHub<ChatHub>("/hubs/chat");
 
             app.Run();
         }
