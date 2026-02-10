@@ -175,7 +175,7 @@ namespace SocialMedia.Services
             return ApiResponse<string>.SuccessResponse(targetCollection, "Post saved successfully.");
         }
 
-        public async Task<ApiResponse<object>> RemoveFromSavedAsync(ClaimsPrincipal userClaims, Guid savedPostId)
+        public async Task<ApiResponse<object>> RemoveFromSavedAsync(ClaimsPrincipal userClaims, Guid postId)
         {
             var invalidUserResponse = GetUserIdOrUnauthorized<object>(userClaims, out var userId);
             if (invalidUserResponse != null) return invalidUserResponse;
@@ -183,15 +183,17 @@ namespace SocialMedia.Services
             var profile = await _profileRepository.GetByApplicationIdAsync(userId);
 
             var savedEntry = await _savedPostsRepository.Query()
-                .FirstOrDefaultAsync(sp => sp.Id == savedPostId);
+                .FirstOrDefaultAsync(sp => sp.PostId == postId && sp.ProfileId == profile.Id);
 
-            if (savedEntry == null) return NotFoundResponse<object>("Saved post not found.");
-            if (savedEntry.ProfileId != profile.Id) return ApiResponse<object>.ErrorResponse("Unauthorized action.");
+            if (savedEntry == null)
+            {
+                return ApiResponse<object>.SuccessResponse(true, "Saved post not found");
+            }
 
             await _savedPostsRepository.DeleteAsync(savedEntry);
             await _savedPostsRepository.SaveChangesAsync();
 
-            return ApiResponse<object>.SuccessResponse(true, "Post removed from saved.");
+            return ApiResponse<object>.SuccessResponse(true, "Removed from saved.");
         }
     }
 }

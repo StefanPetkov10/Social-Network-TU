@@ -39,10 +39,10 @@ export const useToggleSavePost = () => {
 
       if (response.message?.includes("moved")) {
         bgMessage = `Успешно преместено в ${collectionDisplay}`;
-      } else if (response.message?.includes("saved")) {
-        bgMessage = `Успешно запазено в ${collectionDisplay}`;
       } else if (response.message?.includes("already")) {
         bgMessage = `Вече е запазено в ${collectionDisplay}`;
+      } else if (response.message?.includes("saved")) {
+        bgMessage = `Успешно запазено в ${collectionDisplay}`;
       }
       toast.success(bgMessage);
 

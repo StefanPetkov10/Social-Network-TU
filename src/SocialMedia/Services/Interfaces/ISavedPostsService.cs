@@ -13,6 +13,6 @@ namespace SocialMedia.Services.Interfaces
             string? collectionName = null,
             int skip = 0,
             int take = 20);
-        Task<ApiResponse<object>> RemoveFromSavedAsync(ClaimsPrincipal userClaims, Guid savedPostId);
+        Task<ApiResponse<object>> RemoveFromSavedAsync(ClaimsPrincipal userClaims, Guid postId);
     }
 }

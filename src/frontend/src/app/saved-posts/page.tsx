@@ -34,7 +34,7 @@ export default function SavedPage() {
   return (
     <ProtectedRoute>
       <MainLayout user={userForLayout}>
-        <div className="container mx-auto p-4 ml-14 space-y-8 ">
+        <div className="container mx-auto p-4 pl-20 space-y-8 ">
           
           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-6 gap-4">
             <div>
@@ -197,7 +197,7 @@ export default function SavedPage() {
                      <div className={cn("flex flex-col gap-8 w-full max-w-3xl transition-opacity duration-300", isFetching ? "opacity-60" : "opacity-100")}>
                          {posts?.data?.map((post) => (
                              <div key={post.id} className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full">
-                                <PostCard post={post} />
+                                <PostCard post={post} isSavedPage={true} />
                              </div>
                          ))}
                      </div>

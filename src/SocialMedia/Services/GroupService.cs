@@ -478,6 +478,11 @@ namespace SocialMedia.Services
             dto.GroupId = post.GroupId;
             dto.GroupName = post.Group != null ? post.Group.Name : null;
 
+            if (currentUserId.HasValue)
+            {
+                dto.IsOwner = post.ProfileId == currentUserId.Value;
+            }
+
             if (post.Reactions != null)
             {
                 dto.LikesCount = post.Reactions.Count;

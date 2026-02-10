@@ -128,9 +128,8 @@ export const useUpdatePost = () => {
       if (updatedPost?.groupId) {
           queryClient.invalidateQueries({ queryKey: ["group-posts", updatedPost.groupId] });
           queryClient.invalidateQueries({ queryKey: ["group-media", updatedPost.groupId] });
-      } else {
-           queryClient.invalidateQueries({ queryKey: ["group-posts"] });
-      }
+          queryClient.invalidateQueries({ queryKey: ["groups-feed-infinite"] });
+      } 
     },
     onError: (error: any) => {
         toast.error("Грешка", { 

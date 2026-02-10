@@ -2,32 +2,14 @@
 
 import { useState } from "react";
 import { 
-  MoreHorizontal, 
   MessageCircle, 
   Share2, 
-  Bookmark, 
-  ThumbsUp, 
-  Trash2, 
-  Edit2, 
-  FileText, 
   Download,
   Loader2,
-  FileSpreadsheet,
-  FilePieChart,
-  FileArchive,
-  FileIcon,
-  File
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { Button } from "@frontend/components/ui/button";
 import { Separator } from "@frontend/components/ui/separator";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@frontend/components/ui/dropdown-menu";
 import {
   Carousel,
   CarouselContent,
@@ -50,6 +32,7 @@ import { useReaction } from "@frontend/hooks/use-reaction";
 import { ReactionButton, REACTION_CONFIG } from "@frontend/components/ui/reaction-button";
 import { ReactionListDialog } from "../reaction-dialog/reaction-list-dialog";
 import { SavePostDialog } from "@frontend/components/saved-posts-form/save-post-dialog";
+import { PostOptions } from "@frontend/components/post-forms/post-option";
 
 import {
   AlertDialog,
@@ -70,6 +53,7 @@ interface PostCardProps {
     hideGroupInfo?: boolean; 
     isPreview?: boolean;
     isGroupAdmin?: boolean; 
+    isSavedPage?: boolean;
 }
 
 export function PostCard({ 
@@ -77,16 +61,15 @@ export function PostCard({
     authorProfile, 
     hideGroupInfo, 
     isPreview = false,
-    isGroupAdmin = false 
+    isGroupAdmin = false,
+    isSavedPage = false 
 }: PostCardProps) {
   const { data: currentUser } = useProfile();
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
   const [isReactionListOpen, setIsReactionListOpen] = useState(false);
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  
   const [isEditOpen, setIsEditOpen] = useState(false);
-
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
 
   const { mutate: deletePost, isPending: isDeleting } = useDeletePost();
@@ -113,7 +96,6 @@ export function PostCard({
   const groupInitials = getInitials(groupName);
 
   const isOwner = post.isOwner || false;
- 
   const canDelete = isOwner || isGroupAdmin;
 
   const documents = post.media?.filter(m => m.mediaType !== 0 && m.mediaType !== 1) || [];
@@ -191,51 +173,17 @@ export function PostCard({
           </div>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 -mt-1 -mr-1">
-              <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setIsSaveDialogOpen(true)} className="cursor-pointer">
-                <Bookmark className="mr-2 h-4 w-4" />
-                <span>Запази</span>
-            </DropdownMenuItem>
-            
-            {canDelete && (
-                <>
-                    <DropdownMenuSeparator />
-                    
-                    {isOwner && (
-                        <DropdownMenuItem 
-                            className="cursor-pointer"
-                            onSelect={() => {
-                                setTimeout(() => setIsEditOpen(true), 0); 
-                            }}
-                        >
-                            <Edit2 className="mr-2 h-4 w-4" /> Редактиране
-                        </DropdownMenuItem>
-                    )}
-                    
-                    <DropdownMenuItem 
-                        className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
-                        onSelect={(e) => {
-                            e.preventDefault(); 
-                            setIsDeleteDialogOpen(true);
-                        }}
-                    >
-                        <Trash2 className="mr-2 h-4 w-4" /> Изтриване
-                    </DropdownMenuItem>
-                </>
-            )}
-            
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer text-destructive">
-                Докладвай
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="-mt-1 -mr-1">
+             <PostOptions 
+                postId={post.id}
+                isSavedPage={isSavedPage}
+                isOwner={isOwner}
+                canDelete={canDelete}
+                onEdit={() => setIsEditOpen(true)}
+                onDelete={() => setIsDeleteDialogOpen(true)}
+                onSave={() => setIsSaveDialogOpen(true)}
+             />
+        </div>
       </div>
 
       <p className="text-sm mb-4 whitespace-pre-wrap text-foreground/90 leading-relaxed">
