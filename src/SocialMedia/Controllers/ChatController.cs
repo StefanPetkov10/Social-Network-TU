@@ -16,6 +16,24 @@ namespace SocialMedia.Controllers
             _chatService = chatService;
         }
 
+        [HttpGet("conversations")]
+        public async Task<IActionResult> GetConversations()
+        {
+            var response = await _chatService.GetConversationsAsync(User);
+
+            if (response.Success) return Ok(response);
+            return BadRequest(response.Message);
+        }
+
+        [HttpGet("history/{otherUserId}")]
+        public async Task<IActionResult> GetChatHistory(Guid otherUserId)
+        {
+            var response = await _chatService.GetMessageHistoryAsync(User, otherUserId);
+
+            if (response.Success) return Ok(response);
+            return BadRequest(response.Message);
+        }
+
         [HttpPost("upload-attachments")]
         public async Task<IActionResult> UploadAttachments([FromForm] List<IFormFile> files)
         {

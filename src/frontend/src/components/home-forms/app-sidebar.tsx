@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { usePathname } from "next/navigation" 
 import {
   Users,
   Bookmark,
@@ -8,6 +9,7 @@ import {
   LayoutGrid,
   LifeBuoy,
   Send,
+  MessageCircle, 
 } from "lucide-react"
 
 import { NavMain } from "@frontend/components/home-forms/nav-main"
@@ -17,10 +19,12 @@ import {
   SidebarContent,
   SidebarHeader,
   SidebarRail,
+  useSidebar, 
 } from "@frontend/components/ui/sidebar"
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar"
 import { getInitials } from "@frontend/lib/utils";
 import { useMyGroups } from "@frontend/hooks/use-groups"
+import { useEffect } from "react"
 
 type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
   user: {
@@ -32,8 +36,21 @@ type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
 export function AppSidebar({ user, ...props }: AppSidebarProps) {
   const { data: myGroupsItems, isLoading } = useMyGroups();
   const initials = getInitials(user.name);
+  
+  const pathname = usePathname();
+  const { setOpen } = useSidebar();
+  const isMessagesPage = pathname.startsWith("/messages");
 
-   const navMainItems = [
+  useEffect(() => {
+    if (isMessagesPage) {
+      setOpen(false); 
+    } else {
+      setOpen(true); 
+    }
+  }, [isMessagesPage, setOpen]);
+
+  const navMainItems = [
+    { title: "Съобщения", url: "/messages", icon: MessageCircle, isActive: isMessagesPage }, 
     { title: "Приятели", url: "/friends", icon: UserPlus },
     { title: "Последователи", url: "/followers", icon: Users },
     { title: "Запазени", url: "/saved-posts", icon: Bookmark },
@@ -41,7 +58,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
       title: "Моите Групи",
       url: "/groups",
       icon: LayoutGrid,
-      isActive: true, 
+      isActive: pathname.startsWith("/groups") && !isMessagesPage, 
       items: isLoading 
         ? [{ title: "Зареждане...", url: "#" }] 
         : myGroupsItems?.data?.length 
@@ -64,7 +81,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         {...props} 
         style={{
             "--sidebar-width": "19rem",
-            "--sidebar-width-icon": "4.5rem" 
+            "--sidebar-width-icon": "5.5remч" 
         } as React.CSSProperties}
         className="top-16 h-[calc(100vh-4rem)] border-r z-30" 
     >
@@ -87,11 +104,10 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
 
       <SidebarContent className="px-3 flex flex-col h-full gap-6 [&_svg]:size-6 [&_span]:text-base [&_a]:py-3">
         <NavMain items={navMainItems} />
-        
         <NavSecondary items={navSecondaryItems} className="mt-auto pb-4" />
       </SidebarContent>
       
-      <SidebarRail />
+      {!isMessagesPage && <SidebarRail />}
     </Sidebar>
   )
 }

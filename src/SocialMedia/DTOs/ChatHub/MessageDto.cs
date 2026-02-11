@@ -7,6 +7,7 @@
         public Guid SenderId { get; set; }
         public string SenderName { get; set; } = null!;
         public string? SenderPhoto { get; set; }
+        public Guid ReceiverId { get; set; }
         public DateTime SentAt { get; set; }
         public bool IsEdited { get; set; }
         public List<MessageMediaDto> Media { get; set; } = new();

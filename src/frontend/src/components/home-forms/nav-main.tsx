@@ -43,16 +43,33 @@ export function NavMain({ items }: { items: NavItem[] }) {
               <SidebarMenuButton
                 asChild
                 tooltip={item.title}
-                className="h-12 mb-1 rounded-xl text-base font-medium text-muted-foreground hover:bg-gray-50 hover:text-primary"
+                className="
+                    h-12 mb-1 rounded-xl text-base font-medium text-muted-foreground hover:bg-gray-50 hover:text-primary
+                    
+                    /* КОГАТО Е СВИТ (ICON MODE): */
+                    group-data-[collapsible=icon]:!size-[44px]       /* Голям размер */
+                    group-data-[collapsible=icon]:!rounded-full      /* Пълен кръг */
+                    group-data-[collapsible=icon]:!p-0               /* Без падинг */
+                    group-data-[collapsible=icon]:justify-center     /* Центриране */
+                    group-data-[collapsible=icon]:hover:bg-primary/10 /* Хубавия син ховър */
+                "
               >
-                <a href={item.url} className="flex items-center gap-4">
+                <a href={item.url} className="flex items-center gap-4 group-data-[collapsible=icon]:justify-center">
                   <div
-                    className="flex size-9 items-center justify-center rounded-full bg-gray-100 text-muted-foreground transition-colors group-hover/collapsible:bg-primary/10 group-hover/collapsible:text-primary"
+                    className="
+                        flex size-9 items-center justify-center rounded-full bg-gray-100 text-muted-foreground transition-colors 
+                        group-hover/collapsible:bg-primary/10 group-hover/collapsible:text-primary
+                        
+                        /* При свит режим махаме фона и размера, за да ползваме големия бутон */
+                        group-data-[collapsible=icon]:bg-transparent 
+                        group-data-[collapsible=icon]:size-auto
+                        group-data-[collapsible=icon]:group-hover/collapsible:bg-transparent
+                    "
                   >
                     <item.icon className="size-5" />
                   </div>
 
-                  <span>{item.title}</span>
+                  <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
                 </a>
               </SidebarMenuButton>
 
@@ -60,7 +77,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
                 <>
                   <CollapsibleTrigger asChild>
                     <SidebarMenuAction
-                      className="absolute right-14 size-8  text-muted-foreground transition-transform hover:bg-gray-200 hover:text-primary data-[state=open]:rotate-90 rounded-full flex items-center justify-center"
+                      className="absolute right-14 size-8 text-muted-foreground transition-transform hover:bg-gray-200 hover:text-primary data-[state=open]:rotate-90 rounded-full flex items-center justify-center group-data-[collapsible=icon]:hidden"
                     >
                       <ChevronRight className="size-6" /> 
                       <span className="sr-only">Toggle</span>

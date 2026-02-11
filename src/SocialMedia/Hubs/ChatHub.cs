@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using SocialMedia.DTOs.ChatHub;
 using SocialMedia.Services.Interfaces;
@@ -33,14 +34,32 @@ namespace SocialMedia.Hubs
             List<ChatAttachmentDto>? attachments)
         {
             var userIdStr = Context.UserIdentifier;
-            if (string.IsNullOrWhiteSpace(userIdStr)) return;
-            var userId = Guid.Parse(userIdStr);
+
+            if (string.IsNullOrEmpty(userIdStr))
+            {
+                userIdStr = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            }
+
+            if (string.IsNullOrWhiteSpace(userIdStr))
+            {
+                await Clients.Caller.SendAsync("ErrorMessage", "Unauthorized: User ID not found.");
+                return;
+            }
 
             try
             {
-                var messageDto = await _chatService.CreateMessageAsync(userId, content, receiverId, groupId, attachments);
+                var response = await _chatService.CreateMessageAsync(Context.User!, content, receiverId, groupId, attachments);
 
-                await Clients.Group(chatId).SendAsync("ReceiveMessage", messageDto);
+                if (response.Success)
+                {
+                    await Clients.Group(chatId).SendAsync("ReceiveMessage", response.Data);
+
+                    await Clients.Caller.SendAsync("ReceiveMessage", response.Data);
+                }
+                else
+                {
+                    await Clients.Caller.SendAsync("ErrorMessage", response.Message);
+                }
             }
             catch (Exception ex)
             {
