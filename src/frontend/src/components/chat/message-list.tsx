@@ -8,11 +8,12 @@ import { Search, Loader2 } from "lucide-react";
 import { Input } from "@frontend/components/ui/input";
 import { useConversations } from "@frontend/hooks/use-chat-query";
 import { getInitials } from "@frontend/lib/utils";
-
+import { useChatSocket } from "@frontend/hooks/use-chat-socket";
 
 export function MessageList() {
   const pathname = usePathname();
   
+  const { onlineUsers } = useChatSocket(null); 
   const { data: conversations, isLoading, isError } = useConversations();
 
   return (
@@ -51,6 +52,8 @@ export function MessageList() {
                 : "";
            const initials = getInitials(chat.name);
 
+           const isOnline = onlineUsers.has(chat.id);
+
            return (
             <Link 
               key={chat.id} 
@@ -60,6 +63,7 @@ export function MessageList() {
                 isActive ? "bg-slate-100 border-l-4 border-primary pl-2 shadow-sm" : "border-l-4 border-transparent"
               )}
             >
+            <div className="relative">
               <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
                 <AvatarImage 
                     src={chat.authorAvatar || ""} 
@@ -69,7 +73,10 @@ export function MessageList() {
                     {initials}
                 </AvatarFallback>
               </Avatar>
-              
+              {isOnline && (
+                <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white shadow-sm" />
+              )}
+            </div>
               <div className="flex-1 min-w-0 text-left">
                 <div className="flex justify-between items-baseline mb-0.5">
                   <span className={cn("font-semibold text-sm truncate", isActive ? "text-primary" : "text-foreground")}>

@@ -26,8 +26,11 @@ export default function ChatPage() {
   const currentChatUser = conversations?.find(c => c.id === chatId);
 
   const { data: historyMessages, isLoading: isHistoryLoading } = useChatHistory(chatId);
-  const { sendMessage, isConnected } = useChatSocket(chatId);
+  
+  const { sendMessage, isConnected, onlineUsers } = useChatSocket(chatId);
   const uploadMutation = useUploadChatFiles();
+
+  const isUserOnline = onlineUsers.has(chatId);
 
   const messages = historyMessages || [];
 
@@ -160,18 +163,32 @@ export default function ChatPage() {
             <Button variant="ghost" size="icon" className="md:hidden" onClick={() => router.push('/messages')}>
                 <ArrowLeft className="h-5 w-5" />
             </Button>
-            <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
-                <AvatarImage src={currentChatUser?.authorAvatar || ""} className="object-cover"/>
-                <AvatarFallback className="bg-gradient-to-br from-violet-600 to-blue-600 text-white font-bold text-xs">
-                    {getInitials(currentChatUser?.name || "Chat")}
-                </AvatarFallback>
-            </Avatar>
+            
+            <div className="relative">
+                <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
+                    <AvatarImage src={currentChatUser?.authorAvatar || ""} className="object-cover"/>
+                    <AvatarFallback className="bg-gradient-to-br from-violet-600 to-blue-600 text-white font-bold text-xs">
+                        {getInitials(currentChatUser?.name || "Chat")}
+                    </AvatarFallback>
+                </Avatar>
+                {isUserOnline && (
+                    <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white" />
+                )}
+            </div>
+
             <div>
                 <h3 className="font-semibold text-sm">{currentChatUser?.name || "Chat Room"}</h3>
-                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span className={cn("block h-2 w-2 rounded-full", isConnected ? "bg-green-500" : "bg-yellow-500")} />
-                    {isConnected ? "Active now" : "Connecting..."}
-                </span>
+                
+                <div className="flex items-center gap-1.5 h-4">
+                     {isUserOnline ? (
+                        <>
+                            <span className="block h-2 w-2 rounded-full bg-green-500" />
+                            <span className="text-xs text-green-600 font-medium">Active now</span>
+                        </>
+                     ) : (
+                        <span className="text-xs text-muted-foreground">Offline</span>
+                     )}
+                </div>
             </div>
          </div>
          <Button variant="ghost" size="icon">

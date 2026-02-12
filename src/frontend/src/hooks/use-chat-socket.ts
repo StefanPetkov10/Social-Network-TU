@@ -5,11 +5,15 @@ import { MessageDto, ChatAttachmentDto } from "../lib/types/chat";
 import { toast } from "sonner";
 import { useAuthStore } from "@frontend/stores/useAuthStore";
 import { useProfile } from "@frontend/hooks/use-profile"; 
+import { useSocketStore } from "@frontend/stores/useSocketStore";
 
 const HUB_URL = "https://localhost:44386/hubs/chat"; 
 
 export const useChatSocket = (chatId: string | null) => {
     const [isConnected, setIsConnected] = useState(false);
+    
+    const { onlineUsers, setOnlineUsers, addOnlineUser, removeOnlineUser } = useSocketStore();
+
     const connectionRef = useRef<signalR.HubConnection | null>(null);
     const queryClient = useQueryClient();
     const token = useAuthStore((state) => state.token);
@@ -17,7 +21,12 @@ export const useChatSocket = (chatId: string | null) => {
     const { data: myProfile } = useProfile();
 
     useEffect(() => {
-        if (!token || !chatId || !myProfile?.id) return;
+        if (!token || !myProfile?.id) return;
+
+        if (connectionRef.current?.state === signalR.HubConnectionState.Connected) {
+            setIsConnected(true);
+            return;
+        }
 
         const connection = new signalR.HubConnectionBuilder()
             .withUrl(HUB_URL, {
@@ -44,6 +53,14 @@ export const useChatSocket = (chatId: string | null) => {
             queryClient.invalidateQueries({ queryKey: ["conversations"] });
         });
 
+        connection.on("UserIsOnline", (userId: string) => {
+            addOnlineUser(userId);
+        });
+
+        connection.on("UserIsOffline", (userId: string) => {
+            removeOnlineUser(userId);
+        });
+
         connection.on("ErrorMessage", (err) => { 
             toast.error(err);
         });
@@ -55,12 +72,23 @@ export const useChatSocket = (chatId: string | null) => {
                 await connection.start();
                 if (isMounted) {
                     setIsConnected(true);
-                    await connection.invoke("JoinChat", chatId);
+
+                    try {
+                        const currentOnlineUsers: string[] = await connection.invoke("GetOnlineUsers");
+                        setOnlineUsers(new Set(currentOnlineUsers));
+                    } catch (e) {
+                        console.error("Failed to fetch online users", e);
+                    }
+
+                    if (chatId) {
+                        await connection.invoke("JoinChat", chatId);
+                    }
                     if (myProfile.id !== chatId) {
                         await connection.invoke("JoinChat", myProfile.id);
                     }
                 }
             } catch (err: any) {
+                 console.error("Connection error: ", err);
             }
         };
 
@@ -86,5 +114,5 @@ export const useChatSocket = (chatId: string | null) => {
         }
     };
 
-    return { isConnected, sendMessage };
+    return { isConnected, sendMessage, onlineUsers };
 };

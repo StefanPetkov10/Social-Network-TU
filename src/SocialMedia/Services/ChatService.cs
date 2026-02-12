@@ -211,5 +211,19 @@ namespace SocialMedia.Services
 
             return ApiResponse<IEnumerable<MessageDto>>.SuccessResponse(messages, "History retrieved.");
         }
+
+        public async Task<Guid?> GetProfileIdByAppIdAsync(Guid appId)
+        {
+            var profile = await _profileRepository.GetByApplicationIdAsync(appId);
+            return profile?.Id;
+        }
+
+        public async Task<List<string>> GetProfileIdsByAppIdsAsync(List<Guid> appIds)
+        {
+            return await _profileRepository.QueryNoTracking()
+                .Where(p => appIds.Contains(p.ApplicationId))
+                .Select(p => p.Id.ToString())
+                .ToListAsync();
+        }
     }
 }
