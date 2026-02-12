@@ -106,9 +106,10 @@ namespace SocialMedia.Controllers
             var decodedToken = TokenHelper.DecodeToken(token);
             var result = await _userManager.ConfirmEmailAsync(user, decodedToken);
 
-            var frontendUrl = _config["FrontendUrl"]?.TrimEnd('/') ?? $"{Request.Scheme}://{Request.Host}";
+            if (!result.Succeeded)
+                return BadRequest(ApiResponse<object>.ErrorResponse("Confirmation failed.", result.Errors.Select(e => e.Description).ToArray()));
 
-            return Redirect($"{frontendUrl}/auth/email-confirmed");
+            return Ok(ApiResponse<object>.SuccessResponse(null, "Email confirmed successfully."));
         }
 
         [HttpPost("resend-confirmation")]
