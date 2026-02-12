@@ -1,4 +1,3 @@
-// app/messages/page.tsx
 import { MessageCircle } from "lucide-react";
 
 export default function MessagesPage() {

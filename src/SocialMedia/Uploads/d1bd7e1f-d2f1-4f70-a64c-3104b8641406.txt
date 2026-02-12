@@ -1,0 +1,458 @@
+Супер — правим много подробно обяснение за всяка от темите: props (stateless / stateful) и hook-овете useState (важен), useStore (важен — пример с Zustand), useEffect, useContext, useRef. Ще дам теория, практични бележки за performance и често срещани капани, и чисти примери в React Native стил (JSX). Няма задачи — само ясни, изпипани обяснения и примери.
+
+Props — какво са, stateless vs stateful компоненти (много подробно)
+
+Props (properties) са аргументите/параметрите, които предаваш на компонент. Те са read-only за детето: компонентът, който ги получава, не трябва директно да ги променя (трябва да извика функция, предадена като prop или да повдигне промяната нагоре).
+
+Ключови концепции
+
+Props са за комуникация parent → child. Не са предназначени за вътрешно мутиране в child.
+
+Когато child трябва да „промени“ нещо, обичайно parent предава функция като prop (callback). Това се нарича “lifting state up”.
+
+Props могат да бъдат стойности (числа, низове, обекти, масиви), функции, React елементи, или дори други компоненти.
+
+Контролирани компоненти: детето получава стойност и callback (например value + onChange) — parent държи state.
+
+Uncontrolled: компонентът сам държи state (рядко при RN за форми).
+
+Stateless (Presentational) компоненти
+
+Нямат собствен state (не използват useState).
+
+Получават data и callbacks чрез props.
+
+Чисти: по-лесни за тестове и повторна употреба.
+
+Пример:
+
+// UserCard.js (stateless)
+import React from 'react';
+import { View, Text, Button } from 'react-native';
+
+export const UserCard = ({ name, age, onGreet }) => (
+  <View>
+    <Text>{name}</Text>
+    <Text>{age} years</Text>
+    <Button title="Greet" onPress={() => onGreet(name)} />
+  </View>
+);
+
+Stateful (Container) компоненти
+
+Държат state (useState или друг store).
+
+Управляват логика и предават данни/функции надолу.
+
+Пример:
+
+// UserContainer.js (stateful)
+import React, { useState } from 'react';
+import { View, Alert } from 'react-native';
+import { UserCard } from './UserCard';
+
+export const UserContainer = () => {
+  const [user] = useState({ name: 'Ivo', age: 25 });
+
+  const handleGreet = (userName) => {
+    Alert.alert('Hello', `Hi ${userName}!`);
+  };
+
+  return (
+    <View>
+      <UserCard name={user.name} age={user.age} onGreet={handleGreet} />
+    </View>
+  );
+};
+
+Важни практики със props
+
+Не мутирай обектите, предадени като prop; използвай нов обект при ъпдейт (immutability).
+
+Ако предаваш функции от parent, използвай useCallback (ако child е мемоизиран) за да избегнеш излишни re-render.
+
+Разделяй presentational и container компоненти: така тестовете и повторната употреба са по-лесни.
+
+Когато имаш много nested компоненти и множество props, помисли за Context или global store (Zustand) за да избегнеш prop-drilling.
+
+useState — детайлно (важен)
+
+useState е базовият hook за локално състояние в функционален React компонент.
+
+Синтаксис
+const [state, setState] = useState(initialValue);
+
+Как работи (детайлно)
+
+useState връща двойка: текущата стойност и функция за ъпдейт.
+
+setState не променя стойността синхронно в момента на извикване — тя сигнализира на React да планира нов render с новата стойност.
+
+Ако ъпдейваш зависеща от старото state стойност, използвай функционален ъпдейт: setState(prev => prev + 1). Това предотвратява race condition при бързи последователни ъпдейти или когато ъпдейтите са асинхронни.
+
+Примери (React Native)
+import React, { useState } from 'react';
+import { View, Text, Button } from 'react-native';
+
+export const Counter = () => {
+  const [count, setCount] = useState(0);
+
+  const inc = () => setCount(c => c + 1); // предпочитана форма
+  const dec = () => setCount(c => c - 1);
+  const reset = () => setCount(0);
+
+  return (
+    <View>
+      <Text>Count: {count}</Text>
+      <Button title="+" onPress={inc} />
+      <Button title="-" onPress={dec} />
+      <Button title="Reset" onPress={reset} />
+    </View>
+  );
+};
+
+Чести капани и как да ги избегнеш
+
+Stale closure: ако useEffect използва count от closure, може да чете „стар“ value — решава се чрез dependency array или чрез функционален ъпдейт.
+
+Много големи state обекти: раздели state на по-малки части или използвай useReducer за комплексни форми.
+
+Не използвай директно count + 1 ако зависи от текущия state при няколко извиквания едновременно.
+
+Performance note
+
+Локалният state е бърз и прост. За стойности, които трябва да се споделят широко, помисли за глобален store.
+
+useStore (важен) — концепция и практичен пример със Zustand
+
+useStore често означава custom hook към глобален state management. Един много популярен и лек вариант е Zustand. Това е лек (no-boilerplate) store, който се използва чрез hook и е удобен в React Native.
+
+Защо да използваш store (Zustand) вместо useState?
+
+Споделяне на state между много компоненти без prop drilling.
+
+Централизирана логика за ъпдейти.
+
+Добра производителност: селектори позволяват компоненти да се презареждат само при нужда.
+
+По-малко boilerplate от Redux.
+
+Как изглежда store със Zustand (пример)
+// store/counterStore.js
+import create from 'zustand';
+
+export const useCounterStore = create(set => ({
+  count: 0,
+  inc: () => set(state => ({ count: state.count + 1 })),
+  dec: () => set(state => ({ count: state.count - 1 })),
+  reset: () => set({ count: 0 }),
+}));
+
+Как да го използваш в компонент
+import React from 'react';
+import { View, Text, Button } from 'react-native';
+import { useCounterStore } from './store/counterStore';
+
+export const GlobalCounter = () => {
+  const { count, inc, dec, reset } = useCounterStore(); // достъп до store
+
+  return (
+    <View>
+      <Text>Global count: {count}</Text>
+      <Button title="+" onPress={inc} />
+      <Button title="-" onPress={dec} />
+      <Button title="Reset" onPress={reset} />
+    </View>
+  );
+};
+
+Селектори за оптимизация (не взимаш целия state)
+
+Ако компонент се интересува само от count, използвай селектор, за да слушаш само за промени в count:
+
+const count = useCounterStore(state => state.count);
+const inc = useCounterStore(state => state.inc);
+
+
+Това намалява re-renders, защото компонентът ще се актуализира само, когато count се промени.
+
+Персистиране (с AsyncStorage)
+
+Zustand има middleware или можеш ръчно да синхронизираш с AsyncStorage. Пример с middleware е възможен, но не включвам код за пълно персистиране тук (можя да разширя ако искаш).
+
+Кога да използваш store
+
+Когато множество, несвързани компоненти трябва да споделят дадена стойност (напр. auth, theme, cart).
+
+Когато prop-drilling става неудобно.
+
+Ако искаш централизирана бизнес логика (actions в store).
+
+Капани при използване на глобален store
+
+Не слагай много често променящи се стойности в един контекст, защото всички слушатели може да се презареждат често.
+
+Използвай селектори за да минимизираш re-renders.
+
+Не замествай локалното състояние с глобално без причина — локално е по-просто и по-ефективно за UI-only стойности.
+
+useEffect — подробности и добри практики
+
+useEffect е hook за странични ефекти: fetch, timers, подписки, синхронизация към external APIs.
+
+Синтаксис
+useEffect(() => {
+  // effect
+  return () => { /* cleanup */ };
+}, [deps]);
+
+Как да мислиш за useEffect
+
+[] (празен array) → ефект се изпълнява само при mount (и cleanup при unmount).
+
+[dep1, dep2] → ефект се изпълнява при mount и всеки път, когато една от зависимостите се промени.
+
+Без втори аргумент → ефект се изпълнява при всеки render (рядко желано).
+
+Примери (React Native)
+
+Fetch данни при mount:
+
+import React, { useState, useEffect } from 'react';
+import { View, Text, ActivityIndicator } from 'react-native';
+
+export const DataLoader = () => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    fetch('https://example.com/data')
+      .then(res => res.json())
+      .then(json => { if (mounted) setData(json); })
+      .catch(err => console.error(err))
+      .finally(() => { if (mounted) setLoading(false); });
+
+    return () => { mounted = false; }; // cleanup to avoid setState on unmounted
+  }, []);
+
+  if (loading) return <ActivityIndicator />;
+  return <Text>{JSON.stringify(data)}</Text>;
+};
+
+
+Timer с cleanup:
+
+useEffect(() => {
+  const id = setInterval(() => {
+    // някаква периодична работа
+  }, 1000);
+  return () => clearInterval(id); // винаги почистваме
+}, []);
+
+Стale closures и dependency array
+
+Често грешка: в useEffect използваш променливи/функции, без да ги добавиш в dependency array → ефектът може да използва „стар“ snapshot.
+
+Решения:
+
+Добави зависимостите в масива.
+
+Ако зависимост е функция, използвай useCallback или постави логиката вътре в useEffect.
+
+Използвай ref за стойности, които не трябва да тригерират повторно изпълнение.
+
+Cleanup е задължителен при:
+
+Таймери, setInterval
+
+Слушатели (Events, DeviceMotion, geolocation)
+
+Subscriptions (WebSocket, RxJS)
+
+useContext — глобален контекст (без store), подробно
+
+useContext е за споделяне на стойности в дървото на компоненти, без да се предават като props по много нива.
+
+Как работи (примерна структура)
+
+Създаваш Context: const ThemeContext = createContext(defaultValue).
+
+Wrap-ваш App или sub-tree с Provider: <ThemeContext.Provider value={...}>.
+
+В компонентите ползваш const ctx = useContext(ThemeContext).
+
+Пример (Theme)
+// ThemeContext.js
+import React, { createContext, useContext, useState } from 'react';
+
+const ThemeContext = createContext();
+
+export const ThemeProvider = ({ children }) => {
+  const [dark, setDark] = useState(false);
+  return (
+    <ThemeContext.Provider value={{ dark, toggle: () => setDark(d => !d) }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+};
+
+export const useTheme = () => useContext(ThemeContext);
+
+
+Използване:
+
+import { useTheme } from './ThemeContext';
+
+const ThemedText = () => {
+  const { dark } = useTheme();
+  return <Text style={{ color: dark ? '#fff' : '#000' }}>Hello</Text>;
+};
+
+Кога да използваш context
+
+Тема (theme), локализация (i18n), текущ потребител (auth info), настройки на приложението.
+
+Не го използвай за всичко — често променящи се state могат да причинят рендъри на много компоненти.
+
+Добра практика
+
+Разделяй контекстите: има ThemeContext, AuthContext и т.н., вместо един голям.
+
+Предостави както Provider, така и custom hook (useTheme, useAuth) за удобство.
+
+Ако стойността е често променяща, обмисли да запазиш само минималното в контекста и останалото локално или в store.
+
+useRef — подробно (референции и мутабилни стойности)
+
+useRef връща обект с .current свойство, което е мутабилно и не предизвиква re-render при промяна.
+
+Основни употреби
+
+Достъп до UI елементи (например TextInput focus).
+
+Съхраняване на стойности между renders, без да предизвиква render (напр. предишна стойност).
+
+Съхраняване на таймер IDs, mutable флагове (isMounted), за да избегнеш stale closures.
+
+Примери
+
+Фокус на TextInput:
+
+import React, { useRef } from 'react';
+import { TextInput, Button, View } from 'react-native';
+
+export const FocusInput = () => {
+  const inputRef = useRef(null);
+
+  return (
+    <View>
+      <TextInput ref={inputRef} placeholder="Type..." />
+      <Button title="Focus" onPress={() => inputRef.current?.focus()} />
+    </View>
+  );
+};
+
+
+Предишна стойност (prevState):
+
+import React, { useState, useRef, useEffect } from 'react';
+import { Text } from 'react-native';
+
+export const PrevValue = () => {
+  const [count, setCount] = useState(0);
+  const prevRef = useRef(count);
+
+  useEffect(() => {
+    prevRef.current = count; // update after render
+  }, [count]);
+
+  return <Text>Now: {count}, Prev: {prevRef.current}</Text>;
+};
+
+
+Флаг isMounted за безопасен setState:
+
+useEffect(() => {
+  let isMounted = true;
+  fetch(...).then(data => { if (isMounted) setState(data); });
+  return () => { isMounted = false; };
+}, []);
+
+
+(Алтернативно може да се използва const mountedRef = useRef(true) и да се задава mountedRef.current = false в cleanup.)
+
+Кога да НЕ ползваш ref
+
+Не ползвай useRef за UI-логика която трябва да предизвика render. Ако стойността трябва да промени UI, използвай state.
+
+Какво свързва всичко това — примерен сценарий (комбинация)
+
+Имаш компонент, който показва профил и бутон за лайк (локален счетчик) и глобален брояч за общи лайкове (Zustand):
+
+// store/globalStore.js
+import create from 'zustand';
+export const useGlobalStore = create(set => ({
+  totalLikes: 0,
+  addLike: () => set(s => ({ totalLikes: s.totalLikes + 1 }))
+}));
+
+// ProfileCard.js
+import React, { useState, useRef } from 'react';
+import { View, Text, Button } from 'react-native';
+import { useGlobalStore } from './store/globalStore';
+
+export const ProfileCard = ({ name }) => {
+  // локален state за UI (useState)
+  const [likes, setLikes] = useState(0);
+  const addGlobalLike = useGlobalStore(state => state.addLike); // useStore
+  const totalLikes = useGlobalStore(state => state.totalLikes);
+
+  const like = () => {
+    setLikes(l => l + 1);        // локален
+    addGlobalLike();             // глобален
+  };
+
+  return (
+    <View>
+      <Text>{name}</Text>
+      <Text>My likes: {likes}</Text>
+      <Text>Total likes: {totalLikes}</Text>
+      <Button title="Like" onPress={like} />
+    </View>
+  );
+};
+
+
+Тук виждаш:
+
+useState за локална UI логика (бърз feedback).
+
+Zustand за глобално агрегиране.
+
+Props (името name) идва от parent.
+
+Резюме — какво да запомниш
+
+Props: read-only вход към компонентите; използват се за parent→child комуникация; ако child трябва да промени нещо — parent подава callback.
+
+Stateless = presentational, Stateful = държи state (useState / store).
+
+useState: основен hook за локално състояние; използвай функционален ъпдейт, разделяй state при нужда.
+
+useStore (Zustand): лек и ефективен global store; използвай селектори за performance.
+
+useEffect: side-effects; dependency array и cleanup са критично важни.
+
+useContext: добър за theme/auth/lang; не е заместител на правилен store при сложни случаи.
+
+useRef: мутабилни стойности и референции към елементи; не предизвиква render.
+
+------------------------------------------
+useSate, useRef, useStore, useEvent, useEventEffect, useCallback
+
+Производителност: react-hook-form намалява броя на "пренарисуванията" (re-renders) на компонента. При useState (както е в signup-form), всеки натиснат клавиш кара целия компонент да се рендира отново.
+
+Чистота на кода: Логиката за валидация (Zod схема) е отделена от UI логиката. Не пишете десетки if проверки (ако е празно, ако е над 500 символа и т.н.).
+
+Лесна поддръжка: UI библиотеките като shadcn/ui (която използвате) са създадени да работят перфектно с react-hook-form, показвайки грешките автоматично в <FormMessage />.

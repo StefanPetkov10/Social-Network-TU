@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SocialMedia.DTOs.ChatHub;
 using SocialMedia.Services.Interfaces;
 
 namespace SocialMedia.Controllers
@@ -35,11 +36,11 @@ namespace SocialMedia.Controllers
         }
 
         [HttpPost("upload-attachments")]
-        public async Task<IActionResult> UploadAttachments([FromForm] List<IFormFile> files)
+        public async Task<IActionResult> UploadAttachments([FromForm] UploadChatFilesDto dto)
         {
             try
             {
-                var result = await _chatService.UploadAttachmentsAsync(files);
+                var result = await _chatService.UploadAttachmentsAsync(dto.Files);
                 return Ok(result);
             }
             catch (Exception ex)

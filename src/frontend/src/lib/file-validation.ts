@@ -10,6 +10,9 @@ export const ALLOWED_EXTENSIONS = [
   "gif"
 ];
 
+export const MAX_CHAT_FILES = 10; //chat
+export const MAX_CHAT_SIZE_MB = 25;
+
 export const validateFile = (file: File): boolean => {
   const extension = file.name.split(".").pop()?.toLowerCase();
   return extension ? ALLOWED_EXTENSIONS.includes(extension) : false;

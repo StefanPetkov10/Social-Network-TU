@@ -33,7 +33,7 @@ namespace SocialMedia.Services
             _httpContextAccessor = httpContextAccessor;
         }
 
-        public async Task<List<ChatAttachmentDto>> UploadAttachmentsAsync(List<IFormFile> files)
+        public async Task<List<ChatAttachmentDto>> UploadAttachmentsAsync(List<IFormFile>? files)
         {
             var result = new List<ChatAttachmentDto>();
             if (files == null || !files.Any()) return result;
