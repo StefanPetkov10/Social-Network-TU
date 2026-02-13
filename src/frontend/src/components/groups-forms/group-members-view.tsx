@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from 'next/navigation'
 import Link from "next/link";
 import { useInView } from "react-intersection-observer";
 import { 
@@ -315,6 +316,7 @@ interface MemberCardProps {
 }
 
 function MemberCard({ member, isCompact = false, groupId, showBadges = false, viewerRole }: MemberCardProps) {
+  const router = useRouter();
   const initials = getInitials(member.fullName);
   const isMe = member.isMe;
   const profileLink = isMe ? "/profile" : `/${member.username}`;
@@ -430,6 +432,7 @@ function MemberCard({ member, isCompact = false, groupId, showBadges = false, vi
                 variant="secondary" 
                 size="sm" 
                 className="hidden md:flex bg-blue-100/50 text-blue-600 hover:bg-blue-100 font-semibold shadow-sm border border-blue-200/20"
+                onClick={() => router.push(`/messages/${member.profileId}`)}
             >
                 <MessageCircle className="w-4 h-4 mr-2" />
                 Съобщение

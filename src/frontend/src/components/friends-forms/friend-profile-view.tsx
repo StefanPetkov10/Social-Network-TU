@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
     ArrowLeft, UserPlus, UserCheck, MessageCircle, MoreHorizontal,
     UserMinus, Users, Loader2, Image as ImageIcon,
@@ -62,6 +63,7 @@ export function FriendProfileView({
     followersCount,
     followingCount
 }: FriendProfileViewProps) {
+    const router = useRouter();
     const [activeTab, setActiveTab] = useState("Публикации");
     const [isScrolled, setIsScrolled] = useState(false);
     
@@ -372,7 +374,13 @@ export function FriendProfileView({
                                 )}
 
                                 <div className="flex gap-2 mt-1">
-                                    <Button variant="secondary" className="flex-1 gap-2"><MessageCircle className="h-4 w-4" /> Съобщение</Button>
+                                    <Button 
+                                        variant="secondary" 
+                                        className="flex-1 gap-2"
+                                        onClick={() => router.push(`/messages/${profileId}`)} 
+                                    >
+                                        <MessageCircle className="h-4 w-4" /> Съобщение
+                                    </Button>
                                     <Button variant="ghost" size="icon" className="hover:bg-muted"><MoreHorizontal className="h-5 w-5" /></Button>
                                 </div>
                             </div>

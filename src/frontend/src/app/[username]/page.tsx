@@ -456,7 +456,9 @@ export default function UserProfilePage({ params }: PageProps) {
                                                 </Button>
                                             )}
                                             
-                                            <Button variant="secondary" className="h-9 w-9 p-0 shrink-0">
+                                            <Button variant="secondary" 
+                                                className="h-9 w-9 p-0 shrink-0"
+                                                onClick={() => router.push(`/messages/${profile.id}`)}>
                                                 <MessageCircle className="h-4 w-4" /> 
                                             </Button>
                                             <Button variant="ghost" className="h-9 w-9 p-0 shrink-0">

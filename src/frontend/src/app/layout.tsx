@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ReactQueryProvider } from "./providers/ReactQueryProvider";
 import { AuthInitializer } from "./providers/AuthInitializer";
+import { SocketInitializer } from "@frontend/components/chat/socket-initializer";
 import { Toaster } from "@frontend/components/ui/sonner";
 
 
@@ -33,6 +34,7 @@ export default function RootLayout({
       >
          <ReactQueryProvider>
            <AuthInitializer />
+           <SocketInitializer />
           {children}
           <Toaster 
           position="top-right" 

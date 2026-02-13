@@ -13,12 +13,11 @@ export function useProfile() {
   });
 }
 
-export const useProfileById = (userId: string) => {
+export const useProfileById = (userId: string, options?: { enabled?: boolean }) => {
     return useQuery({
         queryKey: ["user-profile-by-id", userId],
         queryFn: () => profileService.getProfileById(userId),
-        enabled: !!userId && userId !== "", 
-        //staleTime: 1000 * 60 * 5, // 5 минути
+        enabled: !!userId && userId !== "" && (options?.enabled !== false),
     });
 };
 

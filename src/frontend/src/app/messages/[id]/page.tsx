@@ -2,7 +2,7 @@
 
 import { useChatHistory, useConversations, useUploadChatFiles } from "@frontend/hooks/use-chat-query";
 import { useChatSocket } from "@frontend/hooks/use-chat-socket";
-import { useProfile } from "@frontend/hooks/use-profile";
+import { useProfile, useProfileById } from "@frontend/hooks/use-profile";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { Button } from "@frontend/components/ui/button";
 import { Input } from "@frontend/components/ui/input";
@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogClose, DialogTitle } from "@frontend/compo
 import { Loader2, Image as ImageIcon, Paperclip, Info, ArrowLeft, X, FileText, Download } from "lucide-react"; 
 import { useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { cn, getInitials, getFileDetails } from "@frontend/lib/utils"; 
+import { cn, getInitials, getFileDetails, getUserDisplayName } from "@frontend/lib/utils"; 
 import { MessageDto, ChatAttachmentDto } from "@frontend/lib/types/chat";
 import { toast } from "sonner";
 import { validateFile, MAX_CHAT_FILES, MAX_CHAT_SIZE_MB } from "@frontend/lib/file-validation";
@@ -23,7 +23,20 @@ export default function ChatPage() {
   
   const { data: myProfile } = useProfile();
   const { data: conversations } = useConversations();
-  const currentChatUser = conversations?.find(c => c.id === chatId);
+  
+  const existingChatUser = conversations?.find(c => c.id === chatId);
+
+  const { data: profileData, isLoading: isProfileLoading } = useProfileById(chatId, {
+      enabled: !existingChatUser
+  });
+
+  const targetUser = existingChatUser || (profileData?.data ? {
+      id: profileData.data.id,
+      name: getUserDisplayName(profileData.data) || "User",
+      authorAvatar: profileData.data.authorAvatar,
+      lastMessage: null,
+      lastMessageTime: null
+  } : null);
 
   const { data: historyMessages, isLoading: isHistoryLoading } = useChatHistory(chatId);
   
@@ -166,9 +179,9 @@ export default function ChatPage() {
             
             <div className="relative">
                 <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
-                    <AvatarImage src={currentChatUser?.authorAvatar || ""} className="object-cover"/>
+                    <AvatarImage src={targetUser?.authorAvatar || ""} className="object-cover"/>
                     <AvatarFallback className="bg-gradient-to-br from-violet-600 to-blue-600 text-white font-bold text-xs">
-                        {getInitials(currentChatUser?.name || "Chat")}
+                        {getInitials(targetUser?.name || "Chat")}
                     </AvatarFallback>
                 </Avatar>
                 {isUserOnline && (
@@ -177,7 +190,9 @@ export default function ChatPage() {
             </div>
 
             <div>
-                <h3 className="font-semibold text-sm">{currentChatUser?.name || "Chat Room"}</h3>
+                <h3 className="font-semibold text-sm">
+                    {targetUser?.name || (isProfileLoading ? "Зареждане..." : "Chat Room")}
+                </h3>
                 
                 <div className="flex items-center gap-1.5 h-4">
                      {isUserOnline ? (
