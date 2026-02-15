@@ -15,6 +15,7 @@ export interface MessageDto {
     senderName: string;
     senderPhoto?: string;
     receiverId: string;
+    groupId?: string;
     sentAt: string; 
     isEdited: boolean;
     media: MessageMediaDto[];

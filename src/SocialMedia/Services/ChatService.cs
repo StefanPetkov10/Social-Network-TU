@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SocialMedia.Common;
 using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database.Models;
+using SocialMedia.Database.Models.Enums;
 using SocialMedia.DTOs.ChatHub;
 using SocialMedia.Services.Interfaces;
 using MediaType = SocialMedia.Database.Models.Enums.MediaType;
@@ -122,6 +123,7 @@ namespace SocialMedia.Services
                 SenderName = $"{senderProfile.FirstName} {senderProfile.LastName}",
                 SenderPhoto = senderProfile.Photo,
                 ReceiverId = message.ReceiverId ?? Guid.Empty,
+                GroupId = message.GroupId,
                 SentAt = message.CreatedDate,
                 IsEdited = false,
                 Media = mediaDtos
@@ -135,34 +137,75 @@ namespace SocialMedia.Services
             var invalidUserResponse = GetUserIdOrUnauthorized<IEnumerable<ChatConversationDto>>(userClaims, out var userId);
             if (invalidUserResponse != null) return invalidUserResponse;
 
-            var viewerProfile = await _profileRepository.GetByApplicationIdAsync(userId);
+            var viewerProfile = await _profileRepository.QueryNoTracking()
+                .Include(p => p.GroupMemberships)
+                .ThenInclude(gm => gm.Group)
+                .FirstOrDefaultAsync(p => p.ApplicationId == userId);
+
             if (viewerProfile == null) return ApiResponse<IEnumerable<ChatConversationDto>>.ErrorResponse("Invalid user profile.");
+
+            var myGroupIds = viewerProfile.GroupMemberships
+                .Where(gm => gm.Status == MembershipStatus.Approved)
+                .Select(gm => gm.GroupId)
+                .ToList();
 
             var allMessages = await _messageRepository.QueryNoTracking()
                 .Include(m => m.Sender)
+                .Include(m => m.Group)
                 .Include(m => m.Receiver)
-                .Where(m => (m.SenderId == viewerProfile.Id || m.ReceiverId == viewerProfile.Id) && !m.IsDeleted)
+                .Where(m => !m.IsDeleted && (
+                    (m.SenderId == viewerProfile.Id || m.ReceiverId == viewerProfile.Id)
+                    ||
+                    (m.GroupId.HasValue && myGroupIds.Contains(m.GroupId.Value))
+                ))
                 .OrderByDescending(m => m.CreatedDate)
                 .ToListAsync();
 
             var conversations = allMessages
-                .GroupBy(m => m.SenderId == viewerProfile.Id ? m.ReceiverId : m.SenderId)
+                .GroupBy(m =>
+                    {
+                        if (m.GroupId.HasValue)
+                        {
+                            return m.GroupId.Value;
+                        }
+                        return m.SenderId == viewerProfile.Id ? m.ReceiverId : m.SenderId;
+                    })
                 .Select(g =>
                 {
                     var lastMsg = g.First();
-                    var otherUser = lastMsg.SenderId == viewerProfile.Id ? lastMsg.Receiver : lastMsg.Sender;
 
-                    if (otherUser == null) return null;
+                    string name;
+                    string? avatar;
+                    bool isGroup;
+                    Guid id;
+
+                    if (lastMsg.GroupId.HasValue)
+                    {
+                        id = lastMsg.GroupId.Value;
+                        isGroup = true;
+                        name = lastMsg.Group?.Name ?? "Unknown Group";
+                        avatar = null;
+                    }
+                    else
+                    {
+                        var otherUser = lastMsg.SenderId == viewerProfile.Id ? lastMsg.Receiver : lastMsg.Sender;
+                        if (otherUser == null) return null;
+
+                        id = otherUser.Id;
+                        isGroup = false;
+                        name = $"{otherUser.FirstName} {otherUser.LastName}";
+                        avatar = otherUser.Photo;
+                    }
 
                     return new ChatConversationDto
                     {
-                        Id = otherUser.Id,
-                        Name = $"{otherUser.FirstName} {otherUser.LastName}",
-                        AuthorAvatar = otherUser.Photo,
+                        Id = id,
+                        Name = name,
+                        AuthorAvatar = avatar,
                         LastMessage = lastMsg.Content,
                         LastMessageTime = lastMsg.CreatedDate,
-                        IsGroup = false,
-                        UnreadCount = g.Count(m => !m.IsRead && m.ReceiverId == viewerProfile.Id)
+                        IsGroup = isGroup,
+                        UnreadCount = g.Count(m => !m.IsRead && m.SenderId != viewerProfile.Id)
                     };
                 })
                 .Where(x => x != null)
@@ -186,7 +229,8 @@ namespace SocialMedia.Services
                 .Include(m => m.Media)
                 .Where(m => !m.IsDeleted &&
                     ((m.SenderId == viewerProfile.Id && m.ReceiverId == otherUserId) ||
-                     (m.SenderId == otherUserId && m.ReceiverId == viewerProfile.Id)))
+                     (m.SenderId == otherUserId && m.ReceiverId == viewerProfile.Id)) ||
+                     (m.GroupId == otherUserId))
                 .OrderBy(m => m.CreatedDate)
                 .Select(m => new MessageDto
                 {
@@ -196,6 +240,7 @@ namespace SocialMedia.Services
                     SenderName = $"{m.Sender.FirstName} {m.Sender.LastName}",
                     SenderPhoto = m.Sender.Photo,
                     ReceiverId = m.ReceiverId ?? Guid.Empty,
+                    GroupId = m.GroupId,
                     SentAt = m.CreatedDate,
                     IsEdited = false,
                     Media = m.Media.Select(media => new MessageMediaDto

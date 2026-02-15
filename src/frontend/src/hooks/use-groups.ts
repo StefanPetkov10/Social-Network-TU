@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useInfiniteQuery, UseQueryOptions } from "@tanstack/react-query";
 import { groupsService } from "@frontend/services/groups-service";
 import { toast } from "sonner";
 import { GroupPrivacy } from "@frontend/lib/types/enums";
@@ -53,6 +53,21 @@ export const useGroupByName = (name: string) => {
   });
 }
 
+export const useGroupById = (
+    groupId: string, 
+    options?: Partial<UseQueryOptions<ApiResponse<GroupDto>, Error>>
+) => {
+  return useQuery({
+    queryKey: ["group-by-id", groupId],
+    queryFn: () => groupsService.getGroupById(groupId),
+    
+    enabled: !!groupId && (options?.enabled !== false),
+    
+    retry: false, 
+    
+    ...options
+  });
+};
 export const useDiscoverGroups = () => {
   return useInfiniteQuery({
     queryKey: ["groups-discover"],

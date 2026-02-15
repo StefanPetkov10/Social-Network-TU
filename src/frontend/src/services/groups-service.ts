@@ -2,6 +2,7 @@ import api from "../lib/axios";
 import { GroupDto, CreateGroupDto, UpdateGroupDto } from "@frontend/lib/types/groups";
 import { PostDto } from "@frontend/lib/types/posts";
 import { ApiResponse } from "@frontend/lib/types/api";
+import { get } from "http";
 
 export const groupsService = {
     getGroupFeed: async (lastPostId?: string) => {
@@ -29,6 +30,11 @@ export const groupsService = {
         const encodedName = encodeURIComponent(name);
 
         const { data } = await api.get<ApiResponse<GroupDto>>(`/api/Group/${encodedName}`);
+        return data;
+    },
+
+    getGroupById: async (groupId: string) => {
+        const { data } = await api.get<ApiResponse<GroupDto>>(`/api/Group/id/${groupId}`);
         return data;
     },
 

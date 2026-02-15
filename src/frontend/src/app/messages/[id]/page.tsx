@@ -3,11 +3,12 @@
 import { useChatHistory, useConversations, useUploadChatFiles } from "@frontend/hooks/use-chat-query";
 import { useChatSocket } from "@frontend/hooks/use-chat-socket";
 import { useProfile, useProfileById } from "@frontend/hooks/use-profile";
+import { useGroupById } from "@frontend/hooks/use-groups"; 
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { Button } from "@frontend/components/ui/button";
 import { Input } from "@frontend/components/ui/input";
 import { Dialog, DialogContent, DialogClose, DialogTitle } from "@frontend/components/ui/dialog"; 
-import { Loader2, Image as ImageIcon, Paperclip, Info, ArrowLeft, X, FileText, Download } from "lucide-react"; 
+import { Loader2, Image as ImageIcon, Paperclip, Info, ArrowLeft, X, FileText, Download, Users } from "lucide-react"; 
 import { useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { cn, getInitials, getFileDetails, getUserDisplayName } from "@frontend/lib/utils"; 
@@ -24,26 +25,58 @@ export default function ChatPage() {
   const { data: myProfile } = useProfile();
   const { data: conversations } = useConversations();
   
-  const existingChatUser = conversations?.find(c => c.id === chatId);
+  const existingConversation = conversations?.find(c => c.id === chatId);
 
   const { data: profileData, isLoading: isProfileLoading } = useProfileById(chatId, {
-      enabled: !existingChatUser
+      enabled: !existingConversation?.isGroup, 
+      retry: false 
   });
 
-  const targetUser = existingChatUser || (profileData?.data ? {
-      id: profileData.data.id,
-      name: getUserDisplayName(profileData.data) || "User",
-      authorAvatar: profileData.data.authorAvatar,
-      lastMessage: null,
-      lastMessageTime: null
-  } : null);
+  const { data: groupData, isLoading: isGroupLoading } = useGroupById(chatId, {
+      enabled: !profileData?.data && (existingConversation?.isGroup !== false),
+      retry: false 
+  });
+
+  let chatTarget = null;
+
+  if (existingConversation) {
+      chatTarget = {
+          id: existingConversation.id,
+          name: existingConversation.name,
+          avatar: existingConversation.authorAvatar,
+          initials: getInitials(existingConversation.name),
+          isGroup: existingConversation.isGroup ?? false,
+          membersCount: null 
+      };
+  } else if (groupData?.data) {
+      chatTarget = {
+          id: groupData.data.id,
+          name: groupData.data.name,
+          avatar: null, 
+          initials: getInitials(groupData.data.name),
+          isGroup: true,
+          membersCount: groupData.data.membersCount
+      };
+  } else if (profileData?.data) {
+      const name = getUserDisplayName(profileData.data);
+      chatTarget = {
+          id: profileData.data.id,
+          name: name,
+          avatar: profileData.data.authorAvatar,
+          initials: getInitials(name),
+          isGroup: false,
+          membersCount: null
+      };
+  }
+
+  const isLoadingTarget = !chatTarget && (isProfileLoading || isGroupLoading);
 
   const { data: historyMessages, isLoading: isHistoryLoading } = useChatHistory(chatId);
   
   const { sendMessage, isConnected, onlineUsers } = useChatSocket(chatId);
   const uploadMutation = useUploadChatFiles();
 
-  const isUserOnline = onlineUsers.has(chatId);
+  const isUserOnline = !chatTarget?.isGroup && onlineUsers.has(chatId);
 
   const messages = historyMessages || [];
 
@@ -164,7 +197,9 @@ export default function ChatPage() {
         }
     }
 
-    await sendMessage(input, attachments);
+    const isGroupChat = !!chatTarget?.isGroup;
+    await sendMessage(input, attachments, isGroupChat);
+    
     setInput("");
     setFiles([]);
   };
@@ -179,11 +214,19 @@ export default function ChatPage() {
             
             <div className="relative">
                 <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
-                    <AvatarImage src={targetUser?.authorAvatar || ""} className="object-cover"/>
-                    <AvatarFallback className="bg-gradient-to-br from-violet-600 to-blue-600 text-white font-bold text-xs">
-                        {getInitials(targetUser?.name || "Chat")}
-                    </AvatarFallback>
+                    <AvatarImage src={chatTarget?.avatar || ""} className="object-cover"/>
+                    
+                    {chatTarget?.isGroup ? (
+                        <AvatarFallback className="bg-gradient-to-br from-blue-600 via-indigo-500 to-purple-600 text-white font-bold text-xs">
+                            {chatTarget.initials}
+                        </AvatarFallback>
+                    ) : (
+                        <AvatarFallback className="bg-gradient-to-br from-violet-600 to-blue-600 text-white font-bold text-xs">
+                            {chatTarget?.initials || "?"}
+                        </AvatarFallback>
+                    )}
                 </Avatar>
+
                 {isUserOnline && (
                     <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white" />
                 )}
@@ -191,17 +234,24 @@ export default function ChatPage() {
 
             <div>
                 <h3 className="font-semibold text-sm">
-                    {targetUser?.name || (isProfileLoading ? "Зареждане..." : "Chat Room")}
+                    {chatTarget?.name || (isLoadingTarget ? "Зареждане..." : "Chat Room")}
                 </h3>
                 
                 <div className="flex items-center gap-1.5 h-4">
-                     {isUserOnline ? (
-                        <>
-                            <span className="block h-2 w-2 rounded-full bg-green-500" />
-                            <span className="text-xs text-green-600 font-medium">Active now</span>
-                        </>
+                     {chatTarget?.isGroup ? (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Users className="w-3 h-3" /> 
+                            {chatTarget.membersCount ? `${chatTarget.membersCount} членове` : "Групов чат"}
+                        </span>
                      ) : (
-                        <span className="text-xs text-muted-foreground">Offline</span>
+                        isUserOnline ? (
+                            <>
+                                <span className="block h-2 w-2 rounded-full bg-green-500" />
+                                <span className="text-xs text-green-600 font-medium">Active now</span>
+                            </>
+                        ) : (
+                            <span className="text-xs text-muted-foreground">Offline</span>
+                        )
                      )}
                 </div>
             </div>
@@ -219,8 +269,12 @@ export default function ChatPage() {
         ) : (
             messages.map((msg: MessageDto, i: number) => {
                 const isMe = myProfile ? msg.senderId === myProfile.id : false;
+                
+                const showSenderInfo = !isMe && chatTarget?.isGroup;
+
                 return (
                     <div key={msg.id || i} className={cn("flex gap-2 max-w-[85%] sm:max-w-[75%]", isMe ? "ml-auto flex-row-reverse" : "")}>
+                        
                         {!isMe && (
                             <Avatar className="h-8 w-8 mt-1 border-2 border-white shadow-sm shrink-0">
                                 <AvatarImage src={msg.senderPhoto} className="object-cover" />
@@ -229,8 +283,14 @@ export default function ChatPage() {
                                 </AvatarFallback>
                             </Avatar>
                         )}
+
                         <div className={cn("flex flex-col", isMe ? "items-end" : "items-start")}>
-                            {!isMe && <span className="text-[10px] text-muted-foreground ml-1 mb-1 block">{msg.senderName}</span>}
+                            
+                            {showSenderInfo && (
+                                <span className="text-[10px] text-muted-foreground ml-1 mb-1 block font-medium">
+                                    {msg.senderName}
+                                </span>
+                            )}
                             
                             <div className={cn("px-3 py-2 text-sm shadow-sm break-words", isMe ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-sm" : "bg-white border text-foreground rounded-2xl rounded-tl-sm")}>
                                 {msg.content && <p className={cn("mb-1", !msg.media?.length && "mb-0")}>{msg.content}</p>}

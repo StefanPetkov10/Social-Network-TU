@@ -1,6 +1,7 @@
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation, UseQueryOptions } from "@tanstack/react-query";
 import { ProfileDto, UpdateProfileDto } from "@frontend/lib/types/profile";
 import { profileService } from "@frontend/services/profile-service";
+import { ApiResponse } from "@frontend/lib/types/api";
 
 
 export function useProfile() {
@@ -13,11 +14,17 @@ export function useProfile() {
   });
 }
 
-export const useProfileById = (userId: string, options?: { enabled?: boolean }) => {
+export const useProfileById = (
+    userId: string, 
+    options?: Partial<UseQueryOptions<ApiResponse<ProfileDto>, Error>>
+) => {
     return useQuery({
         queryKey: ["user-profile-by-id", userId],
         queryFn: () => profileService.getProfileById(userId),
-        enabled: !!userId && userId !== "" && (options?.enabled !== false),
+        
+        enabled: !!userId && (options?.enabled !== false),
+        
+        ...options
     });
 };
 

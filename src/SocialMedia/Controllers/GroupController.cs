@@ -41,6 +41,13 @@ namespace SocialMedia.Controllers
             return Ok(response);
         }
 
+        [HttpGet("id/{groupId}")]
+        public async Task<IActionResult> GetGroupById(Guid groupId)
+        {
+            var response = await _groupService.GetGroupByIdAsync(User, groupId);
+            return Ok(response);
+        }
+
         [HttpGet("discover")]
         public async Task<IActionResult> DiscoverGroups([FromQuery] Guid? lastGroupId, [FromQuery] int take = 20)
         {

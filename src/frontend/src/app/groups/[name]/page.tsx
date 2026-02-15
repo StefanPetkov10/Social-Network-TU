@@ -16,7 +16,8 @@ import {
   Image as ImageIcon,
   ShieldAlert,
   Trash2,
-  Settings 
+  Settings,
+  MessageCircle 
 } from "lucide-react";
 import { useIntersection } from "@mantine/hooks";
 
@@ -232,7 +233,18 @@ export default function GroupPage() {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-center">
+                                    <div className="flex items-center justify-center gap-2"> 
+                                        
+                                        {isMember && (
+                                            <Button 
+                                                onClick={() => router.push(`/messages/${group.id}`)}
+                                                className="bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-blue-600 font-semibold gap-2 h-11 px-6 rounded-lg shadow-sm transition-all"
+                                            >
+                                                <MessageCircle className="w-5 h-5 text-blue-600" />
+                                                Чат
+                                            </Button>
+                                        )}
+
                                         {isMember ? (
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>

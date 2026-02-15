@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import * as signalR from "@microsoft/signalr";
 import { useQueryClient } from "@tanstack/react-query";
 import { MessageDto, ChatAttachmentDto } from "../lib/types/chat";
@@ -13,102 +13,148 @@ let globalConnection: signalR.HubConnection | null = null;
 
 export const useChatSocket = (chatId: string | null) => {
     const [isConnected, setIsConnected] = useState(false);
-    
     const { setOnlineUsers, addOnlineUser, removeOnlineUser } = useSocketStore();
     const queryClient = useQueryClient();
     const token = useAuthStore((state) => state.token);
     const { data: myProfile } = useProfile();
 
+    const profileRef = useRef(myProfile);
+    const isConnecting = useRef(false);
+
+    useEffect(() => {
+        profileRef.current = myProfile;
+    }, [myProfile]);
+
     useEffect(() => {
         if (!token || !myProfile?.id) return;
 
-        if (!globalConnection) {
-            console.log("Creating NEW SignalR Connection..."); 
-            globalConnection = new signalR.HubConnectionBuilder()
-                .withUrl(HUB_URL, {
-                    accessTokenFactory: () => token,
-                    skipNegotiation: true,
-                    transport: signalR.HttpTransportType.WebSockets
-                })
-                .withAutomaticReconnect()
-                .configureLogging(signalR.LogLevel.Error)
-                .build();
-        }
-
-        const connection = globalConnection;
-
-        connection.off("ReceiveMessage");
-        connection.off("UserIsOnline");
-        connection.off("UserIsOffline");
-        connection.off("ErrorMessage");
-
-        connection.on("ReceiveMessage", (newMessage: MessageDto) => {
-            const isMine = newMessage.senderId === myProfile.id;
-            const targetChatId = isMine ? newMessage.receiverId : newMessage.senderId;
-            const cacheKey = targetChatId; 
-
-            if (cacheKey) {
-                queryClient.setQueryData(["chat-history", cacheKey], (oldMessages: MessageDto[] = []) => {
-                    if (oldMessages.some(m => m.id === newMessage.id)) return oldMessages;
-                    return [...oldMessages, newMessage];
-                });
-            }
-            queryClient.invalidateQueries({ queryKey: ["conversations"] });
-        });
-
-        connection.on("UserIsOnline", (userId: string) => addOnlineUser(userId));
-        connection.on("UserIsOffline", (userId: string) => removeOnlineUser(userId));
-        connection.on("ErrorMessage", (err) => toast.error(err));
-
-        const startConnection = async () => {
-            if (connection.state === signalR.HubConnectionState.Connected) {
-                setIsConnected(true);
-                return;
-            }
-            
-            if (connection.state !== signalR.HubConnectionState.Disconnected) {
-                return;
+        const setupConnection = async () => {
+            if (!globalConnection) {
+                console.log("Initializing SignalR Connection..."); 
+                globalConnection = new signalR.HubConnectionBuilder()
+                    .withUrl(HUB_URL, {
+                        accessTokenFactory: () => token,
+                        skipNegotiation: true,
+                        transport: signalR.HttpTransportType.WebSockets
+                    })
+                    .withKeepAliveInterval(15000) 
+                    .withAutomaticReconnect([0, 2000, 5000, 10000]) 
+                    .configureLogging(signalR.LogLevel.None) 
+                    .build();
             }
 
-            try {
-                await connection.start();
-                console.log("Global SignalR Connected!");
-                setIsConnected(true);
+            const connection = globalConnection;
 
-                try {
-                    const currentOnlineUsers: string[] = await connection.invoke("GetOnlineUsers");
-                    setOnlineUsers(new Set(currentOnlineUsers));
-                } catch (e) {
-                    console.error("Failed to fetch online users", e);
+            connection.off("ReceiveMessage");
+            connection.off("UserIsOnline");
+            connection.off("UserIsOffline");
+            connection.off("ErrorMessage");
+
+            connection.on("ReceiveMessage", (newMessage: MessageDto) => {
+                const currentProfileId = profileRef.current?.id;
+                const isMine = newMessage.senderId === currentProfileId;
+                
+                let targetChatId = null;
+
+                if (newMessage.groupId) {
+                    targetChatId = newMessage.groupId;
+                } else {
+                    targetChatId = isMine ? newMessage.receiverId : newMessage.senderId;
                 }
 
-                await connection.invoke("JoinChat", myProfile.id);
+                if (targetChatId) {
+                    queryClient.setQueryData(["chat-history", targetChatId], (oldMessages: MessageDto[] = []) => {
+                        if (oldMessages.some(m => m.id === newMessage.id)) return oldMessages;
+                        return [...oldMessages, newMessage];
+                    });
+                    
+                    queryClient.invalidateQueries({ queryKey: ["chat-history", targetChatId] });
+                }
+                
+                queryClient.invalidateQueries({ queryKey: ["conversations"] });
+            });
 
-            } catch (err: any) {
-                 console.error("Connection error: ", err);
-                 setIsConnected(false);
+            connection.on("UserIsOnline", (userId: string) => addOnlineUser(userId));
+            connection.on("UserIsOffline", (userId: string) => removeOnlineUser(userId));
+            connection.on("ErrorMessage", (err) => toast.error(err));
+
+            connection.onreconnected(async () => {
+                console.log("SignalR Reconnected!");
+                setIsConnected(true);
+                try {
+                    const users = await connection.invoke("GetOnlineUsers");
+                    setOnlineUsers(new Set(users));
+                    if(profileRef.current?.id) await connection.invoke("JoinChat", profileRef.current.id);
+                    if (chatId) await connection.invoke("JoinChat", chatId);
+                } catch (e) { console.error("Reconnect setup failed", e); }
+            });
+
+            connection.onclose(() => {
+                console.log("SignalR Connection Closed.");
+                setIsConnected(false);
+                isConnecting.current = false;
+            });
+
+            if (connection.state === signalR.HubConnectionState.Disconnected && !isConnecting.current) {
+                isConnecting.current = true;
+                try {
+                    await connection.start();
+                    console.log("Global SignalR Connected!");
+                    setIsConnected(true);
+
+                    const currentOnlineUsers: string[] = await connection.invoke("GetOnlineUsers");
+                    setOnlineUsers(new Set(currentOnlineUsers));
+                    await connection.invoke("JoinChat", myProfile.id);
+
+                } catch (err) {
+                    console.error("SignalR Start Error:", err);
+                    setIsConnected(false);
+                } finally {
+                    isConnecting.current = false;
+                }
+            } else if (connection.state === signalR.HubConnectionState.Connected) {
+                setIsConnected(true);
+                connection.invoke("JoinChat", myProfile.id).catch(() => {});
             }
         };
 
-        startConnection();
+        setupConnection();
 
         return () => {
+            if (globalConnection) {
+                globalConnection.off("ReceiveMessage");
+                globalConnection.off("UserIsOnline");
+                globalConnection.off("UserIsOffline");
+                globalConnection.off("ErrorMessage");
+            }
         };
     }, [token, myProfile?.id]); 
 
     useEffect(() => {
-        if (globalConnection && globalConnection.state === signalR.HubConnectionState.Connected && chatId) {
+        if (globalConnection?.state === signalR.HubConnectionState.Connected && chatId) {
             globalConnection.invoke("JoinChat", chatId).catch(err => console.error("Join Room Failed", err));
         }
     }, [chatId, isConnected]);
 
-    const sendMessage = async (content: string, attachments: ChatAttachmentDto[] = []) => {
+    const sendMessage = async (content: string, attachments: ChatAttachmentDto[] = [], isGroup: boolean = false) => {
         if (!globalConnection || globalConnection.state !== signalR.HubConnectionState.Connected) {
+             toast.error("Няма връзка със сървъра. Опитайте да презаредите.");
              return;
         }
         try {
             if (!chatId) return; 
-            await globalConnection.invoke("SendMessage", chatId, content, chatId, null, attachments);
+
+            const receiverId = isGroup ? null : chatId; 
+            const groupId = isGroup ? chatId : null;    
+
+            await globalConnection.invoke(
+                "SendMessage", 
+                chatId,      
+                content,     
+                receiverId,  
+                groupId,     
+                attachments  
+            );
         } catch (error) {
             console.error("Send failed", error);
             toast.error("Неуспешно изпращане.");

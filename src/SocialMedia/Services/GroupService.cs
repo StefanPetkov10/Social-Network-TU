@@ -96,13 +96,38 @@ namespace SocialMedia.Services
             var invalidUserResponse = GetUserIdOrUnauthorized<GroupDto>(userClaims, out var userId);
 
             var profile = await _profileRepository.GetByApplicationIdAsync(userId);
-            var membership = profile != null
-                  ? group.Members.FirstOrDefault(m => m.ProfileId == profile.Id)
-                  : null;
+
+            var dto = MapGroupToDtoWithPermissions(group, profile);
+
+            return ApiResponse<GroupDto>.SuccessResponse(dto);
+        }
+
+        public async Task<ApiResponse<GroupDto>> GetGroupByIdAsync(ClaimsPrincipal userClaims, Guid groupId)
+        {
+            var group = _groupRepository.QueryNoTracking()
+                .Include(g => g.Members)
+                .FirstOrDefault(g => g.Id == groupId);
+
+            if (group == null)
+                return NotFoundResponse<GroupDto>("Group");
+
+            var invalidUserResponse = GetUserIdOrUnauthorized<GroupDto>(userClaims, out var userId);
+            var profile = await _profileRepository.GetByApplicationIdAsync(userId);
+
+            var dto = MapGroupToDtoWithPermissions(group, profile);
+
+            return ApiResponse<GroupDto>.SuccessResponse(dto);
+        }
+
+        private GroupDto MapGroupToDtoWithPermissions(Group group, Profile? currentUserProfile)
+        {
+            var membership = currentUserProfile != null
+                ? group.Members.FirstOrDefault(m => m.ProfileId == currentUserProfile.Id)
+                : null;
 
             var dto = _mapper.Map<GroupDto>(group);
-            dto.IsPrivate = group.Privacy == GroupPrivacy.Private;
 
+            dto.IsPrivate = group.Privacy == GroupPrivacy.Private;
             dto.MembersCount = group.Members.Count(m => m.Status == MembershipStatus.Approved);
 
             if (membership != null && membership.Status == MembershipStatus.Approved)
@@ -111,6 +136,7 @@ namespace SocialMedia.Services
                 dto.IsAdmin = membership.Role == GroupRole.Admin || membership.Role == GroupRole.Owner;
                 dto.IsOwner = membership.Role == GroupRole.Owner;
                 dto.HasRequestedJoin = false;
+
                 dto.CanViewPosts = true;
                 dto.CanCreatePost = true;
             }
@@ -120,6 +146,7 @@ namespace SocialMedia.Services
                 dto.IsAdmin = false;
                 dto.IsOwner = false;
                 dto.HasRequestedJoin = true;
+
                 dto.CanViewPosts = !dto.IsPrivate;
                 dto.CanCreatePost = false;
             }
@@ -129,11 +156,12 @@ namespace SocialMedia.Services
                 dto.IsAdmin = false;
                 dto.IsOwner = false;
                 dto.HasRequestedJoin = false;
+
                 dto.CanViewPosts = !dto.IsPrivate;
                 dto.CanCreatePost = false;
             }
 
-            return ApiResponse<GroupDto>.SuccessResponse(dto);
+            return dto;
         }
 
         public async Task<ApiResponse<IEnumerable<GroupDto>>> GetGroupsDiscoverAsync(ClaimsPrincipal userClaims, Guid? lastGroupId = null, int take = 20)
