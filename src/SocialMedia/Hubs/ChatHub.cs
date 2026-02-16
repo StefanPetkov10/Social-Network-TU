@@ -124,16 +124,11 @@ namespace SocialMedia.Hubs
                 {
                     if (groupId.HasValue)
                     {
-
                         var memberIds = await _chatService.GetGroupMemberIdsAsync(groupId.Value);
-
                         await Clients.Users(memberIds).SendAsync("ReceiveMessage", response.Data);
                     }
                     else
                     {
-                        var senderId = GetUserId();
-                        var targetIdStr = receiverId.ToString();
-
                         await Clients.Group(chatId).SendAsync("ReceiveMessage", response.Data);
                     }
                 }
@@ -145,6 +140,67 @@ namespace SocialMedia.Hubs
             catch (Exception ex)
             {
                 await Clients.Caller.SendAsync("ErrorMessage", "Failed to send message: " + ex.Message);
+            }
+        }
+
+
+        public async Task EditMessage(Guid messageId, string newContent)
+        {
+            try
+            {
+                var response = await _chatService.EditMessageAsync(Context.User!, messageId, newContent);
+
+                if (response.Success)
+                {
+                    await BroadcastMessageUpdate(response.Data, "MessageEdited");
+                }
+                else
+                {
+                    await Clients.Caller.SendAsync("ErrorMessage", response.Message);
+                }
+            }
+            catch (Exception ex)
+            {
+                await Clients.Caller.SendAsync("ErrorMessage", "Failed to edit message: " + ex.Message);
+            }
+        }
+
+        public async Task DeleteMessage(Guid messageId)
+        {
+            try
+            {
+                var response = await _chatService.DeleteMessageAsync(Context.User!, messageId);
+
+                if (response.Success)
+                {
+                    await BroadcastMessageUpdate(response.Data, "MessageDeleted");
+                }
+                else
+                {
+                    await Clients.Caller.SendAsync("ErrorMessage", response.Message);
+                }
+            }
+            catch (Exception ex)
+            {
+                await Clients.Caller.SendAsync("ErrorMessage", "Failed to delete message: " + ex.Message);
+            }
+        }
+
+        private async Task BroadcastMessageUpdate(MessageDto message, string eventName)
+        {
+            if (message.GroupId.HasValue)
+            {
+                var memberIds = await _chatService.GetGroupMemberIdsAsync(message.GroupId.Value);
+                await Clients.Users(memberIds).SendAsync(eventName, message);
+            }
+            else
+            {
+                var senderAppId = GetUserId();
+                if (senderAppId != null)
+                    await Clients.User(senderAppId).SendAsync(eventName, message);
+
+                await Clients.Group(message.SenderId.ToString()).SendAsync(eventName, message);
+                await Clients.Group(message.ReceiverId.ToString()).SendAsync(eventName, message);
             }
         }
 

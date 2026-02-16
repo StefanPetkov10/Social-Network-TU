@@ -46,33 +46,46 @@ export const useChatSocket = (chatId: string | null) => {
             const connection = globalConnection;
 
             connection.off("ReceiveMessage");
+            connection.off("MessageEdited");
+            connection.off("MessageDeleted");
             connection.off("UserIsOnline");
             connection.off("UserIsOffline");
             connection.off("ErrorMessage");
 
-            connection.on("ReceiveMessage", (newMessage: MessageDto) => {
+            const handleMessageUpdate = (msg: MessageDto) => {
                 const currentProfileId = profileRef.current?.id;
-                const isMine = newMessage.senderId === currentProfileId;
+                const isMine = msg.senderId === currentProfileId;
                 
                 let targetChatId = null;
 
-                if (newMessage.groupId) {
-                    targetChatId = newMessage.groupId;
+                if (msg.groupId) {
+                    targetChatId = msg.groupId;
                 } else {
-                    targetChatId = isMine ? newMessage.receiverId : newMessage.senderId;
+                    targetChatId = isMine ? msg.receiverId : msg.senderId;
                 }
 
                 if (targetChatId) {
                     queryClient.setQueryData(["chat-history", targetChatId], (oldMessages: MessageDto[] = []) => {
-                        if (oldMessages.some(m => m.id === newMessage.id)) return oldMessages;
-                        return [...oldMessages, newMessage];
+                        const index = oldMessages.findIndex(m => m.id === msg.id);
+                        
+                        if (index !== -1) {
+                            const updatedList = [...oldMessages];
+                            updatedList[index] = msg; 
+                            return updatedList;
+                        } else {
+                            return [...oldMessages, msg];
+                        }
                     });
                     
                     queryClient.invalidateQueries({ queryKey: ["chat-history", targetChatId] });
                 }
                 
                 queryClient.invalidateQueries({ queryKey: ["conversations"] });
-            });
+            };
+
+            connection.on("ReceiveMessage", handleMessageUpdate);
+            connection.on("MessageEdited", handleMessageUpdate);
+            connection.on("MessageDeleted", handleMessageUpdate);
 
             connection.on("UserIsOnline", (userId: string) => addOnlineUser(userId));
             connection.on("UserIsOffline", (userId: string) => removeOnlineUser(userId));
@@ -102,8 +115,8 @@ export const useChatSocket = (chatId: string | null) => {
                     console.log("Global SignalR Connected!");
                     setIsConnected(true);
 
-                    const currentOnlineUsers: string[] = await connection.invoke("GetOnlineUsers");
-                    setOnlineUsers(new Set(currentOnlineUsers));
+                    const users = await connection.invoke("GetOnlineUsers");
+                    setOnlineUsers(new Set(users));
                     await connection.invoke("JoinChat", myProfile.id);
 
                 } catch (err) {
@@ -123,6 +136,8 @@ export const useChatSocket = (chatId: string | null) => {
         return () => {
             if (globalConnection) {
                 globalConnection.off("ReceiveMessage");
+                globalConnection.off("MessageEdited");
+                globalConnection.off("MessageDeleted");
                 globalConnection.off("UserIsOnline");
                 globalConnection.off("UserIsOffline");
                 globalConnection.off("ErrorMessage");
@@ -161,7 +176,33 @@ export const useChatSocket = (chatId: string | null) => {
         }
     };
 
+    const editMessage = async (messageId: string, newContent: string) => {
+        if (!globalConnection || globalConnection.state !== signalR.HubConnectionState.Connected) {
+            toast.error("Няма връзка със сървъра. Опитайте да презаредите.");
+            return;
+        }
+        try {
+            await globalConnection.invoke("EditMessage", messageId, newContent);
+        } catch (error) {
+            console.error("Edit failed", error);
+            toast.error("Неуспешна редакция.");
+        }
+    };
+
+    const deleteMessage = async (messageId: string) => {
+        if (!globalConnection || globalConnection.state !== signalR.HubConnectionState.Connected) {
+            toast.error("Няма връзка със сървъра. Опитайте да презаредите.");
+            return;
+        }
+        try {
+            await globalConnection.invoke("DeleteMessage", messageId);
+        } catch (error) {
+            console.error("Delete failed", error);
+            toast.error("Неуспешно изтриване.");
+        }
+    };
+
     const { onlineUsers } = useSocketStore();
 
-    return { isConnected, sendMessage, onlineUsers };
+    return { isConnected, sendMessage, editMessage, deleteMessage, onlineUsers };
 };

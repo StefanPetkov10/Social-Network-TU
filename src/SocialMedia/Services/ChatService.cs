@@ -85,9 +85,6 @@ namespace SocialMedia.Services
 
             await _messageRepository.AddAsync(message);
 
-            var mediaDtos = new List<MessageMediaDto>();
-            string baseUrl = $"{_httpContextAccessor.HttpContext?.Request.Scheme}://{_httpContextAccessor.HttpContext?.Request.Host}";
-
             if (attachments != null && attachments.Any())
             {
                 int order = 0;
@@ -102,35 +99,16 @@ namespace SocialMedia.Services
                         MediaType = att.MediaType,
                         Order = order++
                     };
-
                     await _mediaRepository.AddAsync(mediaEntity);
-
-                    mediaDtos.Add(new MessageMediaDto
-                    {
-                        Id = mediaEntity.Id,
-                        Url = $"{baseUrl}/{mediaEntity.FilePath}",
-                        FileName = mediaEntity.FileName,
-                        MediaType = mediaEntity.MediaType,
-                        Order = mediaEntity.Order
-                    });
+                    message.Media.Add(mediaEntity);
                 }
             }
 
             await _messageRepository.SaveChangesAsync();
 
-            var responseDto = new MessageDto
-            {
-                Id = message.Id,
-                Content = message.Content,
-                SenderId = message.SenderId,
-                SenderName = $"{senderProfile.FirstName} {senderProfile.LastName}",
-                SenderPhoto = senderProfile.Photo,
-                ReceiverId = message.ReceiverId ?? Guid.Empty,
-                GroupId = message.GroupId,
-                SentAt = message.CreatedDate,
-                IsEdited = false,
-                Media = mediaDtos
-            };
+            message.Sender = senderProfile;
+
+            var responseDto = await MapMessageToDto(message);
 
             return ApiResponse<MessageDto>.SuccessResponse(responseDto, "Message sent.");
         }
@@ -175,16 +153,15 @@ namespace SocialMedia.Services
 
             var conversations = allMessages
                 .GroupBy(m =>
-                    {
-                        if (m.GroupId.HasValue)
-                        {
-                            return m.GroupId.Value;
-                        }
-                        return m.SenderId == viewerProfile.Id ? m.ReceiverId : m.SenderId;
-                    })
+                {
+                    if (m.GroupId.HasValue) return m.GroupId.Value;
+                    return m.SenderId == viewerProfile.Id ? m.ReceiverId! : m.SenderId;
+                })
                 .Select(g =>
                 {
                     var lastMsg = g.First();
+
+                    string lastMsgContent = lastMsg.IsDeleted ? "Message deleted" : lastMsg.Content;
 
                     string name;
                     string? avatar;
@@ -214,7 +191,7 @@ namespace SocialMedia.Services
                         Id = id,
                         Name = name,
                         AuthorAvatar = avatar,
-                        LastMessage = lastMsg.Content,
+                        LastMessage = lastMsgContent,
                         LastMessageTime = lastMsg.CreatedDate,
                         IsGroup = isGroup,
                         UnreadCount = g.Count(m => !m.IsRead && m.SenderId != viewerProfile.Id)
@@ -234,39 +211,84 @@ namespace SocialMedia.Services
             var viewerProfile = await _profileRepository.GetByApplicationIdAsync(userId);
             if (viewerProfile == null) return ApiResponse<IEnumerable<MessageDto>>.ErrorResponse("Invalid user profile.");
 
-            var baseUrl = $"{_httpContextAccessor.HttpContext!.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}";
-
             var messages = await _messageRepository.QueryNoTracking()
                 .Include(m => m.Sender)
                 .Include(m => m.Media)
-                .Where(m => !m.IsDeleted &&
+                .Where(m =>
                     ((m.SenderId == viewerProfile.Id && m.ReceiverId == otherUserId) ||
                      (m.SenderId == otherUserId && m.ReceiverId == viewerProfile.Id)) ||
                      (m.GroupId == otherUserId))
                 .OrderBy(m => m.CreatedDate)
-                .Select(m => new MessageDto
-                {
-                    Id = m.Id,
-                    Content = m.Content,
-                    SenderId = m.SenderId,
-                    SenderName = $"{m.Sender.FirstName} {m.Sender.LastName}",
-                    SenderPhoto = m.Sender.Photo,
-                    ReceiverId = m.ReceiverId ?? Guid.Empty,
-                    GroupId = m.GroupId,
-                    SentAt = m.CreatedDate,
-                    IsEdited = false,
-                    Media = m.Media.Select(media => new MessageMediaDto
-                    {
-                        Id = media.Id,
-                        Url = $"{baseUrl}/{media.FilePath}",
-                        FileName = media.FileName,
-                        MediaType = media.MediaType,
-                        Order = media.Order
-                    }).ToList()
-                })
                 .ToListAsync();
 
-            return ApiResponse<IEnumerable<MessageDto>>.SuccessResponse(messages, "History retrieved.");
+            var messageDtos = new List<MessageDto>();
+            foreach (var msg in messages)
+            {
+                messageDtos.Add(await MapMessageToDto(msg));
+            }
+
+            return ApiResponse<IEnumerable<MessageDto>>.SuccessResponse(messageDtos, "History retrieved.");
+        }
+
+        public async Task<ApiResponse<MessageDto>> EditMessageAsync(ClaimsPrincipal userClaims, Guid messageId, string newContent)
+        {
+            var invalidUserResponse = GetUserIdOrUnauthorized<MessageDto>(userClaims, out var userId);
+            if (invalidUserResponse != null) return invalidUserResponse;
+
+            var profile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (profile == null) return ApiResponse<MessageDto>.ErrorResponse("Invalid user profile.");
+
+            var messageToEdit = await _messageRepository.GetByIdAsync(messageId);
+            if (messageToEdit == null) return ApiResponse<MessageDto>.ErrorResponse("Message not found.");
+
+            if (messageToEdit.SenderId != profile.Id)
+                return ApiResponse<MessageDto>.ErrorResponse("Unauthorized. You can only edit your own messages.");
+
+            if (messageToEdit.IsDeleted)
+                return ApiResponse<MessageDto>.ErrorResponse("Cannot edit a deleted message.");
+
+            if (string.Equals(messageToEdit.Content, newContent))
+            {
+                var existingDto = await MapMessageToDto(messageToEdit);
+                return ApiResponse<MessageDto>.SuccessResponse(existingDto, "No changes made.");
+            }
+
+            messageToEdit.Content = newContent;
+            messageToEdit.EditedAt = DateTime.UtcNow;
+            messageToEdit.UpdatedDate = DateTime.UtcNow;
+
+            await _messageRepository.UpdateAsync(messageToEdit);
+            await _messageRepository.SaveChangesAsync();
+
+            var messageDto = await MapMessageToDto(messageToEdit);
+            return ApiResponse<MessageDto>.SuccessResponse(messageDto, "Message edited.");
+        }
+
+        public async Task<ApiResponse<MessageDto>> DeleteMessageAsync(ClaimsPrincipal userClaims, Guid messageId)
+        {
+            var invalidUserResponse = GetUserIdOrUnauthorized<MessageDto>(userClaims, out var userId);
+            if (invalidUserResponse != null) return invalidUserResponse;
+
+            var profile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (profile == null) return ApiResponse<MessageDto>.ErrorResponse("Profile not found.");
+
+            var messageToDelete = await _messageRepository.GetByIdAsync(messageId);
+            if (messageToDelete == null) return ApiResponse<MessageDto>.ErrorResponse("Message not found.");
+
+            if (messageToDelete.SenderId != profile.Id)
+                return ApiResponse<MessageDto>.ErrorResponse("Unauthorized. You can only delete your own messages.");
+
+            if (messageToDelete.IsDeleted)
+                return ApiResponse<MessageDto>.ErrorResponse("Message is already deleted.");
+
+            messageToDelete.IsDeleted = true;
+            messageToDelete.UpdatedDate = DateTime.UtcNow;
+
+            await _messageRepository.UpdateAsync(messageToDelete);
+            await _messageRepository.SaveChangesAsync();
+
+            var messageDto = await MapMessageToDto(messageToDelete);
+            return ApiResponse<MessageDto>.SuccessResponse(messageDto, "Message deleted.");
         }
 
         public async Task<Guid?> GetProfileIdByAppIdAsync(Guid appId)
@@ -281,6 +303,44 @@ namespace SocialMedia.Services
                 .Where(p => appIds.Contains(p.ApplicationId))
                 .Select(p => p.Id.ToString())
                 .ToListAsync();
+        }
+
+        private async Task<MessageDto> MapMessageToDto(Message m)
+        {
+            if (m.Sender == null)
+            {
+                m.Sender = await _profileRepository.GetByIdAsync(m.SenderId);
+            }
+
+            var mediaDtos = new List<MessageMediaDto>();
+            string baseUrl = $"{_httpContextAccessor.HttpContext?.Request.Scheme}://{_httpContextAccessor.HttpContext?.Request.Host}";
+
+            if (!m.IsDeleted && m.Media != null)
+            {
+                mediaDtos = m.Media.Select(att => new MessageMediaDto
+                {
+                    Id = att.Id,
+                    Url = $"{baseUrl}/{att.FilePath}",
+                    FileName = att.FileName,
+                    MediaType = att.MediaType,
+                    Order = att.Order
+                }).ToList();
+            }
+
+            return new MessageDto
+            {
+                Id = m.Id,
+                Content = m.IsDeleted ? "This message was deleted." : m.Content,
+                SenderId = m.SenderId,
+                SenderName = $"{m.Sender.FirstName} {m.Sender.LastName}",
+                SenderPhoto = m.Sender.Photo,
+                ReceiverId = m.ReceiverId ?? Guid.Empty,
+                GroupId = m.GroupId,
+                SentAt = m.CreatedDate,
+                IsEdited = m.EditedAt.HasValue && !m.IsDeleted,
+                IsDeleted = m.IsDeleted,
+                Media = mediaDtos
+            };
         }
     }
 }

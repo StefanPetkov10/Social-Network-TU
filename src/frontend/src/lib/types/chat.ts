@@ -18,6 +18,7 @@ export interface MessageDto {
     groupId?: string;
     sentAt: string; 
     isEdited: boolean;
+    isDeleted: boolean;
     media: MessageMediaDto[];
     reactions: any[]; 
 }

@@ -11,6 +11,7 @@
         public Guid? GroupId { get; set; }
         public DateTime SentAt { get; set; }
         public bool IsEdited { get; set; }
+        public bool IsDeleted { get; set; }
         public List<MessageMediaDto> Media { get; set; } = new();
         public List<object> Reactions { get; set; } = new();
     }

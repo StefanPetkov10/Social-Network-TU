@@ -7,8 +7,28 @@ import { useGroupById } from "@frontend/hooks/use-groups";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { Button } from "@frontend/components/ui/button";
 import { Input } from "@frontend/components/ui/input";
-import { Dialog, DialogContent, DialogClose, DialogTitle } from "@frontend/components/ui/dialog"; 
-import { Loader2, Image as ImageIcon, Paperclip, Info, ArrowLeft, X, FileText, Download, Users } from "lucide-react"; 
+import { Dialog, DialogContent, DialogClose, DialogTitle, DialogDescription, DialogFooter, DialogHeader } from "@frontend/components/ui/dialog"; // --- НОВО: Добавени imports за DialogHeader/Footer
+import { 
+    DropdownMenu, 
+    DropdownMenuContent, 
+    DropdownMenuItem, 
+    DropdownMenuTrigger 
+} from "@frontend/components/ui/dropdown-menu";
+import { 
+    Loader2, 
+    Image as ImageIcon, 
+    Paperclip, 
+    Info, 
+    ArrowLeft, 
+    X, 
+    FileText, 
+    Download, 
+    Users,
+    MoreVertical, 
+    Smile,       
+    Edit2,       
+    Trash2        
+} from "lucide-react"; 
 import { useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { cn, getInitials, getFileDetails, getUserDisplayName } from "@frontend/lib/utils"; 
@@ -73,7 +93,7 @@ export default function ChatPage() {
 
   const { data: historyMessages, isLoading: isHistoryLoading } = useChatHistory(chatId);
   
-  const { sendMessage, isConnected, onlineUsers } = useChatSocket(chatId);
+  const { sendMessage, editMessage, deleteMessage, isConnected, onlineUsers } = useChatSocket(chatId);
   const uploadMutation = useUploadChatFiles();
 
   const isUserOnline = !chatTarget?.isGroup && onlineUsers.has(chatId);
@@ -83,12 +103,18 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   
-  const [selectedMedia, setSelectedMedia] = useState<{ url: string; fileName: string } | null>(null);
+  const [editingMessage, setEditingMessage] = useState<MessageDto | null>(null);
+  
+  const [messageToDelete, setMessageToDelete] = useState<MessageDto | null>(null);
 
+  const [selectedMedia, setSelectedMedia] = useState<{ url: string; fileName: string } | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
+  
+  const inputRef = useRef<HTMLInputElement>(null);
+  
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -105,11 +131,37 @@ export default function ChatPage() {
         }, 100); 
     } 
     else if (isInitialized) {
-        setTimeout(() => {
-            scrollToBottom("smooth");
-        }, 100);
+        if (!editingMessage) {
+            setTimeout(() => {
+                scrollToBottom("smooth");
+            }, 100);
+        }
     }
-  }, [messages, isHistoryLoading, isInitialized]);
+  }, [messages, isHistoryLoading, isInitialized, editingMessage]);
+
+  const startEditing = (msg: MessageDto) => {
+      setEditingMessage(msg);
+      setInput(msg.content);
+      
+      setTimeout(() => {
+          if (inputRef.current) {
+              inputRef.current.focus();
+              inputRef.current.setSelectionRange(msg.content.length, msg.content.length);
+          }
+      }, 100); 
+  };
+
+  const cancelEditing = () => {
+      setEditingMessage(null);
+      setInput("");
+  };
+
+  const confirmDelete = async () => {
+      if (messageToDelete) {
+          await deleteMessage(messageToDelete.id);
+          setMessageToDelete(null); 
+      }
+  };
 
   const handleDownload = async (url: string, fileName: string) => {
     try {
@@ -181,6 +233,14 @@ export default function ChatPage() {
   const handleSend = async () => {
     if (!input.trim() && files.length === 0) return;
 
+    if (editingMessage) {
+        if (input.trim() !== editingMessage.content) {
+            await editMessage(editingMessage.id, input);
+        }
+        cancelEditing();
+        return;
+    }
+
     let attachments: ChatAttachmentDto[] = [];
 
     if (files.length > 0) {
@@ -215,7 +275,6 @@ export default function ChatPage() {
             <div className="relative">
                 <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
                     <AvatarImage src={chatTarget?.avatar || ""} className="object-cover"/>
-                    
                     {chatTarget?.isGroup ? (
                         <AvatarFallback className="bg-gradient-to-br from-blue-600 via-indigo-500 to-purple-600 text-white font-bold text-xs">
                             {chatTarget.initials}
@@ -226,7 +285,6 @@ export default function ChatPage() {
                         </AvatarFallback>
                     )}
                 </Avatar>
-
                 {isUserOnline && (
                     <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white" />
                 )}
@@ -269,12 +327,13 @@ export default function ChatPage() {
         ) : (
             messages.map((msg: MessageDto, i: number) => {
                 const isMe = myProfile ? msg.senderId === myProfile.id : false;
-                
                 const showSenderInfo = !isMe && chatTarget?.isGroup;
 
                 return (
-                    <div key={msg.id || i} className={cn("flex gap-2 max-w-[85%] sm:max-w-[75%]", isMe ? "ml-auto flex-row-reverse" : "")}>
-                        
+                    <div 
+                        key={msg.id || i} 
+                        className={cn("flex gap-1 max-w-[85%] sm:max-w-[75%] group relative", isMe ? "ml-auto flex-row-reverse" : "")}
+                    >
                         {!isMe && (
                             <Avatar className="h-8 w-8 mt-1 border-2 border-white shadow-sm shrink-0">
                                 <AvatarImage src={msg.senderPhoto} className="object-cover" />
@@ -285,23 +344,25 @@ export default function ChatPage() {
                         )}
 
                         <div className={cn("flex flex-col", isMe ? "items-end" : "items-start")}>
-                            
                             {showSenderInfo && (
                                 <span className="text-[10px] text-muted-foreground ml-1 mb-1 block font-medium">
                                     {msg.senderName}
                                 </span>
                             )}
                             
-                            <div className={cn("px-3 py-2 text-sm shadow-sm break-words", isMe ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-sm" : "bg-white border text-foreground rounded-2xl rounded-tl-sm")}>
+                            <div className={cn(
+                                "px-3 py-2 text-sm shadow-sm break-words relative",
+                                isMe ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-sm" : "bg-white border text-foreground rounded-2xl rounded-tl-sm",
+                                msg.isDeleted && "italic opacity-80 bg-gray-100 text-gray-500 border-gray-200" 
+                            )}>
                                 {msg.content && <p className={cn("mb-1", !msg.media?.length && "mb-0")}>{msg.content}</p>}
                                 
-                                {msg.media && msg.media.length > 0 && (() => {
+                                {msg.media && msg.media.length > 0 && !msg.isDeleted && (() => {
                                     const imagesAndVideos = msg.media.filter(m => m.mediaType === 0 || m.mediaType === 1);
                                     const documents = msg.media.filter(m => m.mediaType !== 0 && m.mediaType !== 1);
 
                                     return (
                                         <div className="flex flex-col gap-2 mt-1">
-                                            
                                             {imagesAndVideos.length > 0 && (
                                                 <div className={cn("grid gap-1", imagesAndVideos.length > 1 ? "grid-cols-2" : "grid-cols-1")}>
                                                     {imagesAndVideos.map((m) => (
@@ -351,10 +412,50 @@ export default function ChatPage() {
                                     );
                                 })()}
                             </div>
-                            <span className="text-[10px] text-muted-foreground mt-1 px-1 block opacity-70">
-                                {new Date(msg.sentAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                            </span>
+                            
+                            <div className="flex items-center gap-1 mt-1 px-1">
+                                <span className="text-[10px] text-muted-foreground opacity-70">
+                                    {new Date(msg.sentAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                </span>
+                                {msg.isEdited && !msg.isDeleted && (
+                                    <span className="text-[9px] text-muted-foreground italic">(edited)</span>
+                                )}
+                            </div>
                         </div>
+
+                        {!msg.isDeleted && (
+                            <div className={cn(
+                                "opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1",
+                                showSenderInfo 
+                                    ? "mt-6 self-start ml-1" 
+                                    : "self-center pb-4 " + (isMe ? "mr-1" : "ml-1") 
+                            )}>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-black/5 text-muted-foreground">
+                                    <Smile className="h-4 w-4" />
+                                </Button>
+
+                                {isMe && (
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-black/5 text-muted-foreground">
+                                                <MoreVertical className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align={isMe ? "end" : "start"}>
+                                            <DropdownMenuItem onClick={() => startEditing(msg)} className="cursor-pointer gap-2">
+                                                <Edit2 className="h-4 w-4" />
+                                                <span>Редактирай</span>
+                                            </DropdownMenuItem>
+                                            
+                                            <DropdownMenuItem onClick={() => setMessageToDelete(msg)} className="cursor-pointer gap-2 text-red-600 focus:text-red-600 focus:bg-red-50">
+                                                <Trash2 className="h-4 w-4" />
+                                                <span>Изтрий</span>
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )
             })
@@ -363,7 +464,22 @@ export default function ChatPage() {
       </div>
 
       <div className="p-4 bg-white shrink-0 border-t">
-        
+        {editingMessage && (
+            <div className="flex items-center justify-between px-4 py-2 bg-slate-100 border-t border-x rounded-t-lg text-xs text-muted-foreground animate-in slide-in-from-bottom-2">
+                <span className="flex items-center gap-2">
+                    <Edit2 className="h-3 w-3" />
+                    Редактиране на съобщение...
+                </span>
+                <button 
+                    onClick={cancelEditing} 
+                    className="hover:bg-slate-200 rounded-full p-1 transition-colors"
+                    title="Отказ"
+                >
+                    <X className="h-3 w-3 text-red-500" />
+                </button>
+            </div>
+        )}
+
         {files.length > 0 && (
             <div className="flex gap-2 mb-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-200">
                 {files.filter(isDoc).map((file, i) => {
@@ -396,58 +512,67 @@ export default function ChatPage() {
             </div>
         )}
 
-        <div className="flex items-center gap-2 border rounded-3xl px-3 py-1.5 bg-slate-50 focus-within:bg-white focus-within:ring-1 focus-within:ring-primary/20 focus-within:border-primary transition-all shadow-sm">
-            
-            <input 
-                type="file" 
-                ref={mediaInputRef} 
-                className="hidden" 
-                accept="image/*,video/*" 
-                multiple 
-                onChange={handleFileChange} 
-            />
-
-            <input 
-                type="file" 
-                ref={docInputRef} 
-                className="hidden" 
-                accept=".pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx,.csv,.zip,.rar,.7z" 
-                multiple 
-                onChange={handleFileChange} 
-            />
-
-            <Button 
-                variant="ghost" 
-                size="icon" 
-                className="rounded-full text-muted-foreground hover:text-green-600 h-9 w-9 shrink-0"
-                onClick={() => mediaInputRef.current?.click()}
-                disabled={uploadMutation.isPending}
-            >
-                <ImageIcon className="h-5 w-5" />
-            </Button>
-            
-             <Button 
-                variant="ghost" 
-                size="icon" 
-                className="rounded-full text-muted-foreground hover:text-blue-600 h-9 w-9 shrink-0"
-                onClick={() => docInputRef.current?.click()}
-                disabled={uploadMutation.isPending}
-            >
-                <Paperclip className="h-5 w-5" />
-            </Button>
+        <div className={cn(
+            "flex items-center gap-2 border px-3 py-1.5 bg-slate-50 focus-within:bg-white focus-within:ring-1 focus-within:ring-primary/20 focus-within:border-primary transition-all shadow-sm",
+            editingMessage ? "rounded-b-3xl border-t-0" : "rounded-3xl"
+        )}>
+            {!editingMessage && (
+                <>
+                    <input 
+                        type="file" 
+                        ref={mediaInputRef} 
+                        className="hidden" 
+                        accept="image/*,video/*" 
+                        multiple 
+                        onChange={handleFileChange} 
+                    />
+                    <input 
+                        type="file" 
+                        ref={docInputRef} 
+                        className="hidden" 
+                        accept=".pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx,.csv,.zip,.rar,.7z" 
+                        multiple 
+                        onChange={handleFileChange} 
+                    />
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="rounded-full text-muted-foreground hover:text-green-600 h-9 w-9 shrink-0"
+                        onClick={() => mediaInputRef.current?.click()}
+                        disabled={uploadMutation.isPending}
+                    >
+                        <ImageIcon className="h-5 w-5" />
+                    </Button>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="rounded-full text-muted-foreground hover:text-blue-600 h-9 w-9 shrink-0"
+                        onClick={() => docInputRef.current?.click()}
+                        disabled={uploadMutation.isPending}
+                    >
+                        <Paperclip className="h-5 w-5" />
+                    </Button>
+                </>
+            )}
             
             <Input 
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && !uploadMutation.isPending && handleSend()}
-                placeholder="Type a message..." 
+                placeholder={editingMessage ? "Редактирай текста..." : "Type a message..."}
                 className="border-none bg-transparent focus-visible:ring-0 shadow-none px-2 h-9 text-base" 
                 disabled={uploadMutation.isPending}
+                ref={inputRef}
+                autoFocus={!!editingMessage}
             />
             
             <Button 
                 onClick={handleSend}
-                disabled={(!input.trim() && files.length === 0) || uploadMutation.isPending}
+                disabled={
+                    uploadMutation.isPending || 
+                    (!input.trim() && files.length === 0) || 
+                    (!!editingMessage && input.trim() === editingMessage.content) 
+                }
                 variant="ghost" 
                 size="sm" 
                 className={cn(
@@ -455,7 +580,7 @@ export default function ChatPage() {
                     (input.trim() || files.length > 0) ? "text-primary hover:bg-primary/10" : "text-muted-foreground"
                 )}
             >
-                {uploadMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}
+                {uploadMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : (editingMessage ? "Save" : "Send")}
             </Button>
         </div>
       </div>
@@ -465,12 +590,10 @@ export default function ChatPage() {
                 <VisuallyHidden.Root>
                     <DialogTitle>Преглед на изображение</DialogTitle>
                 </VisuallyHidden.Root>
-                
                 <div className="relative w-full h-full flex flex-col items-center">
                     <DialogClose className="absolute -top-10 right-0 bg-white/20 hover:bg-white/40 text-white rounded-full p-2 transition-colors">
                         <X className="h-6 w-6" />
                     </DialogClose>
-
                     {selectedMedia && (
                         <>
                             <img 
@@ -478,7 +601,6 @@ export default function ChatPage() {
                                 alt="Full size" 
                                 className="max-h-[80vh] w-auto object-contain rounded-md shadow-2xl"
                             />
-                            
                             <Button 
                                 onClick={() => handleDownload(selectedMedia.url, selectedMedia.fileName)}
                                 className="mt-4 gap-2 bg-white text-black hover:bg-white/90"
@@ -490,6 +612,25 @@ export default function ChatPage() {
                     )}
                 </div>
             </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!messageToDelete} onOpenChange={(open) => !open && setMessageToDelete(null)}>
+        <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+                <DialogTitle>Изтриване на съобщение</DialogTitle>
+                <DialogDescription>
+                    Сигурни ли сте, че искате да изтриете това съобщение? Това действие е окончателно.
+                </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setMessageToDelete(null)}>
+                    Отказ
+                </Button>
+                <Button variant="destructive" onClick={confirmDelete}>
+                    Изтрий
+                </Button>
+            </DialogFooter>
+        </DialogContent>
       </Dialog>
     </div>
   );
