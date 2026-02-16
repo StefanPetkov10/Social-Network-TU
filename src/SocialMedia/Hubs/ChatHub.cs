@@ -116,16 +116,26 @@ namespace SocialMedia.Hubs
                 await Clients.Caller.SendAsync("ErrorMessage", "Unauthorized: User ID not found.");
                 return;
             }
-
             try
             {
                 var response = await _chatService.CreateMessageAsync(Context.User!, content, receiverId, groupId, attachments);
 
                 if (response.Success)
                 {
-                    await Clients.Group(chatId).SendAsync("ReceiveMessage", response.Data);
+                    if (groupId.HasValue)
+                    {
 
-                    await Clients.Caller.SendAsync("ReceiveMessage", response.Data);
+                        var memberIds = await _chatService.GetGroupMemberIdsAsync(groupId.Value);
+
+                        await Clients.Users(memberIds).SendAsync("ReceiveMessage", response.Data);
+                    }
+                    else
+                    {
+                        var senderId = GetUserId();
+                        var targetIdStr = receiverId.ToString();
+
+                        await Clients.Group(chatId).SendAsync("ReceiveMessage", response.Data);
+                    }
                 }
                 else
                 {

@@ -14,6 +14,7 @@ namespace SocialMedia.Services.Interfaces
 
         Task<List<ChatAttachmentDto>> UploadAttachmentsAsync(List<IFormFile> files);
 
+        Task<List<string>> GetGroupMemberIdsAsync(Guid groupId);
         Task<ApiResponse<IEnumerable<ChatConversationDto>>> GetConversationsAsync(ClaimsPrincipal userClaims);
 
         Task<ApiResponse<IEnumerable<MessageDto>>> GetMessageHistoryAsync(ClaimsPrincipal userClaims, Guid otherUserId);

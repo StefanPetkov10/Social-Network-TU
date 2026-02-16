@@ -16,6 +16,7 @@ namespace SocialMedia.Services
         private readonly IRepository<Message, Guid> _messageRepository;
         private readonly IRepository<MessageMedia, Guid> _mediaRepository;
         private readonly IRepository<Profile, Guid> _profileRepository;
+        private readonly IRepository<GroupMembership, Guid> _groupMembershipRepository;
         private readonly IFileService _fileService;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
@@ -23,6 +24,7 @@ namespace SocialMedia.Services
             IRepository<Message, Guid> messageRepository,
             IRepository<MessageMedia, Guid> mediaRepository,
             IRepository<Profile, Guid> profileRepository,
+            IRepository<GroupMembership, Guid> groupMembershipRepository,
             IFileService fileService,
             IHttpContextAccessor httpContextAccessor)
             : base(userManager)
@@ -30,6 +32,7 @@ namespace SocialMedia.Services
             _messageRepository = messageRepository;
             _mediaRepository = mediaRepository;
             _profileRepository = profileRepository;
+            _groupMembershipRepository = groupMembershipRepository;
             _fileService = fileService;
             _httpContextAccessor = httpContextAccessor;
         }
@@ -130,6 +133,15 @@ namespace SocialMedia.Services
             };
 
             return ApiResponse<MessageDto>.SuccessResponse(responseDto, "Message sent.");
+        }
+
+        public async Task<List<string>> GetGroupMemberIdsAsync(Guid groupId)
+        {
+            return await _groupMembershipRepository.QueryNoTracking()
+                .Include(gm => gm.Profile)
+                .Where(gm => gm.GroupId == groupId && gm.Status == MembershipStatus.Approved)
+                .Select(gm => gm.Profile.ApplicationId.ToString())
+                .ToListAsync();
         }
 
         public async Task<ApiResponse<IEnumerable<ChatConversationDto>>> GetConversationsAsync(ClaimsPrincipal userClaims)
