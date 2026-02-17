@@ -12,6 +12,7 @@ import {
   FileIcon,
   File
 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@frontend/components/ui/button";
 import { Skeleton } from "@frontend/components/ui/skeleton";
 import { cn, getFileDetails } from "@frontend/lib/utils";
@@ -41,8 +42,15 @@ export function ProfileMediaCard({ profileId }: ProfileMediaFormProps) {
     <div className="bg-background rounded-xl border p-5 shadow-sm h-fit">
       <div className="flex justify-between items-center mb-4">
         <h3 className="font-bold text-lg">Медия</h3>
-        {!isEmpty && (
-             <Button variant="link" className="text-primary p-0 h-auto font-semibold">Виж всички</Button>
+            {!isEmpty && (
+            <Link 
+                href={`/profile/?tab=media`} 
+                scroll={false} 
+            >
+                <Button variant="link" className="text-primary p-0 h-auto font-semibold">
+                    Виж всички
+                </Button>
+            </Link>
         )}
       </div>
 

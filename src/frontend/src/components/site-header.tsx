@@ -107,9 +107,11 @@ export function SiteHeader({ user }: SiteHeaderProps) {
       </nav>
 
       <div className="flex items-center gap-2">
+        <Link href="/messages">
         <Button variant="ghost" size="icon" className="cursor-pointer rounded-full bg-muted/50 relative sm:flex hover:bg-primary hover:text-white">
           <MessageCircle className="!size-5" />
         </Button>
+        </Link>
         <Button variant="ghost" size="icon" className="cursor-pointer rounded-full bg-muted/50 relative hover:bg-primary hover:text-white">
           <Bell className="!size-5" />
         </Button>

@@ -29,6 +29,7 @@ import {
     Edit2,       
     Trash2        
 } from "lucide-react"; 
+import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { cn, getInitials, getFileDetails, getUserDisplayName } from "@frontend/lib/utils"; 
@@ -116,6 +117,14 @@ export default function ChatPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isCurrentUser = profileData?.data?.id === chatId ? true : false;
+  const authorUsername = profileData?.data?.username;
+  const groupName = groupData?.data?.name || "Групов чат";
+  const authorProfileUrl = isCurrentUser 
+      ? (authorUsername ? `/${authorUsername}` : "#")
+      : "/profile" ;
+  const groupUrl = `/groups/${encodeURIComponent(groupName)}`; 
+
 
   useEffect(() => {
     if (!scrollRef.current || messages.length === 0) return;
@@ -148,7 +157,7 @@ export default function ChatPage() {
               inputRef.current.focus();
               inputRef.current.setSelectionRange(msg.content.length, msg.content.length);
           }
-      }, 100); 
+      }, 300); 
   };
 
   const cancelEditing = () => {
@@ -271,7 +280,7 @@ export default function ChatPage() {
             <Button variant="ghost" size="icon" className="md:hidden" onClick={() => router.push('/messages')}>
                 <ArrowLeft className="h-5 w-5" />
             </Button>
-            
+            <Link href={chatTarget?.isGroup ? groupUrl : authorProfileUrl}>
             <div className="relative">
                 <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
                     <AvatarImage src={chatTarget?.avatar || ""} className="object-cover"/>
@@ -289,12 +298,14 @@ export default function ChatPage() {
                     <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white" />
                 )}
             </div>
+            </Link>
 
             <div>
-                <h3 className="font-semibold text-sm">
-                    {chatTarget?.name || (isLoadingTarget ? "Зареждане..." : "Chat Room")}
-                </h3>
-                
+                <Link href={chatTarget?.isGroup ? groupUrl : authorProfileUrl}>
+                    <h3 className="font-semibold text-sm">
+                        {chatTarget?.name || (isLoadingTarget ? "Зареждане..." : "Chat Room")}
+                    </h3>
+                </Link>
                 <div className="flex items-center gap-1.5 h-4">
                      {chatTarget?.isGroup ? (
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
