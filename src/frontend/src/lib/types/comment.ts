@@ -17,6 +17,7 @@ export interface CommentDto {
     content: string;
     likesCount: number;
     userReaction: ReactionType | null; 
+    topReactionType?: ReactionType | null; 
     isDeleted: boolean;
     depth: number;
     parentCommentId?: string | null;

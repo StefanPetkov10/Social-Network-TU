@@ -28,6 +28,7 @@ export interface PostDto {
   createdAt: string; 
 
   userReaction?: ReactionType | null; 
+  topReactionType?: ReactionType | null; 
   isOwner?: boolean; 
 }
 

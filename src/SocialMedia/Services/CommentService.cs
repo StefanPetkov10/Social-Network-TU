@@ -94,7 +94,7 @@ namespace SocialMedia.Services
             _postRepository.Update(post);
             await _postRepository.SaveChangesAsync();
 
-            return ApiResponse<CommentDto>.SuccessResponse(SuccessCommentDto(comment), "Comment created successfully.");
+            return ApiResponse<CommentDto>.SuccessResponse(SuccessCommentDto(comment, profile.Id), "Comment created successfully.");
         }
 
         //In this method can add option about sorting like: newest, oldest, most liked
@@ -117,8 +117,10 @@ namespace SocialMedia.Services
                 .Include(c => c.Profile)
                     .ThenInclude(p => p.User)
                 .Include(c => c.Media)
+                .Include(c => c.Reactions)
                 .Include(c => c.Replies).ThenInclude(r => r.Profile)
                 .Include(c => c.Replies).ThenInclude(r => r.Media)
+                .Include(c => c.Replies).ThenInclude(r => r.Reactions)
                 .Include(c => c.Post)
                 .Where(c => c.PostId == postId && c.Depth == 0 && !c.IsDeleted)
                 .OrderByDescending(c => c.CreatedDate) // Главните коментари: Newest First
@@ -134,7 +136,7 @@ namespace SocialMedia.Services
             }
 
             var comments = await commentsQuery.Take(take).ToListAsync();
-            var dtos = comments.Select(c => SuccessCommentDto(c)).ToList();
+            var dtos = comments.Select(c => SuccessCommentDto(c, profile.Id)).ToList();
             var lastId = comments.LastOrDefault()?.Id;
 
             return ApiResponse<IEnumerable<CommentDto>>.SuccessResponse(dtos, "Comments retrieved successfully.", new { lastCommentId = lastId });
@@ -161,6 +163,7 @@ namespace SocialMedia.Services
                 .Include(c => c.Profile)
                     .ThenInclude(p => p.User)
                 .Include(c => c.Media)
+                .Include(c => c.Reactions)
                 .Include(c => c.Replies)
                 .Where(c => c.ParentCommentId == commentId && !c.IsDeleted)
                 .OrderBy(c => c.CreatedDate)
@@ -176,7 +179,7 @@ namespace SocialMedia.Services
             }
 
             var comments = await query.Take(take).ToListAsync();
-            var dtoReplies = comments.Select(c => SuccessCommentDto(c)).ToList();
+            var dtoReplies = comments.Select(c => SuccessCommentDto(c, profile.Id)).ToList();
             var lastId = comments.LastOrDefault()?.Id;
 
             return ApiResponse<IEnumerable<CommentDto>>.SuccessResponse(dtoReplies, "Replies retrieved successfully.", new { lastCommentId = lastId });
@@ -217,7 +220,7 @@ namespace SocialMedia.Services
             }
 
             await _commentRepository.SaveChangesAsync();
-            return ApiResponse<CommentDto>.SuccessResponse(SuccessCommentDto(comment), "Comment updated successfully.");
+            return ApiResponse<CommentDto>.SuccessResponse(SuccessCommentDto(comment, profile.Id), "Comment updated successfully.");
         }
 
         public async Task<ApiResponse<bool>> SoftDeleteCommentAsync(ClaimsPrincipal userClaims, Guid commentId)
@@ -288,9 +291,11 @@ namespace SocialMedia.Services
             }
         }
 
-        private CommentDto SuccessCommentDto(Comment comment)
+        private CommentDto SuccessCommentDto(Comment comment, Guid? currentUserId = null)
         {
             var dto = _mapper.Map<CommentDto>(comment);
+
+            dto.LikesCount = comment.LikesCount;
 
             if (comment.Profile != null)
             {
@@ -312,6 +317,23 @@ namespace SocialMedia.Services
                 };
             }
 
+            if (currentUserId.HasValue && comment.Reactions != null)
+            {
+                var myReaction = comment.Reactions.FirstOrDefault(r => r.ProfileId == currentUserId.Value);
+                dto.UserReaction = myReaction?.Type;
+            }
+
+            if (comment.Reactions != null && comment.Reactions.Any())
+            {
+                var topReaction = comment.Reactions
+                    .GroupBy(r => r.Type)
+                    .OrderByDescending(g => g.Count())
+                    .Select(g => g.Key)
+                    .FirstOrDefault();
+
+                dto.TopReactionType = topReaction;
+            }
+
             // ВАЖНО: Обработка на RepliesPreview, за да се спре рекурсията.
             // Взимаме отговорите, но за тях НЕ зареждаме техните отговори (RepliesPreview = null)
             if (comment.Replies != null && comment.Replies.Any())
@@ -321,6 +343,8 @@ namespace SocialMedia.Services
                 dto.RepliesPreview = activeReplies.Select(reply =>
                 {
                     var replyDto = _mapper.Map<CommentDto>(reply);
+
+                    replyDto.LikesCount = reply.LikesCount;
 
                     if (reply.Profile != null)
                     {
@@ -338,6 +362,12 @@ namespace SocialMedia.Services
                             FileName = reply.Media.FileName,
                             MediaType = reply.Media.MediaType
                         };
+                    }
+
+                    if (currentUserId.HasValue && reply.Reactions != null)
+                    {
+                        var myReplyReaction = reply.Reactions.FirstOrDefault(r => r.ProfileId == currentUserId.Value);
+                        replyDto.UserReaction = myReplyReaction?.Type;
                     }
 
                     // СПИРАЧКА НА ЦИКЪЛА: Зануляваме вложените отговори на отговорите

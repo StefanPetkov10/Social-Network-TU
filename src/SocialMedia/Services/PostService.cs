@@ -518,10 +518,8 @@ namespace SocialMedia.Services
                 dto.IsOwner = post.ProfileId == currentUserId.Value;
             }
 
-            if (post.Reactions != null)
-            {
-                dto.LikesCount = post.Reactions.Count;
-            }
+            dto.LikesCount = post.LikesCount;
+
 
             if (currentUserId.HasValue && post.Reactions != null)
             {
@@ -529,6 +527,16 @@ namespace SocialMedia.Services
                 dto.UserReaction = myReaction?.Type;
             }
 
+            if (post.Reactions != null && post.Reactions.Any())
+            {
+                var topReaction = post.Reactions
+                    .GroupBy(r => r.Type)
+                    .OrderByDescending(g => g.Count())
+                    .Select(g => g.Key)
+                    .FirstOrDefault();
+
+                dto.TopReactionType = topReaction;
+            }
             var baseUrl = $"{_httpContextAccessor.HttpContext!.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}";
             dto.Media = post.Media.Select(m => new PostMediaDto
             {

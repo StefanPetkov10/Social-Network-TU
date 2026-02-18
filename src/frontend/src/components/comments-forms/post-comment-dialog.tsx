@@ -61,7 +61,10 @@ export function PostCommentDialog({
   const { data, fetchNextPage, hasNextPage, isLoading, isFetchingNextPage } = useGetComments(post.id);
   const comments = data?.pages.flatMap((page) => page.data) || [];
 
-  const effectiveReaction = parentReaction !== undefined ? parentReaction : (post.userReaction ?? null);
+  const effectiveReaction = parentReaction !== undefined 
+      ? parentReaction 
+      : (post.userReaction ?? null);
+
   const effectiveCount = parentLikesCount !== undefined ? parentLikesCount : post.likesCount;
 
   const { currentReaction, likesCount, handleReaction } = useReaction({
@@ -85,7 +88,8 @@ export function PostCommentDialog({
   const documents = post.media?.filter(m => m.mediaType !== 0 && m.mediaType !== 1) || [];
   const visualMedia = post.media?.filter(m => m.mediaType === 0 || m.mediaType === 1) || [];
   
-  const activeReactionConfig = currentReaction !== null ? REACTION_CONFIG[currentReaction] : null;
+  const displayReactionType = currentReaction ?? (post as any).topReactionType ?? 0;
+    const displayReactionConfig = REACTION_CONFIG[displayReactionType as keyof typeof REACTION_CONFIG];
 
   const getRelativeTime = (dateString: string) => {
       try {
@@ -262,8 +266,8 @@ export function PostCommentDialog({
                                 >
                                     {likesCount > 0 && (
                                         <>
-                                            {activeReactionConfig 
-                                                ? <span className="text-sm">{activeReactionConfig.icon}</span>
+                                            {displayReactionConfig 
+                                                ? <span className="text-sm">{displayReactionConfig.icon}</span>
                                                 : <span className="text-sm">👍</span>
                                             }
                                             <span className="ml-1">{likesCount}</span>

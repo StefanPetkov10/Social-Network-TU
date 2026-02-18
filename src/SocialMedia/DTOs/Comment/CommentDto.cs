@@ -13,6 +13,7 @@ namespace SocialMedia.DTOs.Comment
         public string Content { get; set; } = null!;
         public int LikesCount { get; set; }
         public ReactionType? UserReaction { get; set; }
+        public ReactionType? TopReactionType { get; set; }
         public bool IsDeleted { get; set; }
         public int Depth { get; set; }
         public Guid? ParentCommentId { get; set; }

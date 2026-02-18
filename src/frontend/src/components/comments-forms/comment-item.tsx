@@ -58,7 +58,7 @@ export function CommentItem({ comment }: CommentItemProps) {
     const [isReactionListOpen, setIsReactionListOpen] = useState(false);
 
     const { currentReaction, likesCount, handleReaction } = useReaction({
-        initialReaction: comment.userReaction || null, 
+        initialReaction: comment.userReaction ?? null, 
         initialCount: comment.likesCount || 0,        
         entityId: comment.id,
         reactApiCall: (id, type) => reactionService.reactToComment(id, type) 
@@ -76,7 +76,8 @@ export function CommentItem({ comment }: CommentItemProps) {
     const isVideo = comment.media?.mediaType === MediaType.Video; 
     const isDocument = comment.media?.mediaType === MediaType.Document; 
 
-    const activeReactionConfig = currentReaction !== null ? REACTION_CONFIG[currentReaction] : null;
+    const displayReactionType = currentReaction ?? comment.topReactionType ?? 0;
+    const displayReactionConfig = REACTION_CONFIG[displayReactionType];
 
     const { 
         data, 
@@ -160,7 +161,7 @@ export function CommentItem({ comment }: CommentItemProps) {
                                         className="absolute -bottom-2 -right-1 z-10 bg-background border shadow-sm rounded-full px-1.5 py-0.5 flex items-center gap-1 cursor-pointer hover:bg-muted/80 transition-colors"
                                     >
                                         <span className="text-[10px] leading-none filter drop-shadow-sm">
-                                            {activeReactionConfig ? activeReactionConfig.icon : "👍"}
+                                            {displayReactionConfig ? displayReactionConfig.icon : "👍"}
                                         </span>
                                         <span className="text-[10px] font-bold text-muted-foreground leading-none">
                                             {likesCount}

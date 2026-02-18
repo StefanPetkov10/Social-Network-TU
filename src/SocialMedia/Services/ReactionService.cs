@@ -98,8 +98,15 @@ namespace SocialMedia.Services
             if (profile == null)
                 return NotFoundResponse<string>("Profile");
 
+            var comment = await _commentRepository.GetByIdAsync(commentId);
+            if (comment == null)
+                return NotFoundResponse<string>("Comment");
+
             var existingReaction = await _reactionRepository
                 .FirstOrDefaultAsync(r => r.CommentId == commentId && r.ProfileId == profile.Id);
+
+            string message = "";
+
             if (existingReaction == null)
             {
                 var newReaction = new Reaction
@@ -110,28 +117,31 @@ namespace SocialMedia.Services
                     CommentId = commentId,
                     CreatedAt = DateTime.UtcNow
                 };
+
+                comment.LikesCount++;
                 await _reactionRepository.AddAsync(newReaction);
-                await _reactionRepository.SaveChangesAsync();
-                return ApiResponse<string>.SuccessResponse("Reaction added successfully.");
+                message = "Reaction added successfully.";
             }
             else
             {
                 if (existingReaction.Type == type)
                 {
+                    comment.LikesCount = Math.Max(0, comment.LikesCount - 1);
                     await _reactionRepository.DeleteAsync(existingReaction);
-                    await _reactionRepository.SaveChangesAsync();
-
-                    return ApiResponse<string>.SuccessResponse("Reaction removed successfully.");
+                    message = "Reaction removed successfully.";
                 }
                 else
                 {
                     existingReaction.Type = type;
                     await _reactionRepository.UpdateAsync(existingReaction);
-                    await _reactionRepository.SaveChangesAsync();
-
-                    return ApiResponse<string>.SuccessResponse("Reaction updated successfully.");
+                    message = "Reaction updated successfully.";
                 }
             }
+
+            await _commentRepository.UpdateAsync(comment);
+            await _commentRepository.SaveChangesAsync();
+
+            return ApiResponse<string>.SuccessResponse(message);
         }
 
         public async Task<ApiResponse<ReactorListResponse>> GetReactorsAsync(

@@ -29,7 +29,10 @@ namespace SocialMedia.Database.Models
         public Comment? ParentComment { get; set; }
 
         public ICollection<Comment> Replies { get; set; } = new List<Comment>();
+        public ICollection<Reaction> Reactions { get; set; } = new List<Reaction>();
 
+
+        public int LikesCount { get; set; }
         public bool IsDeleted { get; set; }
 
         public int Depth { get; set; }

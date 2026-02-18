@@ -101,7 +101,8 @@ export function PostCard({
   const documents = post.media?.filter(m => m.mediaType !== 0 && m.mediaType !== 1) || [];
   const visualMedia = post.media?.filter(m => m.mediaType === 0 || m.mediaType === 1) || [];
 
-  const activeReactionConfig = currentReaction !== null ? REACTION_CONFIG[currentReaction] : null;
+  const displayReactionType = currentReaction ?? (post as any).topReactionType ?? 0;
+  const displayReactionConfig = REACTION_CONFIG[displayReactionType as keyof typeof REACTION_CONFIG];
 
   return (
     <>
@@ -250,13 +251,16 @@ export function PostCard({
 
       <div className="flex justify-between text-xs text-muted-foreground mb-2 px-1 min-h-[20px]">
           <div 
-            className="flex items-center gap-1 cursor-pointer hover:text-blue-600 transition-colors"
+            className={cn(
+                "flex items-center gap-1 cursor-pointer hover:text-blue-600 transition-colors",
+                likesCount > 0 && "cursor-pointer hover:text-blue-600"
+            )}
             onClick={() => likesCount > 0 && setIsReactionListOpen(true)}
           >
             {likesCount > 0 && (
                <>
-                 {activeReactionConfig 
-                    ? <span className="text-sm">{activeReactionConfig.icon}</span>
+                 {displayReactionConfig 
+                    ? <span className="text-sm">{displayReactionConfig.icon}</span>
                     : <span className="text-sm">👍</span>
                  }
                  <span className="ml-1">{likesCount}</span>
@@ -308,7 +312,7 @@ export function PostCard({
         <>
             <PostCommentDialog 
                 open={isCommentDialogOpen} 
-                onOpenChange={setIsCommentDialogOpen}
+                onOpenChange={setIsCommentDialogOpen} 
                 post={post}
                 currentUser={currentUser}
                 parentReaction={currentReaction}

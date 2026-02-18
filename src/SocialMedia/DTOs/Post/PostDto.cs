@@ -18,6 +18,7 @@ namespace SocialMedia.DTOs.Post
 
         public int LikesCount { get; set; }
         public ReactionType? UserReaction { get; set; }
+        public ReactionType? TopReactionType { get; set; }
         public int CommentsCount { get; set; }
 
         public Guid? GroupId { get; set; }
