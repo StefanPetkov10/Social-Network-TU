@@ -214,6 +214,8 @@ namespace SocialMedia.Services
             var messages = await _messageRepository.QueryNoTracking()
                 .Include(m => m.Sender)
                 .Include(m => m.Media)
+                .Include(m => m.Reactions)
+                    .ThenInclude(m => m.Profile)
                 .Where(m =>
                     ((m.SenderId == viewerProfile.Id && m.ReceiverId == otherUserId) ||
                      (m.SenderId == otherUserId && m.ReceiverId == viewerProfile.Id)) ||
@@ -228,6 +230,20 @@ namespace SocialMedia.Services
             }
 
             return ApiResponse<IEnumerable<MessageDto>>.SuccessResponse(messageDtos, "History retrieved.");
+        }
+
+        public async Task<ApiResponse<MessageDto>> GetMessageByIdAsync(Guid messageId)
+        {
+            var msg = await _messageRepository.QueryNoTracking()
+                .Include(m => m.Sender)
+                .Include(m => m.Media)
+                .Include(m => m.Reactions)
+                    .ThenInclude(r => r.Profile)
+                .FirstOrDefaultAsync(m => m.Id == messageId);
+
+            if (msg == null) return ApiResponse<MessageDto>.ErrorResponse("Message not found");
+
+            return ApiResponse<MessageDto>.SuccessResponse(await MapMessageToDto(msg));
         }
 
         public async Task<ApiResponse<MessageDto>> EditMessageAsync(ClaimsPrincipal userClaims, Guid messageId, string newContent)
@@ -327,6 +343,18 @@ namespace SocialMedia.Services
                 }).ToList();
             }
 
+            var reactionDtos = new List<MessageReactionDto>();
+            if (!m.IsDeleted && m.Reactions != null && m.Reactions.Any())
+            {
+                reactionDtos = m.Reactions.Select(r => new MessageReactionDto
+                {
+                    ProfileId = r.ProfileId,
+                    ReactorName = r.Profile?.FullName ?? "Unknown",
+                    ReactorAvatar = r.Profile?.Photo,
+                    Type = r.Type
+                }).ToList();
+            }
+
             return new MessageDto
             {
                 Id = m.Id,
@@ -339,7 +367,8 @@ namespace SocialMedia.Services
                 SentAt = m.CreatedDate,
                 IsEdited = m.EditedAt.HasValue && !m.IsDeleted,
                 IsDeleted = m.IsDeleted,
-                Media = mediaDtos
+                Media = mediaDtos,
+                Reactions = reactionDtos
             };
         }
     }

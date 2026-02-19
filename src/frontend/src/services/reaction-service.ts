@@ -16,12 +16,12 @@ export const reactionService = {
 
     getReactors: async (
         entityId: string, 
-        isComment: boolean, 
+        entityType: 'post' | 'comment' | 'message', 
         typeFilter?: ReactionType | null, 
         lastReactionId?: string
     ) => {
         const params = new URLSearchParams();
-        params.append("isComment", isComment.toString());
+        params.append("entityType", entityType);
         params.append("take", "20"); 
 
         if (typeFilter !== undefined && typeFilter !== null) {

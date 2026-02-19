@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using SocialMedia.Database.Models.Enums;
 using SocialMedia.DTOs.ChatHub;
 using SocialMedia.Services.Interfaces;
 
@@ -11,12 +12,15 @@ namespace SocialMedia.Hubs
     public class ChatHub : Hub
     {
         private readonly IChatService _chatService;
+        private readonly IReactionService _reactionService;
 
         private static readonly ConcurrentDictionary<string, HashSet<string>> ConnectedUsers = new();
 
-        public ChatHub(IChatService chatService)
+        public ChatHub(IChatService chatService,
+                        IReactionService reactionService)
         {
             _chatService = chatService;
+            _reactionService = reactionService;
         }
 
         public override async Task OnConnectedAsync()
@@ -186,6 +190,31 @@ namespace SocialMedia.Hubs
             }
         }
 
+        public async Task ReactToMessage(Guid messageId, ReactionType type)
+        {
+            try
+            {
+                var response = await _reactionService.ReactToMessageAsync(Context.User!, messageId, type);
+
+                if (response.Success)
+                {
+                    var messageResponse = await _chatService.GetMessageByIdAsync(messageId);
+
+                    if (messageResponse.Success)
+                    {
+                        await BroadcastMessageUpdate(messageResponse.Data, "MessageEdited");
+                    }
+                }
+                else
+                {
+                    await Clients.Caller.SendAsync("ErrorMessage", response.Message);
+                }
+            }
+            catch (Exception ex)
+            {
+                await Clients.Caller.SendAsync("ErrorMessage", "Failed to react to message: " + ex.Message);
+            }
+        }
         private async Task BroadcastMessageUpdate(MessageDto message, string eventName)
         {
             if (message.GroupId.HasValue)

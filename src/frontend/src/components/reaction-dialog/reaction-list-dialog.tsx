@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useInView } from "react-intersection-observer";
 import Link from "next/link";
 import { 
@@ -26,10 +27,10 @@ interface ReactionListDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     entityId: string;
-    isComment?: boolean;
+    entityType: 'post' | 'comment' | 'message'; 
 }
 
-export function ReactionListDialog({ open, onOpenChange, entityId, isComment = false }: ReactionListDialogProps) {
+export function ReactionListDialog({ open, onOpenChange, entityId, entityType }: ReactionListDialogProps) {
     const [selectedTab, setSelectedTab] = useState<string>("all");
     
     const typeFilter = selectedTab === "all" ? null : Number(selectedTab) as ReactionType;
@@ -40,7 +41,7 @@ export function ReactionListDialog({ open, onOpenChange, entityId, isComment = f
         hasNextPage, 
         isFetchingNextPage, 
         isLoading 
-    } = useGetReactors(entityId, isComment, typeFilter, open);
+    } = useGetReactors(entityId, entityType, typeFilter, open);
 
     const { ref, inView } = useInView();
 
@@ -113,7 +114,7 @@ export function ReactionListDialog({ open, onOpenChange, entityId, isComment = f
                         ) : (
                             <div className="divide-y">
                                 {reactors.map((reactor) => (
-                                    <ReactorItem key={reactor.profileId} reactor={reactor} />
+                                    <ReactorItem key={reactor.profileId} reactor={reactor} entityType={entityType} />
                                 ))}
                                 
                                 {isFetchingNextPage && (
@@ -164,7 +165,8 @@ function TabButton({
     );
 }
 
-function ReactorItem({ reactor }: { reactor: ReactorDto }) {
+function ReactorItem({ reactor, entityType }: { reactor: ReactorDto; entityType: 'post' | 'comment' | 'message' }) {
+    const router = useRouter();
     const [status, setStatus] = useState<'none' | 'sent' | 'received' | 'friend'>(
         reactor.isFriend ? 'friend' : 
         reactor.hasSentRequest ? 'sent' : 
@@ -236,8 +238,12 @@ function ReactorItem({ reactor }: { reactor: ReactorDto }) {
 
             {!reactor.isMe && (
                 <div className="pl-2">
-                    {status === 'friend' && (
-                        <Button variant="secondary" size="sm" className="h-9 px-4 font-semibold rounded-lg shadow-sm transition-all">
+                    {status === 'friend' && entityType !== 'message' && (
+                        <Button 
+                        variant="secondary" 
+                        size="sm"
+                        className="h-9 px-4 font-semibold rounded-lg shadow-sm transition-all"
+                        onClick={() => router.push(`/messages/${reactor.profileId}`)}>
                             <MessageCircle className="w-4 h-4 mr-2" /> 
                             Съобщение
                         </Button>

@@ -16,12 +16,14 @@ namespace SocialMedia.Services
         private readonly IRepository<Profile, Guid> _profileRepository;
         private readonly IRepository<Post, Guid> _postRepository;
         private readonly IRepository<Comment, Guid> _commentRepository;
+        private readonly IRepository<Message, Guid> _messageRepository;
         private readonly IRepository<Friendship, Guid> _friendshipRepository;
 
         public ReactionService(IRepository<Reaction, Guid> reactionRepository,
             IRepository<Profile, Guid> profileRepository,
             IRepository<Post, Guid> postRepository,
             IRepository<Comment, Guid> commentRepository,
+            IRepository<Message, Guid> messageRepository,
             UserManager<ApplicationUser> userManager,
             IRepository<Friendship, Guid> friendshipRepository) : base(userManager)
         {
@@ -29,6 +31,7 @@ namespace SocialMedia.Services
             _profileRepository = profileRepository;
             _postRepository = postRepository;
             _commentRepository = commentRepository;
+            _messageRepository = messageRepository;
             _friendshipRepository = friendshipRepository;
         }
 
@@ -144,10 +147,60 @@ namespace SocialMedia.Services
             return ApiResponse<string>.SuccessResponse(message);
         }
 
+        public async Task<ApiResponse<string>> ReactToMessageAsync(ClaimsPrincipal userClaim, Guid messageId, ReactionType type)
+        {
+            var invalidUserResponse = GetUserIdOrUnauthorized<string>(userClaim, out var userId);
+            if (invalidUserResponse != null)
+                return invalidUserResponse;
+
+            var profile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (profile == null)
+                return NotFoundResponse<string>("Profile");
+
+            var message = await _messageRepository.GetByIdAsync(messageId);
+            if (message == null) return NotFoundResponse<string>("Message");
+
+            var existingReaction = await _reactionRepository
+                .FirstOrDefaultAsync(r => r.MessageId == messageId && r.ProfileId == profile.Id);
+
+            string responseMessage = "";
+            if (existingReaction == null)
+            {
+                var newReaction = new Reaction
+                {
+                    Id = Guid.NewGuid(),
+                    Type = type,
+                    ProfileId = profile.Id,
+                    MessageId = messageId,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _reactionRepository.AddAsync(newReaction);
+                responseMessage = "Reaction added successfully.";
+            }
+            else
+            {
+                if (existingReaction.Type == type)
+                {
+                    await _reactionRepository.DeleteAsync(existingReaction);
+                    responseMessage = "Reaction removed successfully.";
+                }
+                else
+                {
+                    existingReaction.Type = type;
+                    await _reactionRepository.UpdateAsync(existingReaction);
+                    responseMessage = "Reaction updated successfully.";
+                }
+            }
+
+            await _reactionRepository.SaveChangesAsync();
+            return ApiResponse<string>.SuccessResponse(responseMessage);
+        }
+
         public async Task<ApiResponse<ReactorListResponse>> GetReactorsAsync(
             ClaimsPrincipal userClaims,
             Guid entityId,
-            bool isComment,
+            string entityType,
             ReactionType? typeFilter = null,
             Guid? lastReactionId = null,
             int take = 20)
@@ -158,15 +211,23 @@ namespace SocialMedia.Services
             var currentProfile = await _profileRepository.GetByApplicationIdAsync(currentUserId);
             if (currentProfile == null) return NotFoundResponse<ReactorListResponse>("Profile");
 
+            string eType = entityType.ToLower();
+
             var query = _reactionRepository.QueryNoTracking()
                 .Include(r => r.Profile).ThenInclude(p => p.User)
-                .Where(r => isComment ? r.CommentId == entityId : r.PostId == entityId);
+                .Where(r =>
+                    (eType == "comment" && r.CommentId == entityId) ||
+                    (eType == "post" && r.PostId == entityId) ||
+                    (eType == "message" && r.MessageId == entityId));
 
             Dictionary<ReactionType, int> counts = new();
             if (lastReactionId == null)
             {
                 counts = await _reactionRepository.QueryNoTracking()
-                    .Where(r => isComment ? r.CommentId == entityId : r.PostId == entityId)
+                    .Where(r =>
+                        (eType == "comment" && r.CommentId == entityId) ||
+                        (eType == "post" && r.PostId == entityId) ||
+                        (eType == "message" && r.MessageId == entityId))
                     .GroupBy(r => r.Type)
                     .Select(g => new { Type = g.Key, Count = g.Count() })
                     .ToDictionaryAsync(x => x.Type, x => x.Count);
@@ -182,10 +243,7 @@ namespace SocialMedia.Services
             if (lastReactionId.HasValue)
             {
                 var lastReaction = await _reactionRepository.GetByIdAsync(lastReactionId.Value);
-                if (lastReaction != null)
-                {
-                    query = query.Where(r => r.CreatedAt < lastReaction.CreatedAt);
-                }
+                if (lastReaction != null) query = query.Where(r => r.CreatedAt < lastReaction.CreatedAt);
             }
 
             var reactions = await query.Take(take).ToListAsync();
@@ -200,10 +258,6 @@ namespace SocialMedia.Services
             {
                 var friendship = friendships.FirstOrDefault(f => f.RequesterId == r.ProfileId || f.AddresseeId == r.ProfileId);
 
-                bool isFriend = friendship?.Status == FriendshipStatus.Accepted;
-                bool hasSentRequest = friendship?.Status == FriendshipStatus.Pending && friendship.RequesterId == currentProfile.Id;
-                bool hasReceivedRequest = friendship?.Status == FriendshipStatus.Pending && friendship.AddresseeId == currentProfile.Id;
-
                 return new ReactionDto
                 {
                     ProfileId = r.ProfileId,
@@ -213,18 +267,14 @@ namespace SocialMedia.Services
                     Type = r.Type,
                     ReactedDate = r.CreatedAt,
                     IsMe = r.ProfileId == currentProfile.Id,
-                    IsFriend = isFriend,
-                    HasSentRequest = hasSentRequest,
-                    HasReceivedRequest = hasReceivedRequest,
-                    PendingRequestId = hasSentRequest || hasReceivedRequest ? friendship?.Id : null
+                    IsFriend = friendship?.Status == FriendshipStatus.Accepted,
+                    HasSentRequest = friendship?.Status == FriendshipStatus.Pending && friendship.RequesterId == currentProfile.Id,
+                    HasReceivedRequest = friendship?.Status == FriendshipStatus.Pending && friendship.AddresseeId == currentProfile.Id,
+                    PendingRequestId = friendship != null && friendship.Status == FriendshipStatus.Pending ? friendship.Id : null
                 };
             }).ToList();
 
-            return ApiResponse<ReactorListResponse>.SuccessResponse(new ReactorListResponse
-            {
-                Reactors = dtos,
-                ReactionCounts = counts
-            });
+            return ApiResponse<ReactorListResponse>.SuccessResponse(new ReactorListResponse { Reactors = dtos, ReactionCounts = counts });
         }
     }
 }

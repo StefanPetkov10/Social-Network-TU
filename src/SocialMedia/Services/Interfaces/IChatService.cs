@@ -18,6 +18,8 @@ namespace SocialMedia.Services.Interfaces
         Task<ApiResponse<IEnumerable<ChatConversationDto>>> GetConversationsAsync(ClaimsPrincipal userClaims);
 
         Task<ApiResponse<IEnumerable<MessageDto>>> GetMessageHistoryAsync(ClaimsPrincipal userClaims, Guid otherUserId);
+        Task<ApiResponse<MessageDto>> GetMessageByIdAsync(Guid messageId);
+
 
         Task<Guid?> GetProfileIdByAppIdAsync(Guid appId);
         Task<List<string>> GetProfileIdsByAppIdsAsync(List<Guid> appIds);

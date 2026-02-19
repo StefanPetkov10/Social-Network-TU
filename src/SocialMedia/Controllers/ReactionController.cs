@@ -42,11 +42,11 @@ namespace SocialMedia.Controllers
         [HttpGet("{entityId}/reactors")]
         public async Task<IActionResult> GetReactors(
             Guid entityId,
-            [FromQuery] bool isComment = false,
+            [FromQuery] string entityType,
             [FromQuery] ReactionType? type = null,
             [FromQuery] Guid? lastReactionId = null)
         {
-            var response = await _reactionService.GetReactorsAsync(User, entityId, isComment, type, lastReactionId);
+            var response = await _reactionService.GetReactorsAsync(User, entityId, entityType, type, lastReactionId);
 
             if (!response.Success) return BadRequest(response.Errors);
 

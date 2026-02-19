@@ -1,4 +1,5 @@
 import { MediaType } from "./enums";
+import { ReactionType } from "./enums";
 
 export interface MessageMediaDto {
     id: string;
@@ -20,7 +21,7 @@ export interface MessageDto {
     isEdited: boolean;
     isDeleted: boolean;
     media: MessageMediaDto[];
-    reactions: any[]; 
+    reactions: MessageReactionDto[];
 }
 
 export interface ChatAttachmentDto {
@@ -37,4 +38,11 @@ export interface ChatConversationDto {
     lastMessageTime: string;
     isGroup: boolean;
     unreadCount: number;
+}
+
+export interface MessageReactionDto {
+    profileId: string;
+    reactorName: string;
+    reactorAvatar?: string;
+    type: ReactionType | null;  
 }

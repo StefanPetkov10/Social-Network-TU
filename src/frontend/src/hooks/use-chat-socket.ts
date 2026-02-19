@@ -189,6 +189,19 @@ export const useChatSocket = (chatId: string | null) => {
         }
     };
 
+    const reactToMessage = async (messageId: string, reactionType: number) => {
+        if (!globalConnection || globalConnection.state !== signalR.HubConnectionState.Connected) {
+            toast.error("Няма връзка със сървъра. Опитайте да презаредите.");
+            return;
+        }
+        try {
+            await globalConnection.invoke("ReactToMessage", messageId, reactionType);
+        } catch (error) {
+            console.error("Reaction failed", error);
+            toast.error("Неуспешна реакция.");
+        }
+    };
+
     const deleteMessage = async (messageId: string) => {
         if (!globalConnection || globalConnection.state !== signalR.HubConnectionState.Connected) {
             toast.error("Няма връзка със сървъра. Опитайте да презаредите.");
@@ -204,5 +217,5 @@ export const useChatSocket = (chatId: string | null) => {
 
     const { onlineUsers } = useSocketStore();
 
-    return { isConnected, sendMessage, editMessage, deleteMessage, onlineUsers };
+    return { isConnected, sendMessage, editMessage, reactToMessage,deleteMessage, onlineUsers };
 };

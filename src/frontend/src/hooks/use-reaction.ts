@@ -59,14 +59,14 @@ export function useReaction({
 
 export const useGetReactors = (
     entityId: string, 
-    isComment: boolean, 
+    entityType: 'post' | 'comment' | 'message', 
     selectedType: ReactionType | null,
     isOpen: boolean 
 ) => {
     return useInfiniteQuery({
-        queryKey: ["reactors", entityId, isComment, selectedType],
+        queryKey: ["reactors", entityId, entityType, selectedType],
         queryFn: async ({ pageParam }) => {
-            const response = await reactionService.getReactors(entityId, isComment, selectedType, pageParam);
+            const response = await reactionService.getReactors(entityId, entityType, selectedType, pageParam);
             return response.data;
         },
         initialPageParam: undefined as string | undefined,

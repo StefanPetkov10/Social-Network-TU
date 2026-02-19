@@ -339,7 +339,7 @@ export function CommentItem({ comment }: CommentItemProps) {
                     open={isReactionListOpen}
                     onOpenChange={setIsReactionListOpen}
                     entityId={comment.id}
-                    isComment={true} 
+                    entityType="comment"
                 />
             )}
         </div>

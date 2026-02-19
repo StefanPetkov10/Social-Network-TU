@@ -9,11 +9,11 @@ namespace SocialMedia.Services.Interfaces
     {
         Task<ApiResponse<string>> ReactToPostAsync(ClaimsPrincipal userClaim, Guid postId, ReactionType type);
         Task<ApiResponse<string>> ReactToCommentAsync(ClaimsPrincipal userClaim, Guid commentId, ReactionType type);
-
+        Task<ApiResponse<string>> ReactToMessageAsync(ClaimsPrincipal userClaim, Guid messageId, ReactionType type);
         Task<ApiResponse<ReactorListResponse>> GetReactorsAsync(
             ClaimsPrincipal userClaims,
             Guid entityId,
-            bool isComment,
+            string entityType,
             ReactionType? typeFilter = null,
             Guid? lastReactionId = null,
             int take = 20);

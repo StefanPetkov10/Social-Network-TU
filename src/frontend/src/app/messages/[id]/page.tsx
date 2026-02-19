@@ -7,7 +7,7 @@ import { useGroupById } from "@frontend/hooks/use-groups";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { Button } from "@frontend/components/ui/button";
 import { Input } from "@frontend/components/ui/input";
-import { Dialog, DialogContent, DialogClose, DialogTitle, DialogDescription, DialogFooter, DialogHeader } from "@frontend/components/ui/dialog"; // --- НОВО: Добавени imports за DialogHeader/Footer
+import { Dialog, DialogContent, DialogClose, DialogTitle, DialogDescription, DialogFooter, DialogHeader } from "@frontend/components/ui/dialog"; 
 import { 
     DropdownMenu, 
     DropdownMenuContent, 
@@ -27,16 +27,21 @@ import {
     MoreVertical, 
     Smile,       
     Edit2,       
-    Trash2        
+    Trash2,
+    ChevronDown 
 } from "lucide-react"; 
 import Link from "next/link";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { cn, getInitials, getFileDetails, getUserDisplayName } from "@frontend/lib/utils"; 
 import { MessageDto, ChatAttachmentDto } from "@frontend/lib/types/chat";
 import { toast } from "sonner";
 import { validateFile, MAX_CHAT_FILES, MAX_CHAT_SIZE_MB } from "@frontend/lib/file-validation";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden"; 
+
+import { REACTION_CONFIG } from "@frontend/components/ui/reaction-button";
+import { ReactionListDialog } from "@frontend/components/reaction-dialog/reaction-list-dialog";
+import { ms } from "date-fns/locale";
 
 export default function ChatPage() {
   const params = useParams();
@@ -94,7 +99,8 @@ export default function ChatPage() {
 
   const { data: historyMessages, isLoading: isHistoryLoading } = useChatHistory(chatId);
   
-  const { sendMessage, editMessage, deleteMessage, isConnected, onlineUsers } = useChatSocket(chatId);
+  const { sendMessage, editMessage, deleteMessage, reactToMessage, isConnected, onlineUsers, } = useChatSocket(chatId);
+  
   const uploadMutation = useUploadChatFiles();
 
   const isUserOnline = !chatTarget?.isGroup && onlineUsers.has(chatId);
@@ -111,6 +117,13 @@ export default function ChatPage() {
   const [selectedMedia, setSelectedMedia] = useState<{ url: string; fileName: string } | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
+  const [reactionDialogMessageId, setReactionDialogMessageId] = useState<string | null>(null);
+
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
+  const previousMessagesLengthRef = useRef(messages.length);
+
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
   
@@ -125,28 +138,46 @@ export default function ChatPage() {
       : "/profile" ;
   const groupUrl = `/groups/${encodeURIComponent(groupName)}`; 
 
+  const handleScroll = () => {
+      if (!chatContainerRef.current) return;
+      const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+      
+      const distanceToBottom = scrollHeight - scrollTop - clientHeight;
+      const isNear = distanceToBottom < 150;
+      
+      isNearBottomRef.current = isNear;
+      
+      if (isNear && showScrollButton) {
+          setShowScrollButton(false);
+      }
+  };
+
+  useLayoutEffect(() => {
+    if (!isHistoryLoading && messages.length > 0 && !isInitialized) {
+        scrollRef.current?.scrollIntoView({ behavior: "auto" }); 
+        setIsInitialized(true); 
+        previousMessagesLengthRef.current = messages.length;
+    }
+  }, [isHistoryLoading, messages, isInitialized]);
 
   useEffect(() => {
-    if (!scrollRef.current || messages.length === 0) return;
+    if (!isInitialized || messages.length === 0 || !scrollRef.current) return;
 
-    const scrollToBottom = (behavior: ScrollBehavior) => {
-        scrollRef.current?.scrollIntoView({ behavior });
-    };
+    const isNewMessage = messages.length > previousMessagesLengthRef.current;
+    const lastMsg = messages[messages.length - 1];
+    const isMyLastMsg = myProfile && lastMsg?.senderId === myProfile.id;
 
-    if (!isInitialized && !isHistoryLoading) {
-        setTimeout(() => {
-            scrollToBottom("auto");
-            setIsInitialized(true); 
-        }, 100); 
-    } 
-    else if (isInitialized) {
-        if (!editingMessage) {
+    if (!editingMessage && isNewMessage) {
+        if (isMyLastMsg || isNearBottomRef.current) {
             setTimeout(() => {
-                scrollToBottom("smooth");
-            }, 100);
+                scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+            }, 50); 
+        } else {
+            setShowScrollButton(true);
         }
     }
-  }, [messages, isHistoryLoading, isInitialized, editingMessage]);
+    previousMessagesLengthRef.current = messages.length;
+  }, [messages, isInitialized, editingMessage, myProfile]);
 
   const startEditing = (msg: MessageDto) => {
       setEditingMessage(msg);
@@ -274,7 +305,7 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-background relative">
+    <div className="flex flex-col h-full bg-background relative overflow-hidden">
       <div className="h-[60px] border-b flex items-center justify-between px-4 bg-white shrink-0 shadow-sm z-10">
          <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" className="md:hidden" onClick={() => router.push('/messages')}>
@@ -330,7 +361,11 @@ export default function ChatPage() {
          </Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
+      <div 
+        ref={chatContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 relative"
+      >
         {isHistoryLoading ? (
             <div className="flex justify-center items-center h-full">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -339,11 +374,12 @@ export default function ChatPage() {
             messages.map((msg: MessageDto, i: number) => {
                 const isMe = myProfile ? msg.senderId === myProfile.id : false;
                 const showSenderInfo = !isMe && chatTarget?.isGroup;
+                const hasReactions = msg.reactions && msg.reactions.length > 0 && !msg.isDeleted;
 
                 return (
                     <div 
                         key={msg.id || i} 
-                        className={cn("flex gap-1 max-w-[85%] sm:max-w-[75%] group relative", isMe ? "ml-auto flex-row-reverse" : "")}
+                        className={cn("flex gap-1 max-w-[85%] sm:max-w-[75%] group relative", isMe ? "ml-auto flex-row-reverse" : "", hasReactions && "mb-3")}
                     >
                         {!isMe && (
                             <Avatar className="h-8 w-8 mt-1 border-2 border-white shadow-sm shrink-0">
@@ -354,79 +390,122 @@ export default function ChatPage() {
                             </Avatar>
                         )}
 
-                        <div className={cn("flex flex-col", isMe ? "items-end" : "items-start")}>
+                        <div className={cn("flex flex-col relative", isMe ? "items-end" : "items-start")}>
                             {showSenderInfo && (
                                 <span className="text-[10px] text-muted-foreground ml-1 mb-1 block font-medium">
                                     {msg.senderName}
                                 </span>
                             )}
                             
-                            <div className={cn(
-                                "px-3 py-2 text-sm shadow-sm break-words relative",
-                                isMe ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-sm" : "bg-white border text-foreground rounded-2xl rounded-tl-sm",
-                                msg.isDeleted && "italic opacity-80 bg-gray-100 text-gray-500 border-gray-200" 
-                            )}>
-                                {msg.content && <p className={cn("mb-1", !msg.media?.length && "mb-0")}>{msg.content}</p>}
+                            <div className="relative"> 
+                                <div className={cn(
+                                    "px-3 py-2 text-sm shadow-sm break-words",
+                                    isMe ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-sm" : "bg-white border text-foreground rounded-2xl rounded-tl-sm",
+                                    msg.isDeleted && "italic opacity-80 bg-gray-100 text-gray-500 border-gray-200" 
+                                )}>
+                                    {msg.content && <p className={cn("mb-1", !msg.media?.length && "mb-0")}>{msg.content}</p>}
+                                    
+                                    {msg.media && msg.media.length > 0 && !msg.isDeleted && (() => {
+                                        const imagesAndVideos = msg.media.filter(m => m.mediaType === 0 || m.mediaType === 1);
+                                        const documents = msg.media.filter(m => m.mediaType !== 0 && m.mediaType !== 1);
+
+                                        return (
+                                            <div className="flex flex-col gap-2 mt-1">
+                                                {imagesAndVideos.length > 0 && (
+                                                    <div className={cn("grid gap-1", imagesAndVideos.length > 1 ? "grid-cols-2" : "grid-cols-1")}>
+                                                        {imagesAndVideos.map((m) => (
+                                                            <div key={m.id} className="relative group">
+                                                                <img 
+                                                                    src={m.url} 
+                                                                    alt="attachment" 
+                                                                    onClick={() => setSelectedMedia({ url: m.url, fileName: m.fileName })}
+                                                                    className="rounded-md w-full object-cover max-h-[200px] cursor-pointer hover:opacity-95 transition-opacity" 
+                                                                />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {documents.length > 0 && (
+                                                    <div className="flex flex-col gap-1">
+                                                        {documents.map((m) => (
+                                                            <a 
+                                                                key={m.id}
+                                                                href={m.url} 
+                                                                target="_blank" 
+                                                                rel="noopener noreferrer" 
+                                                                className={cn(
+                                                                    "flex items-center gap-2 p-2 rounded-md transition-colors border no-underline",
+                                                                    isMe 
+                                                                        ? "bg-black/10 border-black/5 hover:bg-black/20" 
+                                                                        : "bg-white border-gray-200 hover:bg-gray-50"
+                                                                )}
+                                                            >
+                                                                <div className="bg-white p-1.5 rounded-md shadow-sm shrink-0">
+                                                                    <FileText className="h-5 w-5 text-blue-600" />
+                                                                </div>
+                                                                <div className="flex flex-col overflow-hidden text-left min-w-0">
+                                                                    <span className={cn("text-xs font-medium truncate", isMe ? "text-primary-foreground" : "text-foreground")}>
+                                                                        {m.fileName}
+                                                                    </span>
+                                                                    <span className={cn("text-[9px] uppercase opacity-70", isMe ? "text-primary-foreground" : "text-muted-foreground")}>
+                                                                        FILE
+                                                                    </span>
+                                                                </div>
+                                                            </a>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
                                 
-                                {msg.media && msg.media.length > 0 && !msg.isDeleted && (() => {
-                                    const imagesAndVideos = msg.media.filter(m => m.mediaType === 0 || m.mediaType === 1);
-                                    const documents = msg.media.filter(m => m.mediaType !== 0 && m.mediaType !== 1);
+                                {hasReactions && (() => {
+                                    const reactionCounts = msg.reactions
+                                    .filter(r => r.type !== null && r.type !== undefined)
+                                    .reduce((acc, r) => {
+                                        acc[r.type!] = (acc[r.type!] || 0) + 1;
+                                        return acc;
+                                    }, {} as Record<number, number>);
+                                    
+                                    const topIcons = Object.entries(reactionCounts)
+                                        .sort((a, b) => b[1] - a[1])
+                                        .slice(0, 3)
+                                        .map(([type]) => REACTION_CONFIG[Number(type) as keyof typeof REACTION_CONFIG]?.icon);
+
+                                    const hasMyReaction = myProfile && msg.reactions.some(r => r.profileId === myProfile.id);
 
                                     return (
-                                        <div className="flex flex-col gap-2 mt-1">
-                                            {imagesAndVideos.length > 0 && (
-                                                <div className={cn("grid gap-1", imagesAndVideos.length > 1 ? "grid-cols-2" : "grid-cols-1")}>
-                                                    {imagesAndVideos.map((m) => (
-                                                        <div key={m.id} className="relative group">
-                                                            <img 
-                                                                src={m.url} 
-                                                                alt="attachment" 
-                                                                onClick={() => setSelectedMedia({ url: m.url, fileName: m.fileName })}
-                                                                className="rounded-md w-full object-cover max-h-[200px] cursor-pointer hover:opacity-95 transition-opacity" 
-                                                            />
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                        <div 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setReactionDialogMessageId(msg.id);
+                                            }}
+                                            className={cn(
+                                                "absolute bottom-0 translate-y-1/2 flex items-center gap-0.5 bg-background border shadow-sm rounded-full px-1.5 py-0.5 cursor-pointer hover:bg-muted/80 z-10 transition-colors select-none text-foreground",
+                                                isMe ? "right-0" : "left-0", 
+                                                hasMyReaction && !isMe && "border-primary/40 bg-primary/5"
                                             )}
-
-                                            {documents.length > 0 && (
-                                                <div className="flex flex-col gap-1">
-                                                    {documents.map((m) => (
-                                                        <a 
-                                                            key={m.id}
-                                                            href={m.url} 
-                                                            target="_blank" 
-                                                            rel="noopener noreferrer" 
-                                                            className={cn(
-                                                                "flex items-center gap-2 p-2 rounded-md transition-colors border no-underline",
-                                                                isMe 
-                                                                    ? "bg-black/10 border-black/5 hover:bg-black/20" 
-                                                                    : "bg-white border-gray-200 hover:bg-gray-50"
-                                                            )}
-                                                        >
-                                                            <div className="bg-white p-1.5 rounded-md shadow-sm shrink-0">
-                                                                <FileText className="h-5 w-5 text-blue-600" />
-                                                            </div>
-                                                            <div className="flex flex-col overflow-hidden text-left min-w-0">
-                                                                <span className={cn("text-xs font-medium truncate", isMe ? "text-primary-foreground" : "text-foreground")}>
-                                                                    {m.fileName}
-                                                                </span>
-                                                                <span className={cn("text-[9px] uppercase opacity-70", isMe ? "text-primary-foreground" : "text-muted-foreground")}>
-                                                                    FILE
-                                                                </span>
-                                                            </div>
-                                                        </a>
-                                                    ))}
-                                                </div>
+                                        >
+                                            <div className="flex -space-x-1">
+                                                {topIcons.map((icon, idx) => (
+                                                    <span key={idx} className="text-[11px] bg-background rounded-full leading-none filter drop-shadow-sm">{icon}</span>
+                                                ))}
+                                            </div>
+                                            {msg.reactions.length > 1 && (
+                                                <span className={cn("text-[10px] font-bold ml-0.5 leading-none", hasMyReaction ? "text-primary" : "text-muted-foreground")}>
+                                                    {msg.reactions.length}
+                                                </span>
                                             )}
                                         </div>
                                     );
                                 })()}
                             </div>
-                            
-                            <div className="flex items-center gap-1 mt-1 px-1">
+
+                             <div className="flex items-center gap-1 mt-2.5 px-1">
                                 <span className="text-[10px] text-muted-foreground opacity-70">
-                                    {new Date(msg.sentAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                    {new Date(msg.sentAt).toLocaleTimeString('bg-BG', {hour: '2-digit', minute:'2-digit'})}
                                 </span>
                                 {msg.isEdited && !msg.isDeleted && (
                                     <span className="text-[9px] text-muted-foreground italic">(edited)</span>
@@ -439,12 +518,30 @@ export default function ChatPage() {
                                 "opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1",
                                 showSenderInfo 
                                     ? "mt-6 self-start ml-1" 
-                                    : "self-center pb-4 " + (isMe ? "mr-1" : "ml-1") 
+                                    : "self-center pb-6 " + (isMe ? "mr-1" : "ml-1") 
                             )}>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-black/5 text-muted-foreground">
-                                    <Smile className="h-4 w-4" />
-                                </Button>
-
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-black/5 text-muted-foreground">
+                                            <Smile className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="center" side="top" className="flex gap-1 p-1 min-w-0 rounded-full bg-background/95 backdrop-blur-sm shadow-md border z-50">
+                                        {(Object.keys(REACTION_CONFIG) as unknown as Array<keyof typeof REACTION_CONFIG>).map((type) => {
+                                            const config = REACTION_CONFIG[type];
+                                            return (
+                                                <DropdownMenuItem 
+                                                    key={type} 
+                                                    onClick={() => reactToMessage(msg.id, Number(type))}
+                                                    className="cursor-pointer hover:bg-muted p-1.5 rounded-full transition-transform hover:scale-125 text-lg leading-none outline-none"
+                                                    title={config.label}
+                                                >
+                                                    {config.icon}
+                                                </DropdownMenuItem>
+                                            );
+                                        })}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                                 {isMe && (
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
@@ -474,7 +571,21 @@ export default function ChatPage() {
         <div ref={scrollRef} />
       </div>
 
-      <div className="p-4 bg-white shrink-0 border-t">
+      {showScrollButton && (
+        <Button
+            onClick={() => {
+                scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+                setShowScrollButton(false);
+            }}
+            size="icon"
+            className="absolute bottom-[85px] right-6 h-10 w-10 rounded-full shadow-lg border bg-white text-primary hover:bg-slate-50 z-20 animate-in fade-in zoom-in"
+        >
+            <ChevronDown className="h-6 w-6" />
+            <span className="absolute top-0 right-0 h-3 w-3 rounded-full bg-red-500 border-2 border-white" />
+        </Button>
+      )}
+
+      <div className="p-4 bg-white shrink-0 border-t z-10"> 
         {editingMessage && (
             <div className="flex items-center justify-between px-4 py-2 bg-slate-100 border-t border-x rounded-t-lg text-xs text-muted-foreground animate-in slide-in-from-bottom-2">
                 <span className="flex items-center gap-2">
@@ -643,6 +754,16 @@ export default function ChatPage() {
             </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {reactionDialogMessageId && (
+        <ReactionListDialog 
+            open={!!reactionDialogMessageId}
+            onOpenChange={(open) => !open && setReactionDialogMessageId(null)}
+            entityId={reactionDialogMessageId}
+            entityType="message" 
+        />
+      )}
+
     </div>
   );
 }

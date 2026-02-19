@@ -324,7 +324,7 @@ export function PostCard({
                     open={isReactionListOpen}
                     onOpenChange={setIsReactionListOpen}
                     entityId={post.id}
-                    isComment={false}
+                    entityType="post"
                 />
             )}
         </>
