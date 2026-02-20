@@ -24,6 +24,7 @@ namespace SocialMedia.Database
         public DbSet<Reaction> Reactions { get; set; }
         public DbSet<Message> Messages { get; set; }
         public DbSet<MessageMedia> MessageMedias { get; set; }
+        public DbSet<MessageReadReceipt> MessageReadReceipts { get; set; }
         public DbSet<EmailOtpCode> EmailOtpCodes { get; set; }
         public DbSet<PasswordResetSession> PasswordResetSessions { get; set; }
 
@@ -54,6 +55,21 @@ namespace SocialMedia.Database
                 .WithMany(m => m.Reactions)
                 .HasForeignKey(r => r.MessageId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // builder.Entity<MessageReadReceipt>()
+            //.HasKey(r => new { r.MessageId, r.ProfileId });
+
+            builder.Entity<MessageReadReceipt>()
+                .HasOne(r => r.Message)
+                .WithMany(m => m.ReadReceipts)
+                .HasForeignKey(r => r.MessageId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<MessageReadReceipt>()
+                .HasOne(r => r.Profile)
+                .WithMany() // <-- Тук казваме на EF, че няма колекция в Profile!
+                .HasForeignKey(r => r.ProfileId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
 
         public override int SaveChanges()

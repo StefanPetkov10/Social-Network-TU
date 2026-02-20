@@ -78,7 +78,6 @@ namespace SocialMedia.Services
                 SenderId = senderProfile.Id,
                 ReceiverId = receiverId,
                 GroupId = groupId,
-                IsRead = false,
                 IsDeleted = false,
                 CreatedDate = DateTime.UtcNow
             };
@@ -143,6 +142,7 @@ namespace SocialMedia.Services
                 .Include(m => m.Sender)
                 .Include(m => m.Group)
                 .Include(m => m.Receiver)
+                .Include(m => m.ReadReceipts)
                 .Where(m => !m.IsDeleted && (
                     (m.SenderId == viewerProfile.Id || m.ReceiverId == viewerProfile.Id)
                     ||
@@ -194,7 +194,9 @@ namespace SocialMedia.Services
                         LastMessage = lastMsgContent,
                         LastMessageTime = lastMsg.CreatedDate,
                         IsGroup = isGroup,
-                        UnreadCount = g.Count(m => !m.IsRead && m.SenderId != viewerProfile.Id)
+                        UnreadCount = g.Count(m =>
+                            m.SenderId != viewerProfile.Id &&
+                            !m.ReadReceipts.Any(r => r.ProfileId == viewerProfile.Id))
                     };
                 })
                 .Where(x => x != null)
@@ -215,6 +217,7 @@ namespace SocialMedia.Services
                 .Include(m => m.Sender)
                 .Include(m => m.Media)
                 .Include(m => m.Reactions)
+                .Include(m => m.ReadReceipts)
                     .ThenInclude(m => m.Profile)
                 .Where(m =>
                     ((m.SenderId == viewerProfile.Id && m.ReceiverId == otherUserId) ||
@@ -244,6 +247,52 @@ namespace SocialMedia.Services
             if (msg == null) return ApiResponse<MessageDto>.ErrorResponse("Message not found");
 
             return ApiResponse<MessageDto>.SuccessResponse(await MapMessageToDto(msg));
+        }
+
+        public async Task<ApiResponse<List<Guid>>> MarkMessagesAsReadAsync(ClaimsPrincipal userClaims, Guid chatId, bool isGroup)
+        {
+            var invalidUserResponse = GetUserIdOrUnauthorized<List<Guid>>(userClaims, out var userId);
+            if (invalidUserResponse != null) return invalidUserResponse;
+
+            var viewerProfile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (viewerProfile == null) return ApiResponse<List<Guid>>.ErrorResponse("Invalid user profile.");
+
+            var query = _messageRepository.Query()
+                .Include(m => m.ReadReceipts)
+                .Where(m => m.SenderId != viewerProfile.Id && !m.ReadReceipts.Any(r => r.ProfileId == viewerProfile.Id));
+
+            if (isGroup)
+            {
+                query = query.Where(m => m.GroupId == chatId);
+            }
+            else
+            {
+                query = query.Where(m => m.SenderId == chatId && m.ReceiverId == viewerProfile.Id);
+            }
+
+            var unreadMessages = await query.ToListAsync();
+
+            if (!unreadMessages.Any())
+            {
+                return ApiResponse<List<Guid>>.SuccessResponse(new List<Guid>(), "No new messages to mark.");
+            }
+
+            var readMessageIds = new List<Guid>();
+
+            foreach (var msg in unreadMessages)
+            {
+                msg.ReadReceipts.Add(new MessageReadReceipt
+                {
+                    MessageId = msg.Id,
+                    ProfileId = viewerProfile.Id,
+                    ReadAt = DateTime.UtcNow
+                });
+                readMessageIds.Add(msg.Id);
+            }
+
+            await _messageRepository.SaveChangesAsync();
+
+            return ApiResponse<List<Guid>>.SuccessResponse(readMessageIds, "Messages marked as read.");
         }
 
         public async Task<ApiResponse<MessageDto>> EditMessageAsync(ClaimsPrincipal userClaims, Guid messageId, string newContent)
@@ -364,6 +413,7 @@ namespace SocialMedia.Services
                 SenderPhoto = m.Sender.Photo,
                 ReceiverId = m.ReceiverId ?? Guid.Empty,
                 GroupId = m.GroupId,
+                ReadBy = m.ReadReceipts?.Select(r => r.ProfileId).ToList() ?? new List<Guid>(),
                 SentAt = m.CreatedDate,
                 IsEdited = m.EditedAt.HasValue && !m.IsDeleted,
                 IsDeleted = m.IsDeleted,

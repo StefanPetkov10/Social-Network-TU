@@ -20,6 +20,8 @@ export interface MessageDto {
     sentAt: string; 
     isEdited: boolean;
     isDeleted: boolean;
+    isRead: boolean;
+    readBy: string[];
     media: MessageMediaDto[];
     reactions: MessageReactionDto[];
 }

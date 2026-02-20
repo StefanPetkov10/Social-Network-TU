@@ -53,6 +53,8 @@ export function MessageList() {
            const initials = getInitials(chat.name);
 
            const isOnline = onlineUsers.has(chat.id);
+           
+           const isUnread = chat.unreadCount > 0;
 
            return (
             <Link 
@@ -82,11 +84,25 @@ export function MessageList() {
                   <span className={cn("font-semibold text-sm truncate", isActive ? "text-primary" : "text-foreground")}>
                     {chat.name}
                   </span>
-                  <span className="text-[10px] text-muted-foreground shrink-0 ml-2">{time}</span>
+                  <span className={cn("text-[10px] shrink-0 ml-2", isUnread ? "text-blue-600 font-bold" : "text-muted-foreground")}>
+                    {time}
+                  </span>
                 </div>
-                <p className="text-xs text-muted-foreground truncate opacity-80 font-medium">
-                  {chat.lastMessage || "Start a conversation"}
-                </p>
+                
+                <div className="flex justify-between items-center">
+                  <p className={cn(
+                    "text-xs truncate", 
+                    isUnread ? "text-foreground font-bold" : "text-muted-foreground opacity-80 font-medium"
+                  )}>
+                    {chat.lastMessage || "Start a conversation"}
+                  </p>
+                  
+                  {isUnread && (
+                    <span className="ml-2 bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">
+                      {chat.unreadCount}
+                    </span>
+                  )}
+                </div>
               </div>
             </Link>
            )

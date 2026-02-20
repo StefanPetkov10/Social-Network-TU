@@ -34,19 +34,20 @@ import Link from "next/link";
 import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { cn, getInitials, getFileDetails, getUserDisplayName } from "@frontend/lib/utils"; 
-import { MessageDto, ChatAttachmentDto } from "@frontend/lib/types/chat";
+import { MessageDto, ChatAttachmentDto, ChatConversationDto } from "@frontend/lib/types/chat";
 import { toast } from "sonner";
 import { validateFile, MAX_CHAT_FILES, MAX_CHAT_SIZE_MB } from "@frontend/lib/file-validation";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden"; 
 
 import { REACTION_CONFIG } from "@frontend/components/ui/reaction-button";
 import { ReactionListDialog } from "@frontend/components/reaction-dialog/reaction-list-dialog";
-import { ms } from "date-fns/locale";
+import { useQueryClient } from "@tanstack/react-query"; 
 
 export default function ChatPage() {
   const params = useParams();
   const router = useRouter();
   const chatId = params.id as string;
+  const queryClient = useQueryClient();
   
   const { data: myProfile } = useProfile();
   const { data: conversations } = useConversations();
@@ -99,13 +100,29 @@ export default function ChatPage() {
 
   const { data: historyMessages, isLoading: isHistoryLoading } = useChatHistory(chatId);
   
-  const { sendMessage, editMessage, deleteMessage, reactToMessage, isConnected, onlineUsers, } = useChatSocket(chatId);
+  const { sendMessage, editMessage, deleteMessage, reactToMessage, isConnected, onlineUsers, markChatAsRead } = useChatSocket(chatId);
   
   const uploadMutation = useUploadChatFiles();
 
   const isUserOnline = !chatTarget?.isGroup && onlineUsers.has(chatId);
 
   const messages = historyMessages || [];
+
+  const absoluteLastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+
+  useEffect(() => {
+      if (chatId && chatTarget) {
+          markChatAsRead(chatId, chatTarget.isGroup);
+
+          // Гарантирано зануляване на брояча в момента на отваряне
+          queryClient.setQueryData(["conversations"], (oldConvs: ChatConversationDto[] | undefined) => {
+              if (!oldConvs) return oldConvs;
+              return oldConvs.map(conv => 
+                  conv.id === chatId ? { ...conv, unreadCount: 0 } : conv
+              );
+          });
+      }
+  }, [chatId, messages.length, chatTarget?.isGroup, queryClient]);
 
   const [input, setInput] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -375,6 +392,10 @@ export default function ChatPage() {
                 const isMe = myProfile ? msg.senderId === myProfile.id : false;
                 const showSenderInfo = !isMe && chatTarget?.isGroup;
                 const hasReactions = msg.reactions && msg.reactions.length > 0 && !msg.isDeleted;
+                
+                const isSeen = msg.readBy && msg.readBy.length > 0;
+                
+                const isAbsoluteLastInChat = absoluteLastMessage && msg.id === absoluteLastMessage.id;
 
                 return (
                     <div 
@@ -509,6 +530,16 @@ export default function ChatPage() {
                                 </span>
                                 {msg.isEdited && !msg.isDeleted && (
                                     <span className="text-[9px] text-muted-foreground italic">(edited)</span>
+                                )}
+                                
+                                {isMe && isAbsoluteLastInChat && !msg.isDeleted && (
+                                    <span className={cn("text-[10px] ml-1 font-medium", isSeen ? "text-blue-500" : "text-muted-foreground opacity-70")}>
+                                        {isSeen ? (
+                                            <>✓✓ {chatTarget?.isGroup ? `Видяно от ${msg.readBy.length}` : "Видяно"}</>
+                                        ) : (
+                                            <>✓ Доставено</>
+                                        )}
+                                    </span>
                                 )}
                             </div>
                         </div>

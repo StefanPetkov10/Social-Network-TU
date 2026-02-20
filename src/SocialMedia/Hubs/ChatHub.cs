@@ -147,6 +147,39 @@ namespace SocialMedia.Hubs
             }
         }
 
+        public async Task MarkChatAsRead(Guid chatId, bool isGroup)
+        {
+            try
+            {
+                var response = await _chatService.MarkMessagesAsReadAsync(Context.User!, chatId, isGroup);
+
+                if (response.Success && response.Data != null && response.Data.Any())
+                {
+                    var currentAppId = GetUserId();
+                    if (currentAppId != null && Guid.TryParse(currentAppId, out var appIdGuid))
+                    {
+                        var currentProfileId = await _chatService.GetProfileIdByAppIdAsync(appIdGuid);
+
+                        if (isGroup)
+                        {
+                            var memberIds = await _chatService.GetGroupMemberIdsAsync(chatId);
+
+                            await Clients.Users(memberIds)
+                                .SendAsync("MessagesMarkedAsRead", currentProfileId, response.Data, chatId);
+                        }
+                        else
+                        {
+                            await Clients.Group(chatId.ToString())
+                                .SendAsync("MessagesMarkedAsRead", currentProfileId, response.Data, currentProfileId);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                await Clients.Caller.SendAsync("ErrorMessage", "Failed to mark messages as read: " + ex.Message);
+            }
+        }
 
         public async Task EditMessage(Guid messageId, string newContent)
         {

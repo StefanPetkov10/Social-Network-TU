@@ -24,6 +24,7 @@ namespace SocialMedia.Services.Interfaces
         Task<Guid?> GetProfileIdByAppIdAsync(Guid appId);
         Task<List<string>> GetProfileIdsByAppIdsAsync(List<Guid> appIds);
 
+        Task<ApiResponse<List<Guid>>> MarkMessagesAsReadAsync(ClaimsPrincipal userClaims, Guid chatId, bool isGroup);
         Task<ApiResponse<MessageDto>> EditMessageAsync(ClaimsPrincipal userClaims, Guid messageId, string newContent);
         Task<ApiResponse<MessageDto>> DeleteMessageAsync(ClaimsPrincipal userClaims, Guid messageId);
     }

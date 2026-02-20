@@ -26,13 +26,12 @@ namespace SocialMedia.Database.Models
 
         public DateTime? EditedAt { get; set; }
 
-        public bool IsRead { get; set; }
-
         public bool IsEdited => UpdatedDate.HasValue;
 
         public bool IsDeleted { get; set; }
 
         public ICollection<MessageMedia> Media { get; set; } = new List<MessageMedia>();
         public ICollection<Reaction> Reactions { get; set; } = new List<Reaction>();
+        public ICollection<MessageReadReceipt> ReadReceipts { get; set; } = new List<MessageReadReceipt>();
     }
 }

@@ -12,6 +12,7 @@
         public DateTime SentAt { get; set; }
         public bool IsEdited { get; set; }
         public bool IsDeleted { get; set; }
+        public List<Guid> ReadBy { get; set; } = new();
         public List<MessageMediaDto> Media { get; set; } = new();
         public List<MessageReactionDto> Reactions { get; set; } = new();
     }
