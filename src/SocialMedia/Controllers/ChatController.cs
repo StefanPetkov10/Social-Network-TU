@@ -27,9 +27,11 @@ namespace SocialMedia.Controllers
         }
 
         [HttpGet("history/{otherUserId}")]
-        public async Task<IActionResult> GetChatHistory(Guid otherUserId)
+        public async Task<IActionResult> GetChatHistory(Guid otherUserId, [
+            FromQuery] Guid? lastMessageId = null,
+            [FromQuery] int take = 30)
         {
-            var response = await _chatService.GetMessageHistoryAsync(User, otherUserId);
+            var response = await _chatService.GetMessageHistoryAsync(User, otherUserId, lastMessageId, take);
 
             if (response.Success) return Ok(response);
             return BadRequest(response.Message);

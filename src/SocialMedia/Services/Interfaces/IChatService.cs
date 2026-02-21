@@ -17,7 +17,11 @@ namespace SocialMedia.Services.Interfaces
         Task<List<string>> GetGroupMemberIdsAsync(Guid groupId);
         Task<ApiResponse<IEnumerable<ChatConversationDto>>> GetConversationsAsync(ClaimsPrincipal userClaims);
 
-        Task<ApiResponse<IEnumerable<MessageDto>>> GetMessageHistoryAsync(ClaimsPrincipal userClaims, Guid otherUserId);
+        Task<ApiResponse<IEnumerable<MessageDto>>> GetMessageHistoryAsync(
+            ClaimsPrincipal userClaims, 
+            Guid otherUserId, 
+            Guid? lastMessageId = null, 
+            int take = 30);
         Task<ApiResponse<MessageDto>> GetMessageByIdAsync(Guid messageId);
 
 

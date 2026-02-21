@@ -1,13 +1,13 @@
 import { useEffect, useState, useRef } from "react";
 import * as signalR from "@microsoft/signalr";
 import { useQueryClient } from "@tanstack/react-query";
-import { MessageDto, ChatAttachmentDto, ChatConversationDto } from "../lib/types/chat"; 
+import { MessageDto, ChatAttachmentDto, ChatConversationDto } from "../lib/types/chat";
 import { toast } from "sonner";
 import { useAuthStore } from "@frontend/stores/useAuthStore";
-import { useProfile } from "@frontend/hooks/use-profile"; 
+import { useProfile } from "@frontend/hooks/use-profile";
 import { useSocketStore } from "@frontend/stores/useSocketStore";
 
-const HUB_URL = "https://localhost:44386/hubs/chat"; 
+const HUB_URL = "https://localhost:44386/hubs/chat";
 
 let globalConnection: signalR.HubConnection | null = null;
 
@@ -36,16 +36,16 @@ export const useChatSocket = (chatId: string | null) => {
 
         const setupConnection = async () => {
             if (!globalConnection) {
-                console.log("Initializing SignalR Connection..."); 
+                console.log("Initializing SignalR Connection...");
                 globalConnection = new signalR.HubConnectionBuilder()
                     .withUrl(HUB_URL, {
                         accessTokenFactory: () => token,
                         skipNegotiation: true,
                         transport: signalR.HttpTransportType.WebSockets
                     })
-                    .withKeepAliveInterval(15000) 
-                    .withAutomaticReconnect([0, 2000, 5000, 10000]) 
-                    .configureLogging(signalR.LogLevel.None) 
+                    .withKeepAliveInterval(15000)
+                    .withAutomaticReconnect([0, 2000, 5000, 10000])
+                    .configureLogging(signalR.LogLevel.None)
                     .build();
             }
 
@@ -57,12 +57,12 @@ export const useChatSocket = (chatId: string | null) => {
             connection.off("UserIsOnline");
             connection.off("UserIsOffline");
             connection.off("ErrorMessage");
-            connection.off("MessagesMarkedAsRead"); 
+            connection.off("MessagesMarkedAsRead");
 
             const handleMessageUpdate = (msg: MessageDto, eventType: "ReceiveMessage" | "MessageEdited" | "MessageDeleted") => {
                 const currentProfileId = profileRef.current?.id;
                 const isMine = msg.senderId === currentProfileId;
-                
+
                 let targetChatId = null;
 
                 if (msg.groupId) {
@@ -72,36 +72,55 @@ export const useChatSocket = (chatId: string | null) => {
                 }
 
                 if (targetChatId) {
-                    queryClient.setQueryData(["chat-history", targetChatId], (oldMessages: MessageDto[] = []) => {
-                        const index = oldMessages.findIndex(m => m.id === msg.id);
-                        
-                        if (index !== -1) {
-                            const updatedList = [...oldMessages];
-                            updatedList[index] = msg; 
-                            return updatedList;
-                        } else {
-                            return [...oldMessages, msg];
+                    queryClient.setQueryData(["chat-history", targetChatId], (oldData: any) => {
+                        if (!oldData || !oldData.pages) return oldData;
+
+                        let isUpdated = false;
+                        const newPages = oldData.pages.map((page: any) => {
+                            const index = page.data.findIndex((m: MessageDto) => m.id === msg.id);
+                            if (index !== -1) {
+                                isUpdated = true;
+                                const updatedData = [...page.data];
+                                updatedData[index] = msg;
+                                return { ...page, data: updatedData };
+                            }
+                            return page;
+                        });
+
+                        if (isUpdated) {
+                            return { ...oldData, pages: newPages };
+                        } else if (eventType === "ReceiveMessage") {
+                            // Добавяме ново съобщение в първата страница (най-новите са там в нашия случай ако сме обърнали данните от бекенда, *но* ние връщаме DESC и правим Reverse на бекенда => най-новите са накрая, затова го добавяме на 1ва страница, или по-точно при нас първата страница съдържа най-новите ако е взето с firstPage)
+                            // За да сме сигурни, добавяме го в последната страница.
+                            const lastPageIndex = newPages.length - 1;
+                            newPages[lastPageIndex] = {
+                                ...newPages[lastPageIndex],
+                                data: [...newPages[lastPageIndex].data, msg]
+                            };
+                            return { ...oldData, pages: newPages };
                         }
+
+                        return oldData;
                     });
-                    
+
                     queryClient.invalidateQueries({ queryKey: ["chat-history", targetChatId] });
 
                     queryClient.setQueryData(["conversations"], (oldConvs: ChatConversationDto[] | undefined) => {
                         if (!oldConvs) return oldConvs;
-                        
+
                         const convIndex = oldConvs.findIndex(c => c.id === targetChatId);
-                        const isCurrentChatOpen = targetChatId === activeChatIdRef.current; 
-                        
+                        const isCurrentChatOpen = targetChatId === activeChatIdRef.current;
+
                         if (convIndex !== -1) {
                             const updatedConvs = [...oldConvs];
                             const conv = updatedConvs[convIndex];
-                            
+
                             let newUnreadCount = conv.unreadCount;
-                            
+
                             if (eventType === "ReceiveMessage" && !isMine && !isCurrentChatOpen) {
                                 newUnreadCount += 1;
                             } else if (isCurrentChatOpen) {
-                                newUnreadCount = 0; 
+                                newUnreadCount = 0;
                             }
 
                             let lastMsgText = msg.content || "Прикачен файл";
@@ -118,7 +137,7 @@ export const useChatSocket = (chatId: string | null) => {
                                 const [moved] = updatedConvs.splice(convIndex, 1);
                                 updatedConvs.unshift(moved);
                             }
-                            
+
                             return updatedConvs;
                         } else {
                             queryClient.invalidateQueries({ queryKey: ["conversations"] });
@@ -129,13 +148,20 @@ export const useChatSocket = (chatId: string | null) => {
             };
 
             const handleMessagesMarkedAsRead = (readerProfileId: string, messageIds: string[], targetChatId: string) => {
-                queryClient.setQueryData(["chat-history", targetChatId], (oldMessages: MessageDto[] = []) => {
-                    return oldMessages.map(msg => {
-                        if (messageIds.includes(msg.id) && !msg.readBy?.includes(readerProfileId)) {
-                            return { ...msg, readBy: [...(msg.readBy || []), readerProfileId] };
-                        }
-                        return msg;
-                    });
+                queryClient.setQueryData(["chat-history", targetChatId], (oldData: any) => {
+                    if (!oldData || !oldData.pages) return oldData;
+
+                    const newPages = oldData.pages.map((page: any) => ({
+                        ...page,
+                        data: page.data.map((msg: MessageDto) => {
+                            if (messageIds.includes(msg.id) && !msg.readBy?.includes(readerProfileId)) {
+                                return { ...msg, readBy: [...(msg.readBy || []), readerProfileId] };
+                            }
+                            return msg;
+                        })
+                    }));
+
+                    return { ...oldData, pages: newPages };
                 });
 
                 if (readerProfileId === profileRef.current?.id) {
@@ -153,8 +179,8 @@ export const useChatSocket = (chatId: string | null) => {
             connection.on("ReceiveMessage", (msg) => handleMessageUpdate(msg, "ReceiveMessage"));
             connection.on("MessageEdited", (msg) => handleMessageUpdate(msg, "MessageEdited"));
             connection.on("MessageDeleted", (msg) => handleMessageUpdate(msg, "MessageDeleted"));
-            
-            connection.on("MessagesMarkedAsRead", handleMessagesMarkedAsRead); 
+
+            connection.on("MessagesMarkedAsRead", handleMessagesMarkedAsRead);
 
             connection.on("UserIsOnline", (userId: string) => addOnlineUser(userId));
             connection.on("UserIsOffline", (userId: string) => removeOnlineUser(userId));
@@ -166,7 +192,7 @@ export const useChatSocket = (chatId: string | null) => {
                 try {
                     const users = await connection.invoke("GetOnlineUsers");
                     setOnlineUsers(new Set(users));
-                    if(profileRef.current?.id) await connection.invoke("JoinChat", profileRef.current.id);
+                    if (profileRef.current?.id) await connection.invoke("JoinChat", profileRef.current.id);
                     if (activeChatIdRef.current) await connection.invoke("JoinChat", activeChatIdRef.current);
                 } catch (e) { console.error("Reconnect setup failed", e); }
             });
@@ -196,7 +222,7 @@ export const useChatSocket = (chatId: string | null) => {
                 }
             } else if (connection.state === signalR.HubConnectionState.Connected) {
                 setIsConnected(true);
-                connection.invoke("JoinChat", myProfile.id).catch(() => {});
+                connection.invoke("JoinChat", myProfile.id).catch(() => { });
             }
         };
 
@@ -210,10 +236,10 @@ export const useChatSocket = (chatId: string | null) => {
                 globalConnection.off("UserIsOnline");
                 globalConnection.off("UserIsOffline");
                 globalConnection.off("ErrorMessage");
-                globalConnection.off("MessagesMarkedAsRead"); 
+                globalConnection.off("MessagesMarkedAsRead");
             }
         };
-    }, [token, myProfile?.id]); 
+    }, [token, myProfile?.id]);
 
     useEffect(() => {
         if (globalConnection?.state === signalR.HubConnectionState.Connected && chatId) {
@@ -223,22 +249,22 @@ export const useChatSocket = (chatId: string | null) => {
 
     const sendMessage = async (content: string, attachments: ChatAttachmentDto[] = [], isGroup: boolean = false) => {
         if (!globalConnection || globalConnection.state !== signalR.HubConnectionState.Connected) {
-             toast.error("Няма връзка със сървъра. Опитайте да презаредите.");
-             return;
+            toast.error("Няма връзка със сървъра. Опитайте да презаредите.");
+            return;
         }
         try {
-            if (!chatId) return; 
+            if (!chatId) return;
 
-            const receiverId = isGroup ? null : chatId; 
-            const groupId = isGroup ? chatId : null;    
+            const receiverId = isGroup ? null : chatId;
+            const groupId = isGroup ? chatId : null;
 
             await globalConnection.invoke(
-                "SendMessage", 
-                chatId,      
-                content,     
-                receiverId,  
-                groupId,     
-                attachments  
+                "SendMessage",
+                chatId,
+                content,
+                receiverId,
+                groupId,
+                attachments
             );
         } catch (error) {
             console.error("Send failed", error);
@@ -287,7 +313,7 @@ export const useChatSocket = (chatId: string | null) => {
 
     const markChatAsRead = async (targetChatId: string, isGroup: boolean = false) => {
         if (!globalConnection || globalConnection.state !== signalR.HubConnectionState.Connected) {
-            return; 
+            return;
         }
         try {
             await globalConnection.invoke("MarkChatAsRead", targetChatId, isGroup);

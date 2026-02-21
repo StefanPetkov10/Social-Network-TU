@@ -205,7 +205,11 @@ namespace SocialMedia.Services
             return ApiResponse<IEnumerable<ChatConversationDto>>.SuccessResponse(conversations!, "Conversations retrieved.");
         }
 
-        public async Task<ApiResponse<IEnumerable<MessageDto>>> GetMessageHistoryAsync(ClaimsPrincipal userClaims, Guid otherUserId)
+        public async Task<ApiResponse<IEnumerable<MessageDto>>> GetMessageHistoryAsync(
+            ClaimsPrincipal userClaims,
+            Guid otherUserId,
+            Guid? lastMessageId = null,
+            int take = 30)
         {
             var invalidUserResponse = GetUserIdOrUnauthorized<IEnumerable<MessageDto>>(userClaims, out var userId);
             if (invalidUserResponse != null) return invalidUserResponse;
@@ -223,8 +227,20 @@ namespace SocialMedia.Services
                     ((m.SenderId == viewerProfile.Id && m.ReceiverId == otherUserId) ||
                      (m.SenderId == otherUserId && m.ReceiverId == viewerProfile.Id)) ||
                      (m.GroupId == otherUserId))
-                .OrderBy(m => m.CreatedDate)
+                .OrderByDescending(m => m.CreatedDate)
                 .ToListAsync();
+
+            if (lastMessageId.HasValue)
+            {
+                var lastmsg = await _messageRepository.GetByIdAsync(lastMessageId.Value);
+                if (lastmsg != null)
+                {
+                    messages = messages.Where(m => m.CreatedDate < lastmsg.CreatedDate).ToList();
+                }
+            }
+
+            messages = messages.Take(take).ToList();
+            messages.Reverse();
 
             var messageDtos = new List<MessageDto>();
             foreach (var msg in messages)
@@ -232,7 +248,8 @@ namespace SocialMedia.Services
                 messageDtos.Add(await MapMessageToDto(msg));
             }
 
-            return ApiResponse<IEnumerable<MessageDto>>.SuccessResponse(messageDtos, "History retrieved.");
+            var nextCursor = messages.FirstOrDefault()?.Id;
+            return ApiResponse<IEnumerable<MessageDto>>.SuccessResponse(messageDtos, "History retrieved.", new { nextCursor });
         }
 
         public async Task<ApiResponse<MessageDto>> GetMessageByIdAsync(Guid messageId)

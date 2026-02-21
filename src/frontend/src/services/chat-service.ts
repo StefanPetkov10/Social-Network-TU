@@ -8,14 +8,19 @@ export const chatService = {
     return data;
   },
 
-  getHistory: async (otherUserId: string) => {
-    const { data } = await api.get<ApiResponse<MessageDto[]>>(`/api/Chat/history/${otherUserId}`);
+  getHistory: async ({ lastMessageId, otherUserId }: { lastMessageId: string | null; otherUserId: string }) => {
+    const params = new URLSearchParams();
+    params.append("take", "30");
+    if (lastMessageId) {
+      params.append("lastMessageId", lastMessageId);
+    }
+    const { data } = await api.get<ApiResponse<MessageDto[]>>(`/api/Chat/history/${otherUserId}?${params.toString()}`);
     return data;
   },
 
   uploadAttachments: async (formData: FormData) => {
     const { data } = await api.post<ChatAttachmentDto[]>("/api/Chat/upload-attachments", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      headers: { "Content-Type": "multipart/form-data" },
     });
     return data;
   }
