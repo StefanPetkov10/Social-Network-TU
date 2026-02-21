@@ -23,6 +23,7 @@ type NavItem = {
   url: string
   icon: LucideIcon
   isActive?: boolean
+  hasUnread?: boolean
   items?: {
     title: string
     url: string
@@ -57,6 +58,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
                 <a href={item.url} className="flex items-center gap-4 group-data-[collapsible=icon]:justify-center">
                   <div
                     className="
+                        relative
                         flex size-9 items-center justify-center rounded-full bg-gray-100 text-muted-foreground transition-colors 
                         group-hover/collapsible:bg-primary/10 group-hover/collapsible:text-primary
                         
@@ -67,6 +69,9 @@ export function NavMain({ items }: { items: NavItem[] }) {
                     "
                   >
                     <item.icon className="size-5" />
+                    {item.hasUnread && (
+                      <span className="absolute -top-0.5 -right-0.5 size-2.5 bg-red-500 rounded-full border border-white group-data-[collapsible=icon]:border-background" />
+                    )}
                   </div>
 
                   <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
@@ -79,7 +84,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
                     <SidebarMenuAction
                       className="absolute right-14 size-8 text-muted-foreground transition-transform hover:bg-gray-200 hover:text-primary data-[state=open]:rotate-90 rounded-full flex items-center justify-center group-data-[collapsible=icon]:hidden"
                     >
-                      <ChevronRight className="size-6" /> 
+                      <ChevronRight className="size-6" />
                       <span className="sr-only">Toggle</span>
                     </SidebarMenuAction>
                   </CollapsibleTrigger>

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { usePathname } from "next/navigation" 
+import { usePathname } from "next/navigation"
 import {
   Users,
   Bookmark,
@@ -9,7 +9,7 @@ import {
   LayoutGrid,
   LifeBuoy,
   Send,
-  MessageCircle, 
+  MessageCircle,
 } from "lucide-react"
 
 import { NavMain } from "@frontend/components/home-forms/nav-main"
@@ -19,11 +19,12 @@ import {
   SidebarContent,
   SidebarHeader,
   SidebarRail,
-  useSidebar, 
+  useSidebar,
 } from "@frontend/components/ui/sidebar"
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar"
 import { getInitials } from "@frontend/lib/utils";
 import { useMyGroups } from "@frontend/hooks/use-groups"
+import { useConversations } from "@frontend/hooks/use-chat-query"
 import { useEffect } from "react"
 
 type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
@@ -35,22 +36,25 @@ type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
 
 export function AppSidebar({ user, ...props }: AppSidebarProps) {
   const { data: myGroupsItems, isLoading } = useMyGroups();
+  const { data: conversations } = useConversations();
   const initials = getInitials(user.name);
-  
+
+  const hasUnreadMessages = conversations?.some(c => c.unreadCount > 0);
+
   const pathname = usePathname();
   const { setOpen } = useSidebar();
   const isMessagesPage = pathname.startsWith("/messages");
 
   useEffect(() => {
     if (isMessagesPage) {
-      setOpen(false); 
+      setOpen(false);
     } else {
-      setOpen(true); 
+      setOpen(true);
     }
   }, [isMessagesPage, setOpen]);
 
   const navMainItems = [
-    { title: "Съобщения", url: "/messages", icon: MessageCircle, isActive: isMessagesPage }, 
+    { title: "Съобщения", url: "/messages", icon: MessageCircle, isActive: isMessagesPage, hasUnread: hasUnreadMessages },
     { title: "Приятели", url: "/friends", icon: UserPlus },
     { title: "Последователи", url: "/followers", icon: Users },
     { title: "Запазени", url: "/saved-posts", icon: Bookmark },
@@ -58,15 +62,16 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
       title: "Моите Групи",
       url: "/groups",
       icon: LayoutGrid,
-      isActive: pathname.startsWith("/groups") && !isMessagesPage, 
-      items: isLoading 
-        ? [{ title: "Зареждане...", url: "#" }] 
-        : myGroupsItems?.data?.length 
-            ? myGroupsItems.data.map((group: any) => ({
-                title: group.name,
-                url: `/groups/${group.name}` 
-              }))
-            : [{ title: "Нямате групи", url: "/groups/discover" }], 
+      isActive: pathname.startsWith("/groups") && !isMessagesPage,
+      items: isLoading
+        ? [{ title: "Зареждане...", url: "#" }]
+        : myGroupsItems?.data?.length
+          ? myGroupsItems.data.map((group: any) => ({
+            title: group.name,
+            url: `/groups/${group.name}`
+          }))
+          : [{ title: "Нямате групи", url: "/groups/discover" }],
+
     },
   ];
 
@@ -76,29 +81,29 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
   ];
 
   return (
-    <Sidebar 
-        collapsible="icon" 
-        {...props} 
-        style={{
-            "--sidebar-width": "19rem",
-            "--sidebar-width-icon": "5.5remч" 
-        } as React.CSSProperties}
-        className="top-16 h-[calc(100vh-4rem)] border-r z-30" 
+    <Sidebar
+      collapsible="icon"
+      {...props}
+      style={{
+        "--sidebar-width": "19rem",
+        "--sidebar-width-icon": "5.5remч"
+      } as React.CSSProperties}
+      className="top-16 h-[calc(100vh-4rem)] border-r z-30"
     >
-      <SidebarHeader className="p-4 pb-2"> 
-        <a 
-            href="/profile" 
-            className="flex items-center gap-4 p-3 hover:bg-sidebar-accent rounded-xl transition-colors group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-1"
+      <SidebarHeader className="p-4 pb-2">
+        <a
+          href="/profile"
+          className="flex items-center gap-4 p-3 hover:bg-sidebar-accent rounded-xl transition-colors group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-1"
         >
-           <Avatar className="h-12 w-12 border cursor-pointer shadow-sm shrink-0">
-              <AvatarImage src={user.avatar} />
-              <AvatarFallback className="bg-primary text-white text-lg">{initials}</AvatarFallback>
-           </Avatar>
-           
-           <div className="grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
-              <span className="truncate font-bold text-lg text-foreground">{user.name}</span>
-              <span className="truncate text-sm text-muted-foreground">Студент @ ТУ-София</span>
-           </div>
+          <Avatar className="h-12 w-12 border cursor-pointer shadow-sm shrink-0">
+            <AvatarImage src={user.avatar} />
+            <AvatarFallback className="bg-primary text-white text-lg">{initials}</AvatarFallback>
+          </Avatar>
+
+          <div className="grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
+            <span className="truncate font-bold text-lg text-foreground">{user.name}</span>
+            <span className="truncate text-sm text-muted-foreground">Студент @ ТУ-София</span>
+          </div>
         </a>
       </SidebarHeader>
 
@@ -106,7 +111,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         <NavMain items={navMainItems} />
         <NavSecondary items={navSecondaryItems} className="mt-auto pb-4" />
       </SidebarContent>
-      
+
       {!isMessagesPage && <SidebarRail />}
     </Sidebar>
   )

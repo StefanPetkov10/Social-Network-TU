@@ -28,7 +28,8 @@ import {
     Smile,
     Edit2,
     Trash2,
-    ChevronDown
+    ChevronDown,
+    AlertCircle
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useRef, useEffect, useLayoutEffect } from "react";
@@ -97,6 +98,10 @@ export default function ChatPage() {
     }
 
     const isLoadingTarget = !chatTarget && (isProfileLoading || isGroupLoading);
+
+    const isGroupChat = chatTarget?.isGroup || groupData?.data;
+    const isAccessDenied = isGroupChat && groupData?.data && groupData.data.isMember === false;
+    const isNotFound = !isLoadingTarget && !chatTarget;
 
     const {
         data: historyMessagesData,
@@ -389,6 +394,40 @@ export default function ChatPage() {
         setInput("");
         setFiles([]);
     };
+
+    if (isAccessDenied) {
+        return (
+            <div className="flex flex-col h-full bg-background items-center justify-center text-center p-6 space-y-4">
+                <div className="h-16 w-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-2 shadow-sm">
+                    <X className="h-8 w-8" />
+                </div>
+                <h2 className="text-xl font-bold text-foreground">Нямате достъп</h2>
+                <p className="text-muted-foreground text-sm max-w-sm mb-4">
+                    Нямате права за достъп до този чат или вече не сте член на групата.
+                </p>
+                <Button onClick={() => router.push('/messages')} variant="default" className="shadow-sm">
+                    Към съобщенията
+                </Button>
+            </div>
+        );
+    }
+
+    if (isNotFound) {
+        return (
+            <div className="flex flex-col h-full bg-background items-center justify-center text-center p-6 space-y-4">
+                <div className="h-16 w-16 bg-slate-100 text-slate-500 rounded-full flex items-center justify-center mb-2 shadow-sm">
+                    <AlertCircle className="h-8 w-8" />
+                </div>
+                <h2 className="text-xl font-bold text-foreground">Чатът не е намерен</h2>
+                <p className="text-muted-foreground text-sm mb-4">
+                    Този чат или профил не съществува.
+                </p>
+                <Button onClick={() => router.push('/messages')} variant="default" className="shadow-sm">
+                    Към съобщенията
+                </Button>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-full bg-background relative overflow-hidden">
