@@ -226,7 +226,6 @@ namespace SocialMedia.Services
         // тази стъпка. Вместо да връщам "случайни непознати", ще връщам "непознати със сходни интереси".
         public async Task<ApiResponse<IEnumerable<FriendSuggestionDto>>> GetFriendSuggestionsAsync(ClaimsPrincipal userClaims, int skip = 0, int take = 20)
         {
-
             if (skip >= 100) return ApiResponse<IEnumerable<FriendSuggestionDto>>.SuccessResponse(new List<FriendSuggestionDto>(), "Limit reached.");
             if (skip + take > 100) take = 100 - skip;
 
@@ -359,19 +358,13 @@ namespace SocialMedia.Services
         }
 
         public async Task<ApiResponse<IEnumerable<FriendDto>>> GetFriendsListAsync(
-     ClaimsPrincipal userClaims,
-     Guid profileId,
-     Guid? lastFriendId = null,
-     DateTime? lastFriendshipDate = null,
-     int take = 20)
+            ClaimsPrincipal userClaims,
+            Guid profileId,
+            Guid? lastFriendId = null,
+            DateTime? lastFriendshipDate = null,
+            int take = 20)
         {
-            var viewerIdResponse = GetUserIdOrUnauthorized<object>(userClaims, out var userId);
-            Guid? viewerProfileId = null;
-            if (viewerIdResponse == null)
-            {
-                var viewer = await _profileRepository.GetByApplicationIdAsync(userId);
-                viewerProfileId = viewer?.Id;
-            }
+            var viewerProfileId = await GetViewerProfileIdAsync(userClaims);
 
             var listOwnerProfile = await _profileRepository.GetByIdAsync(profileId);
             if (listOwnerProfile == null) return ApiResponse<IEnumerable<FriendDto>>.ErrorResponse("Profile not found.");
@@ -408,12 +401,106 @@ namespace SocialMedia.Services
                 .Select(f => f.RequesterId == listOwnerProfile.Id ? f.Addressee : f.Requester)
                 .ToList();
 
+            var friendDtos = await MapProfilesToFriendDtosAsync(friendProfiles, viewerProfileId);
+
+            var lastItem = friendships.LastOrDefault();
+
+            return ApiResponse<IEnumerable<FriendDto>>.SuccessResponse(
+                friendDtos,
+                "Friends list retrieved.",
+                new
+                {
+                    lastFriendshipDate = lastItem?.AcceptedAt,
+                    lastFriendId = lastItem?.Id,
+                    totalCount = totalCount
+                });
+        }
+
+        public async Task<ApiResponse<IEnumerable<FriendDto>>> SearchFriendsAsync(
+            ClaimsPrincipal userClaims,
+            Guid profileId,
+            string query,
+            int take = 20)
+        {
+            var viewerProfileId = await GetViewerProfileIdAsync(userClaims);
+
+            var listOwnerProfile = await _profileRepository.GetByIdAsync(profileId);
+            if (listOwnerProfile == null) return ApiResponse<IEnumerable<FriendDto>>.ErrorResponse("Profile not found.");
+
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return ApiResponse<IEnumerable<FriendDto>>.SuccessResponse(new List<FriendDto>(), "Empty query.");
+            }
+
+            var cleanQuery = query.Trim().ToLower();
+
+            var dbQuery = _friendshipRepository.QueryNoTracking()
+                .Where(f => (f.RequesterId == listOwnerProfile.Id || f.AddresseeId == listOwnerProfile.Id)
+                             && f.Status == FriendshipStatus.Accepted);
+
+            dbQuery = dbQuery.Where(f =>
+                    (f.RequesterId == listOwnerProfile.Id && (
+                        EF.Functions.ILike(f.Addressee.FirstName + " " + f.Addressee.LastName, $"%{cleanQuery}%") ||
+                        EF.Functions.ILike(f.Addressee.User.UserName, $"%{cleanQuery}%") ||
+                        EF.Functions.TrigramsWordSimilarity(f.Addressee.FirstName + " " + f.Addressee.LastName, cleanQuery) > 0.3 ||
+                        EF.Functions.TrigramsWordSimilarity(f.Addressee.User.UserName, cleanQuery) > 0.3
+                    )) ||
+                    (f.AddresseeId == listOwnerProfile.Id && (
+                        EF.Functions.ILike(f.Requester.FirstName + " " + f.Requester.LastName, $"%{cleanQuery}%") ||
+                        EF.Functions.ILike(f.Requester.User.UserName, $"%{cleanQuery}%") ||
+                        EF.Functions.TrigramsWordSimilarity(f.Requester.FirstName + " " + f.Requester.LastName, cleanQuery) > 0.3 ||
+                        EF.Functions.TrigramsWordSimilarity(f.Requester.User.UserName, cleanQuery) > 0.3
+                    ))
+                );
+
+            dbQuery = dbQuery.OrderByDescending(f => f.RequesterId == listOwnerProfile.Id
+                    ? Math.Max(EF.Functions.TrigramsWordSimilarity(f.Addressee.FirstName + " " + f.Addressee.LastName, cleanQuery),
+                               EF.Functions.TrigramsWordSimilarity(f.Addressee.User.UserName, cleanQuery))
+                    : Math.Max(EF.Functions.TrigramsWordSimilarity(f.Requester.FirstName + " " + f.Requester.LastName, cleanQuery),
+                               EF.Functions.TrigramsWordSimilarity(f.Requester.User.UserName, cleanQuery))
+                ).ThenByDescending(f => f.AcceptedAt).ThenByDescending(f => f.Id);
+
+            var friendships = await dbQuery
+                .Take(take)
+                .Include(f => f.Requester).ThenInclude(p => p.User)
+                .Include(f => f.Addressee).ThenInclude(p => p.User)
+                .ToListAsync();
+
+            var friendProfiles = friendships
+                .Select(f => f.RequesterId == listOwnerProfile.Id ? f.Addressee : f.Requester)
+                .ToList();
+
+            var friendDtos = await MapProfilesToFriendDtosAsync(friendProfiles, viewerProfileId);
+
+            return ApiResponse<IEnumerable<FriendDto>>.SuccessResponse(
+                friendDtos,
+                "Friends search completed.",
+                new
+                {
+                    totalCount = friendDtos.Count
+                });
+        }
+
+
+        private async Task<Guid?> GetViewerProfileIdAsync(ClaimsPrincipal userClaims)
+        {
+            var viewerIdResponse = GetUserIdOrUnauthorized<object>(userClaims, out var userId);
+            if (viewerIdResponse != null) return null;
+
+            var viewer = await _profileRepository.GetByApplicationIdAsync(userId);
+            return viewer?.Id;
+        }
+
+        private async Task<List<FriendDto>> MapProfilesToFriendDtosAsync(
+            List<Database.Models.Profile> friendProfiles,
+            Guid? viewerProfileId)
+        {
             var friendProfileIds = friendProfiles.Select(p => p.Id).ToList();
 
             List<Friendship> viewerRelationships = new List<Friendship>();
             HashSet<Guid> viewerFriendIds = new HashSet<Guid>();
 
-            if (viewerProfileId.HasValue)
+            if (viewerProfileId.HasValue && friendProfileIds.Any())
             {
                 viewerRelationships = await _friendshipRepository.QueryNoTracking()
                     .Where(f => (f.RequesterId == viewerProfileId.Value && friendProfileIds.Contains(f.AddresseeId)) ||
@@ -429,10 +516,11 @@ namespace SocialMedia.Services
                 viewerFriendIds = new HashSet<Guid>(viewerFriendsList);
             }
 
-            var friendDtos = friendProfiles.Select(p =>
+            var friendDtos = new List<FriendDto>();
+
+            foreach (var p in friendProfiles)
             {
                 bool isMe = viewerProfileId.HasValue && p.Id == viewerProfileId.Value;
-
                 var rel = viewerRelationships.FirstOrDefault(r => r.RequesterId == p.Id || r.AddresseeId == p.Id);
 
                 bool isFriend = rel?.Status == FriendshipStatus.Accepted;
@@ -442,13 +530,13 @@ namespace SocialMedia.Services
                 int mutualCount = 0;
                 if (viewerProfileId.HasValue && !isMe)
                 {
-                    mutualCount = _friendshipRepository.QueryNoTracking()
-                        .Count(f => f.Status == FriendshipStatus.Accepted &&
+                    mutualCount = await _friendshipRepository.QueryNoTracking()
+                        .CountAsync(f => f.Status == FriendshipStatus.Accepted &&
                                     (f.RequesterId == p.Id || f.AddresseeId == p.Id) &&
                                     (f.RequesterId == p.Id ? viewerFriendIds.Contains(f.AddresseeId) : viewerFriendIds.Contains(f.RequesterId)));
                 }
 
-                return new FriendDto
+                friendDtos.Add(new FriendDto
                 {
                     ProfileId = p.Id,
                     DisplayFullName = p.FullName ?? "Unknown",
@@ -460,20 +548,10 @@ namespace SocialMedia.Services
                     HasReceivedRequest = hasReceived,
                     PendingRequestId = (hasSent || hasReceived) ? rel?.Id : null,
                     MutualFriendsCount = isMe ? 0 : mutualCount
-                };
-            }).ToList();
-
-            var lastItem = friendships.LastOrDefault();
-
-            return ApiResponse<IEnumerable<FriendDto>>.SuccessResponse(
-                friendDtos,
-                "Friends list retrieved.",
-                new
-                {
-                    lastFriendshipDate = lastItem?.AcceptedAt,
-                    lastFriendId = lastItem?.Id,
-                    totalCount = totalCount
                 });
+            }
+
+            return friendDtos;
         }
     }
 }

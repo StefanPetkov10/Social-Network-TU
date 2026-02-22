@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useInView } from 'react-intersection-observer';
-import { Search, Users, UserX } from "lucide-react"; 
+import { Search, Users, UserX, Loader2 } from "lucide-react"; 
 
 import { SiteHeader } from '@frontend/components/site-header';
 import { SidebarProvider } from "@frontend/components/ui/sidebar";
@@ -13,7 +13,8 @@ import { FriendsSidebar } from "@frontend/components/friends-forms/friends-sideb
 import { FriendProfileView } from "@frontend/components/friends-forms/friend-profile-view";
 
 import { useProfile } from "@frontend/hooks/use-profile";
-import { useInfiniteFriends, useRemoveFriend } from "@frontend/hooks/use-friends"; 
+import { useInfiniteFriends, useRemoveFriend, useSearchFriends } from "@frontend/hooks/use-friends"; 
+import { useDebounce } from "@frontend/hooks/use-debounce";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { FriendDto } from "@frontend/lib/types/friends";
@@ -22,6 +23,8 @@ import ProtectedRoute from '@frontend/components/protected-route';
 export default function AllFriendsPage() {
   const [selectedProfile, setSelectedProfile] = useState<FriendDto | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  const debouncedSearch = useDebounce(searchQuery, 300);
   
   const queryClient = useQueryClient();
   const { data: profile } = useProfile();
@@ -33,6 +36,11 @@ export default function AllFriendsPage() {
     isFetchingNextPage,
     isLoading 
   } = useInfiniteFriends(profile?.id || ""); 
+
+  const { 
+    data: searchResults, 
+    isFetching: isSearching 
+  } = useSearchFriends(profile?.id || "", debouncedSearch);
   
   const { ref, inView } = useInView();
   const removeFriendMutation = useRemoveFriend();
@@ -52,13 +60,12 @@ export default function AllFriendsPage() {
       return firstPage.meta?.totalCount ?? firstPage.totalCount ?? friendsList.length;
   }, [data, friendsList.length]);
 
-  const filteredFriends = useMemo(() => {
-    if (!searchQuery) return friendsList;
-    return friendsList.filter((friend) => 
-        (friend.displayFullName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (friend.username || "").toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [friendsList, searchQuery]);
+  const displayFriends = useMemo(() => {
+    if (debouncedSearch.length > 0 && searchResults?.data) {
+        return searchResults.data;
+    }
+    return friendsList;
+  }, [friendsList, searchResults, debouncedSearch]);
 
   useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage && !selectedProfile && !searchQuery) {
@@ -89,6 +96,7 @@ export default function AllFriendsPage() {
             }
             queryClient.invalidateQueries({ queryKey: ["friends-list"] });
             queryClient.invalidateQueries({ queryKey: ["my-friends-infinite"] });
+            queryClient.invalidateQueries({ queryKey: ["search-friends"] });
         }
     });
   };
@@ -128,7 +136,7 @@ export default function AllFriendsPage() {
                                     <Users className="h-7 w-7 text-primary" />
                                     Всички приятели
                                     <span className="text-gray-400 font-normal text-lg ml-2">
-                                        ({searchQuery ? filteredFriends.length : totalCount})
+                                        ({searchQuery ? displayFriends.length : totalCount})
                                     </span>
                                 </h1>
                                 <p className="text-gray-500 mt-1">Управлявайте списъка си с приятели тук.</p>
@@ -142,6 +150,9 @@ export default function AllFriendsPage() {
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                 />
+                                {isSearching && (
+                                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary animate-spin" />
+                                )}
                             </div>
                         </div>
                     </div>
@@ -152,7 +163,7 @@ export default function AllFriendsPage() {
                                 <div key={i} className="h-64 bg-gray-200 animate-pulse rounded-xl" />
                             ))}
                         </div>
-                    ) : filteredFriends.length === 0 ? (
+                    ) : displayFriends.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-20 opacity-70">
                             <div className="bg-gray-100 p-6 rounded-full mb-4">
                                 <UserX className="size-12 text-gray-400" />
@@ -166,7 +177,7 @@ export default function AllFriendsPage() {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                            {filteredFriends.map((friend) => (
+                            {displayFriends.map((friend) => (
                                 <FriendCard 
                                     key={friend?.profileId} 
                                     friend={friend} 

@@ -58,5 +58,16 @@ export const friendsService = {
     removeFriend: async (friendProfileId: string) => {
         const { data } = await api.delete<ApiResponse<null>>(`/api/Friendship/remove-friend/${friendProfileId}`);
         return data;
+    },
+
+    searchFriends: async (profileId: string, query: string, take: number = 20) => {
+        const params = new URLSearchParams();
+        params.append("query", query);
+        params.append("take", take.toString());
+
+        const response = await api.get<{ data: FriendDto[], meta: any }>(
+            `/api/Friendship/friends/${profileId}/search?${params.toString()}`
+        );
+        return response.data;
     }
 };

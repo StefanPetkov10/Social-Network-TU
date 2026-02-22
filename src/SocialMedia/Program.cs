@@ -14,6 +14,7 @@ using SocialMedia.Database;
 using SocialMedia.Database.Models;
 using SocialMedia.Extensions;
 using SocialMedia.Hubs;
+using SocialMedia.Services;
 using SocialMedia.Services.Interfaces;
 using SocialMedia.Validators;
 using SocialMedia.Validators.CommentValidation;
@@ -135,6 +136,7 @@ namespace SocialMedia
             builder.Services.RegisterRepositories(typeof(ApplicationUser).Assembly);
             builder.Services.AddScoped<IRepository<GroupMembership, Guid>, BaseRepository<GroupMembership, Guid>>();
             builder.Services.RegisterUserDefinedServices(typeof(IProfileService).Assembly);
+            builder.Services.AddScoped<ISearchService, SearchService>();
 
             builder.Services.AddAutoMapper(config =>
             {

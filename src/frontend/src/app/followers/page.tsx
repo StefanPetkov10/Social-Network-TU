@@ -49,7 +49,7 @@ export default function MyFollowersPage() {
     if (!searchQuery) return followersList;
     return followersList.filter((follower) => 
        (follower.displayFullName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-       (follower.userName || "").toLowerCase().includes(searchQuery.toLowerCase())
+       (follower.username || "").toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [followersList, searchQuery]);
 

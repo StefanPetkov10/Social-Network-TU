@@ -67,6 +67,15 @@ namespace SocialMedia.Controllers
             return Ok(response);
         }
 
+        [HttpGet("friends/{profileId:guid}/search")]
+        public async Task<IActionResult> SearchFriends(Guid profileId, [FromQuery] string query, [FromQuery] int take = 20)
+        {
+            var response = await _friendshipService.SearchFriendsAsync(User, profileId, query, take);
+            if (!response.Success)
+                return BadRequest(response);
+            return Ok(response);
+        }
+
         [HttpDelete("cancel-request/{addresseeId:guid}")]
         public async Task<IActionResult> CancelRequest(Guid addresseeId)
         {

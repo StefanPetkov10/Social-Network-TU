@@ -32,6 +32,18 @@ namespace SocialMedia.Database
         {
             base.OnModelCreating(builder);
 
+            builder.HasPostgresExtension("pg_trgm");
+
+            builder.Entity<Profile>()
+                .HasIndex(p => new { p.FirstName, p.LastName })
+                .HasMethod("gin")
+                .HasOperators("gin_trgm_ops", "gin_trgm_ops");
+
+            builder.Entity<ApplicationUser>()
+                .HasIndex(u => u.UserName)
+                .HasMethod("gin")
+                .HasOperators("gin_trgm_ops");
+
             builder.Entity<Message>()
             .HasOne(m => m.Sender)
             .WithMany(p => p.MessagesSent)

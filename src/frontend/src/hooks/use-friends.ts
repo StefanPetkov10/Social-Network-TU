@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { friendsService } from "@frontend/services/friends-service";
 import { toast } from "sonner";
 
@@ -43,6 +43,15 @@ export const useInfiniteFriends = (profileId: string) => {
             lastFriendshipDate: meta.lastFriendshipDate
         };
     },
+  });
+};
+
+export const useSearchFriends = (profileId: string, query: string) => {
+  return useQuery({
+    queryKey: ["search-friends", profileId, query],
+    queryFn: () => friendsService.searchFriends(profileId, query, 20),
+    enabled: !!profileId && query.length > 0,
+    staleTime: 0, 
   });
 };
 

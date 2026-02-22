@@ -18,6 +18,13 @@ namespace SocialMedia.Services.Interfaces
             Guid? lastFriendId = null,
             DateTime? lastFriendshipDate = null,
             int take = 20);
+            
+        Task<ApiResponse<IEnumerable<FriendDto>>> SearchFriendsAsync(
+            ClaimsPrincipal userClaims,
+            Guid profileId,
+            string query,
+            int take = 20);
+
         Task<ApiResponse<IEnumerable<PendingFriendDto>>> GetPendingFriendRequestsAsync(
             ClaimsPrincipal userClaims,
             DateTime? lastRequestDate = null,
