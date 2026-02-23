@@ -2,6 +2,7 @@ import api from "../lib/axios";
 import { MemberDto } from "@frontend/lib/types/groups";
 import { ApiResponse } from "@frontend/lib/types/api";
 import { GroupRole } from "@frontend/lib/types/enums";
+import { se } from "date-fns/locale";
 
 export const groupMembersService = {
 
@@ -37,6 +38,14 @@ export const groupMembersService = {
 
     getPendingRequests: async (groupId: string) => {
         const { data } = await api.get<ApiResponse<MemberDto[]>>(`/api/GroupMembership/${groupId}/requests`);
+        return data;
+    },
+
+    searchGroupMembers: async (groupId: string, query: string, take: number = 20) => {
+        const params = new URLSearchParams();
+        params.append("query", query);
+        params.append("take", take.toString());
+        const { data } = await api.get<ApiResponse<MemberDto[]>>(`/api/GroupMembership/${groupId}/members/search?${params.toString()}`);
         return data;
     },
 

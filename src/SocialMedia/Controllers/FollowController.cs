@@ -82,5 +82,27 @@ namespace SocialMedia.Controllers
             }
             return BadRequest(response);
         }
+
+        [HttpGet("{profileId:guid}/followers/search")]
+        public async Task<IActionResult> SearchFollowers(Guid profileId, [FromQuery] string query, [FromQuery] int take = 20)
+        {
+            var response = await _followService.SearchFollowersAsync(User, profileId, query, take);
+            if (!response.Success)
+            {
+                return BadRequest(response);
+            }
+            return Ok(response);
+        }
+
+        [HttpGet("{profileId:guid}/following/search")]
+        public async Task<IActionResult> SearchFollowing(Guid profileId, [FromQuery] string query, [FromQuery] int take = 20)
+        {
+            var response = await _followService.SearchFollowingAsync(User, profileId, query, take);
+            if (!response.Success)
+            {
+                return BadRequest(response);
+            }
+            return Ok(response);
+        }
     }
 }

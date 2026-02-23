@@ -30,5 +30,6 @@ namespace SocialMedia.Services.Interfaces
             int skip = 0);
         Task<ApiResponse<IEnumerable<MemberDto>>> GetOwnerAndAdminsAsync(ClaimsPrincipal userClaims, Guid groupId);
         Task<ApiResponse<IEnumerable<MemberDto>>> GetMutualFriendsInGroupAsync(ClaimsPrincipal userClaims, Guid groupId);
+        Task<ApiResponse<IEnumerable<MemberDto>>> SearchGroupMembersAsync(ClaimsPrincipal userClaims, Guid groupId, string query, int take = 20);
     }
 }

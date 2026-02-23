@@ -51,13 +51,16 @@ import {
 } from "@frontend/components/ui/alert-dialog"; 
 import { getInitials } from "@frontend/lib/utils";
 
+import { useDebounce } from "@frontend/hooks/use-debounce";
+
 import { 
     useGroupMembers, 
     useGroupAdmins, 
     useGroupFriends, 
     useGroupMutualFriends,
     useRemoveMember,
-    useChangeRole
+    useChangeRole,
+    useSearchGroupMembers 
 } from "@frontend/hooks/use-group-members";
 import { 
     useSendFriendRequest, 
@@ -73,10 +76,11 @@ interface GroupMembersViewProps {
 }
 
 export function GroupMembersView({ groupId }: GroupMembersViewProps) {
-  
   const [showAllAdmins, setShowAllAdmins] = useState(false);
   const [showAllMutuals, setShowAllMutuals] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  
+  const debouncedSearch = useDebounce(searchTerm, 300);
 
   const { data: adminsResponse, isLoading: isLoadingAdmins } = useGroupAdmins(groupId);
   const admins = useMemo(() => {
@@ -97,6 +101,11 @@ export function GroupMembersView({ groupId }: GroupMembersViewProps) {
       isLoading: isLoadingAll 
   } = useGroupMembers(groupId);
 
+  const { 
+      data: searchResults, 
+      isFetching: isSearching 
+  } = useSearchGroupMembers(groupId, debouncedSearch);
+
   const allMembersRaw = useMemo(() => {
       return membersData?.pages.flatMap((page) => page.data ?? []) || [];
   }, [membersData]);
@@ -104,11 +113,10 @@ export function GroupMembersView({ groupId }: GroupMembersViewProps) {
   const { ref, inView } = useInView({ threshold: 0, rootMargin: '100px' });
 
   useEffect(() => {
-    if (inView && hasNextPage && !isFetchingNextPage) {
+    if (inView && hasNextPage && !isFetchingNextPage && !debouncedSearch) {
       fetchNextPage();
     }
-  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
-
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage, debouncedSearch]);
 
   const currentUserMember = useMemo(() => {
       return admins.find(m => m.isMe) || 
@@ -119,9 +127,12 @@ export function GroupMembersView({ groupId }: GroupMembersViewProps) {
 
   const viewerRole = currentUserMember?.role;
 
-  const masterList = useMemo(() => {
+  const displayMembers = useMemo(() => {
+    if (debouncedSearch.length > 0 && searchResults?.data) {
+        return searchResults.data;
+    }
     return allMembersRaw.filter(m => !m.isMe);
-  }, [allMembersRaw]);
+  }, [allMembersRaw, searchResults, debouncedSearch]);
 
   const totalMembersCount = membersData?.pages[0]?.meta?.totalCount ?? 0;
   const visibleAdmins = showAllAdmins ? admins : admins.slice(0, 3);
@@ -150,7 +161,9 @@ export function GroupMembersView({ groupId }: GroupMembersViewProps) {
               Членове
             </h2>
             <p className="text-sm text-gray-500 ml-7">
-               {totalMembersCount > 0 ? totalMembersCount : "..."} общо
+               {debouncedSearch 
+                  ? `${displayMembers.length} намерени` 
+                  : `${totalMembersCount > 0 ? totalMembersCount : "..."} общо`}
             </p>
           </div>
           
@@ -162,11 +175,14 @@ export function GroupMembersView({ groupId }: GroupMembersViewProps) {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+            {isSearching && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-600 animate-spin" />
+            )}
           </div>
         </div>
       </div>
 
-       {currentUserMember && (
+       {!debouncedSearch && currentUserMember && (
          <div className="bg-white rounded-xl shadow-sm border border-blue-100/50 p-1">
           <div className="px-4 py-2 border-b border-gray-50 flex items-center gap-2">
             <UserCircle2 className="w-4 h-4 text-blue-600" />
@@ -176,7 +192,7 @@ export function GroupMembersView({ groupId }: GroupMembersViewProps) {
         </div>
        )}
 
-      {admins.length > 0 && (
+      {!debouncedSearch && admins.length > 0 && (
         <MemberSection 
           title="Администратори и модератори" 
           icon={<ShieldAlert className="w-5 h-5 text-indigo-500" />}
@@ -202,7 +218,7 @@ export function GroupMembersView({ groupId }: GroupMembersViewProps) {
         </MemberSection>
       )}
 
-      {visibleFriends.length > 0 && (
+      {!debouncedSearch && visibleFriends.length > 0 && (
         <MemberSection 
           title="Топ Приятели" 
           icon={<Star className="w-5 h-5 text-blue-400 fill-sky-200" />} 
@@ -215,7 +231,7 @@ export function GroupMembersView({ groupId }: GroupMembersViewProps) {
         </MemberSection>
       )}
 
-      {mutuals.length > 0 && (
+      {!debouncedSearch && mutuals.length > 0 && (
         <MemberSection 
           title="С общи приятели"
           icon={<Users2 className="w-5 h-5 text-cyan-600" />}
@@ -240,13 +256,13 @@ export function GroupMembersView({ groupId }: GroupMembersViewProps) {
         <div className="flex items-center justify-between px-1">
           <h3 className="font-bold text-gray-900 text-lg flex items-center gap-2">
             <ListFilter className="w-5 h-5 text-gray-500" />
-            Всички членове
+            {debouncedSearch ? "Резултати от търсенето" : "Всички членове"}
           </h3>
         </div>
         
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-50">
-          {masterList.length > 0 ? (
-            masterList.map((member) => (
+          {displayMembers.length > 0 ? (
+            displayMembers.map((member) => (
               <div key={member.profileId} className="p-1 hover:bg-gray-50/80 transition-colors">
                 <MemberCard 
                     member={member} 
@@ -259,12 +275,12 @@ export function GroupMembersView({ groupId }: GroupMembersViewProps) {
             ))
           ) : (
             <div className="p-8 text-center text-gray-500 text-sm">
-                Няма други членове.
+                {debouncedSearch ? `Няма намерени резултати за "${searchTerm}".` : "Няма други членове."}
             </div>
           )}
         </div>
 
-        {hasNextPage && (
+        {hasNextPage && !debouncedSearch && (
             <div ref={ref} className="py-6 flex flex-col items-center justify-center text-gray-400 gap-2">
             {isFetchingNextPage ? (
                 <>

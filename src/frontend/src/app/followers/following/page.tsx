@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useInView } from 'react-intersection-observer';
-import { Search, UserCheck, Users } from "lucide-react"; 
+import { Search, UserCheck, Users, Loader2 } from "lucide-react"; 
 
 import { SiteHeader } from '@frontend/components/site-header';
 import { SidebarProvider } from "@frontend/components/ui/sidebar";
@@ -13,7 +13,8 @@ import { FollowingCard } from "@frontend/components/followers-forms/following-ca
 import { FriendProfileView } from "@frontend/components/friends-forms/friend-profile-view";
 
 import { useProfile } from "@frontend/hooks/use-profile";
-import { useInfiniteFollowing, useUnfollowUser } from "@frontend/hooks/use-followers"; 
+import { useInfiniteFollowing, useUnfollowUser, useSearchFollowing } from "@frontend/hooks/use-followers"; 
+import { useDebounce } from "@frontend/hooks/use-debounce";
 import { useQueryClient } from "@tanstack/react-query";
 import ProtectedRoute from '@frontend/components/protected-route';
 import { FollowUser } from "@frontend/lib/types/followers";
@@ -21,6 +22,8 @@ import { FollowUser } from "@frontend/lib/types/followers";
 export default function FollowingPage() {
   const [selectedProfile, setSelectedProfile] = useState<FollowUser | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  const debouncedSearch = useDebounce(searchQuery, 300);
   
   const queryClient = useQueryClient();
   const { data: profile } = useProfile();
@@ -33,6 +36,11 @@ export default function FollowingPage() {
     isLoading 
   } = useInfiniteFollowing(profile?.id || ""); 
   
+  const { 
+    data: searchResults, 
+    isFetching: isSearching 
+  } = useSearchFollowing(profile?.id || "", debouncedSearch);
+  
   const { ref, inView } = useInView();
   
   const unfollowMutation = useUnfollowUser();
@@ -42,19 +50,18 @@ export default function FollowingPage() {
     return list?.filter((f): f is FollowUser => !!f) || [];
   }, [rawFollowing]);
 
-  const filteredFollowing = useMemo(() => {
-    if (!searchQuery) return followingList;
-    return followingList.filter((person) => 
-      (person.displayFullName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (person.username || "").toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [followingList, searchQuery]);
+  const displayFollowing = useMemo(() => {
+    if (debouncedSearch.length > 0 && searchResults?.data) {
+        return searchResults.data;
+    }
+    return followingList;
+  }, [followingList, searchResults, debouncedSearch]);
 
   useEffect(() => {
-    if (inView && hasNextPage && !isFetchingNextPage && !selectedProfile && !searchQuery) {
+    if (inView && hasNextPage && !isFetchingNextPage && !selectedProfile && !debouncedSearch) {
       fetchNextPage();
     }
-  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage, selectedProfile, searchQuery]);
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage, selectedProfile, debouncedSearch]);
 
   const userForLayout = useMemo(() => ({
     name: profile ? `${profile.fullName || ""}` : "Потребител",
@@ -70,6 +77,7 @@ export default function FollowingPage() {
               if (selectedProfile?.profileId === id) setSelectedProfile(null);
               queryClient.invalidateQueries({ queryKey: ["following-list"] });
               queryClient.invalidateQueries({ queryKey: ["feed"] });
+              queryClient.invalidateQueries({ queryKey: ["search-following"] });
           }
       });
   };
@@ -109,7 +117,7 @@ export default function FollowingPage() {
                                     <UserCheck className="h-7 w-7 text-indigo-600" />
                                     Последвани
                                     <span className="text-gray-400 font-normal text-lg ml-2">
-                                        ({filteredFollowing.length})
+                                        ({displayFollowing.length})
                                     </span>
                                 </h1>
                                 <p className="text-gray-500 mt-1">Хората, чието съдържание виждате във вашия фийд.</p>
@@ -123,6 +131,9 @@ export default function FollowingPage() {
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                 />
+                                {isSearching && (
+                                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-indigo-600 animate-spin" />
+                                )}
                             </div>
                         </div>
                     </div>
@@ -133,7 +144,7 @@ export default function FollowingPage() {
                                 <div key={i} className="h-72 bg-gray-200 animate-pulse rounded-xl" />
                             ))}
                         </div>
-                    ) : filteredFollowing.length === 0 ? (
+                    ) : displayFollowing.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-20 opacity-70">
                             <div className="bg-gray-100 p-6 rounded-full mb-4">
                                 <Users className="size-12 text-gray-400" />
@@ -147,7 +158,7 @@ export default function FollowingPage() {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                            {filteredFollowing.map((person: FollowUser) => (
+                            {displayFollowing.map((person: FollowUser) => (
                                 <FollowingCard 
                                     key={person.profileId || Math.random()} 
                                     person={person}
@@ -156,13 +167,13 @@ export default function FollowingPage() {
                                 />
                             ))}
                             
-                            {isFetchingNextPage && !searchQuery && [...Array(4)].map((_, i) => (
+                            {isFetchingNextPage && !debouncedSearch && [...Array(4)].map((_, i) => (
                                 <div key={`loader-${i}`} className="h-72 bg-gray-200 animate-pulse rounded-xl" />
                             ))}
                         </div>
                     )}
                     
-                    {!searchQuery && <div ref={ref} className="h-10 w-full mt-4" />}
+                    {!debouncedSearch && <div ref={ref} className="h-10 w-full mt-4" />}
                 </div>
             )} 
           </div>

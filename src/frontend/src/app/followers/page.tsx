@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useInView } from 'react-intersection-observer';
-import { Search, Users, UserX } from "lucide-react"; 
+import { Search, Users, UserX, Loader2 } from "lucide-react"; 
 
 import { SiteHeader } from '@frontend/components/site-header';
 import { SidebarProvider } from "@frontend/components/ui/sidebar";
@@ -13,7 +13,8 @@ import { FollowerCard } from "@frontend/components/followers-forms/follower-card
 import { FriendProfileView } from "@frontend/components/friends-forms/friend-profile-view";
 
 import { useProfile } from "@frontend/hooks/use-profile";
-import { useInfiniteFollowers, useFollowUser, useUnfollowUser } from "@frontend/hooks/use-followers"; 
+import { useInfiniteFollowers, useFollowUser, useUnfollowUser, useSearchFollowers } from "@frontend/hooks/use-followers"; 
+import { useDebounce } from "@frontend/hooks/use-debounce";
 import { useQueryClient } from "@tanstack/react-query";
 import ProtectedRoute from '@frontend/components/protected-route';
 
@@ -23,6 +24,8 @@ import { ProfilePreviewData } from "@frontend/lib/types/profile-view";
 export default function MyFollowersPage() {
   const [selectedProfile, setSelectedProfile] = useState<ProfilePreviewData | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  const debouncedSearch = useDebounce(searchQuery, 300);
   
   const queryClient = useQueryClient();
   const { data: profile } = useProfile();
@@ -34,6 +37,11 @@ export default function MyFollowersPage() {
     isFetchingNextPage,
     isLoading 
   } = useInfiniteFollowers(profile?.id || ""); 
+
+  const { 
+    data: searchResults, 
+    isFetching: isSearching 
+  } = useSearchFollowers(profile?.id || "", debouncedSearch);
   
   const { ref, inView } = useInView();
   
@@ -45,19 +53,18 @@ export default function MyFollowersPage() {
       return list?.filter((f): f is FollowUser => !!f) || [];
   }, [rawFollowers]);
 
-  const filteredFollowers = useMemo(() => {
-    if (!searchQuery) return followersList;
-    return followersList.filter((follower) => 
-       (follower.displayFullName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-       (follower.username || "").toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [followersList, searchQuery]);
+  const displayFollowers = useMemo(() => {
+    if (debouncedSearch.length > 0 && searchResults?.data) {
+        return searchResults.data;
+    }
+    return followersList;
+  }, [followersList, searchResults, debouncedSearch]);
 
   useEffect(() => {
-    if (inView && hasNextPage && !isFetchingNextPage && !selectedProfile && !searchQuery) {
+    if (inView && hasNextPage && !isFetchingNextPage && !selectedProfile && !debouncedSearch) {
       fetchNextPage();
     }
-  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage, selectedProfile, searchQuery]);
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage, selectedProfile, debouncedSearch]);
 
   const userForLayout = useMemo(() => ({
     name: profile ? `${profile.fullName || ""}` : "Потребител",
@@ -72,6 +79,7 @@ export default function MyFollowersPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["followers-list"] });
             queryClient.invalidateQueries({ queryKey: ["following-list"] });
+            queryClient.invalidateQueries({ queryKey: ["search-followers"] });
         }
     });
   };
@@ -83,6 +91,7 @@ export default function MyFollowersPage() {
                 const currentId = (selectedProfile as any)?.profileId || (selectedProfile as any)?.id;
                 if (currentId === id) setSelectedProfile(null);
                 queryClient.invalidateQueries({ queryKey: ["followers-list"] });
+                queryClient.invalidateQueries({ queryKey: ["search-followers"] });
             }
         });
     }
@@ -123,7 +132,7 @@ export default function MyFollowersPage() {
                                     <Users className="h-7 w-7 text-primary" />
                                     Моите последователи
                                     <span className="text-gray-400 font-normal text-lg ml-2">
-                                        ({filteredFollowers.length})
+                                        ({displayFollowers.length})
                                     </span>
                                 </h1>
                                 <p className="text-gray-500 mt-1">Хората, които са се абонирали за вашето съдържание.</p>
@@ -137,6 +146,9 @@ export default function MyFollowersPage() {
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                 />
+                                {isSearching && (
+                                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary animate-spin" />
+                                )}
                             </div>
                         </div>
                     </div>
@@ -147,7 +159,7 @@ export default function MyFollowersPage() {
                                 <div key={i} className="h-72 bg-gray-200 animate-pulse rounded-xl" />
                             ))}
                         </div>
-                    ) : filteredFollowers.length === 0 ? (
+                    ) : displayFollowers.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-20 opacity-70">
                             <div className="bg-gray-100 p-6 rounded-full mb-4">
                                 <UserX className="size-12 text-gray-400" />
@@ -161,7 +173,7 @@ export default function MyFollowersPage() {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                            {filteredFollowers.map((follower) => (
+                            {displayFollowers.map((follower) => (
                                 <FollowerCard 
                                     key={follower.profileId} 
                                     follower={follower}
@@ -172,13 +184,13 @@ export default function MyFollowersPage() {
                                 />
                             ))}
                             
-                            {isFetchingNextPage && !searchQuery && [...Array(4)].map((_, i) => (
+                            {isFetchingNextPage && !debouncedSearch && [...Array(4)].map((_, i) => (
                                 <div key={`loader-${i}`} className="h-72 bg-gray-200 animate-pulse rounded-xl" />
                             ))}
                         </div>
                     )}
                     
-                    {!searchQuery && <div ref={ref} className="h-10 w-full mt-4" />}
+                    {!debouncedSearch && <div ref={ref} className="h-10 w-full mt-4" />}
                 </div>
             )} 
           </div>

@@ -26,5 +26,8 @@ namespace SocialMedia.Services.Interfaces
             ClaimsPrincipal userClaims,
             int skip = 0,
             int take = 10);
+
+        Task<ApiResponse<IEnumerable<FollowDto>>> SearchFollowersAsync(ClaimsPrincipal userClaims, Guid targetProfileId, string query, int take = 20);
+        Task<ApiResponse<IEnumerable<FollowDto>>> SearchFollowingAsync(ClaimsPrincipal userClaims, Guid targetProfileId, string query, int take = 20);
     }
 }

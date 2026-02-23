@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { followersService } from "@frontend/services/followers-servise";
 import { toast } from "sonner";
 
@@ -41,6 +41,24 @@ export const useInfiniteFollowerSuggestions = () => {
             return lastPage.meta?.nextCursor ?? undefined;
         },
         select: (data) => data.pages.flatMap((page) => page.data),
+    });
+}
+
+export const useSearchFollowers = (profileId: string, query: string) => {
+    return useQuery({
+        queryKey: ["search-followers", profileId, query],
+        queryFn: () => followersService.searchFollowers(profileId, query, 20),
+        enabled: !!profileId && query.length > 0,
+        staleTime: 0, 
+    });
+}
+
+export const useSearchFollowing = (profileId: string, query: string) => {
+    return useQuery({
+        queryKey: ["search-following", profileId, query],
+        queryFn: () => followersService.searchFollowing(profileId, query, 20),
+        enabled: !!profileId && query.length > 0,
+        staleTime: 0, 
     });
 }
 

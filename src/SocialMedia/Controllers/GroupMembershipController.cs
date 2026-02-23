@@ -79,6 +79,14 @@ namespace SocialMedia.Controllers
             return Ok(response);
         }
 
+        [HttpGet("members/search")]
+        public async Task<IActionResult> SearchGroupMembers(Guid groupId, [FromQuery] string query, [FromQuery] int take = 20)
+        {
+            var response = await _groupMembershipService.SearchGroupMembersAsync(User, groupId, query, take);
+            if (!response.Success) return BadRequest(response);
+            return Ok(response);
+        }
+
         [HttpPost("join")]
         public async Task<IActionResult> JoinGroup([FromRoute] Guid groupId)
         {

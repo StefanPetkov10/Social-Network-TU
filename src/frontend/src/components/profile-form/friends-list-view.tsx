@@ -45,8 +45,10 @@ import {
     useSendFriendRequest, 
     useCancelFriendRequest, 
     useAcceptFriendRequest, 
-    useDeclineFriendRequest 
+    useDeclineFriendRequest,
+    useSearchFriends 
 } from "@frontend/hooks/use-friends";
+import { useDebounce } from "@frontend/hooks/use-debounce";
 import { useProfile } from "@frontend/hooks/use-profile";
 import { FriendDto } from "@frontend/lib/types/friends";
 import { toast } from "sonner";
@@ -57,10 +59,11 @@ interface FriendsListViewProps {
 
 export function FriendsListView({ profileId }: FriendsListViewProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 300);
+  
   const [friendToRemove, setFriendToRemove] = useState<FriendDto | null>(null);
   
   const { data: currentUserProfile } = useProfile();
-  
   const isViewingMyProfile = currentUserProfile?.id === profileId;
 
   const { 
@@ -70,6 +73,11 @@ export function FriendsListView({ profileId }: FriendsListViewProps) {
       isFetchingNextPage, 
       isLoading 
   } = useInfiniteFriends(profileId);
+
+  const { 
+      data: searchResults, 
+      isFetching: isSearching 
+  } = useSearchFriends(profileId, debouncedSearch);
 
   const { mutate: removeFriend, isPending: isRemoving } = useRemoveFriend();
 
@@ -88,24 +96,20 @@ export function FriendsListView({ profileId }: FriendsListViewProps) {
       return firstPage.meta?.totalCount ?? firstPage.totalCount ?? firstPage.total ?? allFriends.length;
   }, [data, allFriends.length]);
 
-  const filteredFriends = useMemo(() => {
-      if (!searchTerm) return allFriends;
-      const lowerTerm = searchTerm.toLowerCase();
-      
-      return allFriends.filter((f) => {
-          const name = (f.displayFullName || "").toLowerCase();
-          const username = (f.username || "").toLowerCase();
-          return name.includes(lowerTerm) || username.includes(lowerTerm);
-      });
-  }, [allFriends, searchTerm]);
+  const displayFriends = useMemo(() => {
+      if (debouncedSearch.length > 0 && searchResults?.data) {
+          return searchResults.data;
+      }
+      return allFriends;
+  }, [allFriends, searchResults, debouncedSearch]);
 
   const { ref, inView } = useInView({ threshold: 0, rootMargin: '100px' });
 
   useEffect(() => {
-    if (inView && hasNextPage && !isFetchingNextPage) {
+    if (inView && hasNextPage && !isFetchingNextPage && !debouncedSearch) {
       fetchNextPage();
     }
-  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage, debouncedSearch]);
 
   const confirmRemoveFriend = () => {
       if (friendToRemove) {
@@ -145,13 +149,18 @@ export function FriendsListView({ profileId }: FriendsListViewProps) {
           </div>
           
           <div className="relative w-full md:w-72">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><Search className="w-4 h-4" /></div>
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <Search className="w-4 h-4" />
+            </div>
             <Input 
               placeholder="Търсене..." 
               className="pl-9 bg-gray-100 border-transparent focus-visible:ring-primary/20 rounded-full h-10 transition-all hover:bg-gray-200/70 focus:bg-white focus:border-gray-200"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+            {isSearching && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary animate-spin" />
+            )}
           </div>
         </div>
       </div>
@@ -165,8 +174,8 @@ export function FriendsListView({ profileId }: FriendsListViewProps) {
         </div>
         
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-50">
-          {filteredFriends.length > 0 ? (
-            filteredFriends.map((friend) => (
+          {displayFriends.length > 0 ? (
+            displayFriends.map((friend) => (
               <div key={friend.profileId || friend.username} className="p-1 hover:bg-gray-50/80 transition-colors">
                 <FriendCard 
                     friend={friend} 
@@ -182,7 +191,7 @@ export function FriendsListView({ profileId }: FriendsListViewProps) {
           )}
         </div>
 
-        {hasNextPage && (
+        {hasNextPage && !debouncedSearch && (
             <div ref={ref} className="py-6 flex flex-col items-center justify-center text-gray-400 gap-2">
             {isFetchingNextPage ? (
                 <>

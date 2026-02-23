@@ -72,6 +72,15 @@ export const useGroupRequests = (groupId: string, options?: { enabled?: boolean 
     });
 };
 
+export const useSearchGroupMembers = (groupId: string, query: string) => {
+    return useQuery({
+        queryKey: ["search-group-members", groupId, query],
+        queryFn: () => groupMembersService.searchGroupMembers(groupId, query, 20),
+        enabled: !!groupId && query.length > 0, 
+        staleTime: 0,
+    });
+};
+
 
 export const useJoinGroup = () => {
     const queryClient = useQueryClient();
