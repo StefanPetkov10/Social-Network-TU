@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using SocialMedia.Common;
 using SocialMedia.Database;
 using SocialMedia.DTOs.Profile;
+using SocialMedia.Extensions;
 using SocialMedia.Services.Interfaces;
 
 namespace SocialMedia.Services
@@ -22,18 +23,19 @@ namespace SocialMedia.Services
             {
                 return ApiResponse<List<ProfileDto>>.SuccessResponse(new List<ProfileDto>(), "No query provided");
             }
+            var cleanQuery = EscapeLikePattern.EscapeLikePatternMethod(query.Trim().ToLower());
 
             // PostgreSQL pg_trgm Fuzzy search
             var profilesInfo = await _context.Profiles
                 .AsNoTracking()
                 .Include(p => p.User)
                 // Filter by trigram similarity threshold (default is usually > 0.3)
-                .Where(p => EF.Functions.TrigramsWordSimilarity(p.FirstName + " " + p.LastName, query) > 0.3 ||
-                            EF.Functions.TrigramsWordSimilarity(p.User.UserName, query) > 0.3)
+                .Where(p => EF.Functions.TrigramsWordSimilarity(p.FirstName + " " + p.LastName, cleanQuery) > 0.3 ||
+                            EF.Functions.TrigramsWordSimilarity(p.User.UserName, cleanQuery) > 0.3)
                 // Order by similarity (closest match first)
                 .OrderByDescending(p => Math.Max(
-                    EF.Functions.TrigramsWordSimilarity(p.FirstName + " " + p.LastName, query),
-                    EF.Functions.TrigramsWordSimilarity(p.User.UserName, query)
+                    EF.Functions.TrigramsWordSimilarity(p.FirstName + " " + p.LastName, cleanQuery),
+                    EF.Functions.TrigramsWordSimilarity(p.User.UserName, cleanQuery)
                 ))
                 .Select(p => new ProfileDto
                 {
@@ -53,8 +55,8 @@ namespace SocialMedia.Services
                 profilesInfo = await _context.Profiles
                    .AsNoTracking()
                    .Include(p => p.User)
-                   .Where(p => EF.Functions.ILike(p.FirstName + " " + p.LastName, $"%{query}%") ||
-                               EF.Functions.ILike(p.User.UserName, $"%{query}%"))
+                   .Where(p => EF.Functions.ILike(p.FirstName + " " + p.LastName, $"%{cleanQuery}%") ||
+                               EF.Functions.ILike(p.User.UserName, $"%{cleanQuery}%"))
                    .Select(p => new ProfileDto
                    {
                        Id = p.Id,

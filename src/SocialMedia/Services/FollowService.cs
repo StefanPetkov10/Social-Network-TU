@@ -7,6 +7,7 @@ using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database.Models;
 using SocialMedia.Database.Models.Enums;
 using SocialMedia.DTOs.Follow;
+using SocialMedia.Extensions;
 using SocialMedia.Services.Interfaces;
 
 namespace SocialMedia.Services
@@ -191,7 +192,7 @@ namespace SocialMedia.Services
             if (string.IsNullOrWhiteSpace(query))
                 return ApiResponse<IEnumerable<FollowDto>>.SuccessResponse(new List<FollowDto>(), "Empty query.");
 
-            var cleanQuery = query.Trim().ToLower();
+            var cleanQuery = EscapeLikePattern.EscapeLikePatternMethod(query.Trim().ToLower());
 
             var dbQuery = _followRepository.QueryNoTracking()
                 .Where(f => f.FollowingId == targetProfile.Id);
@@ -230,7 +231,7 @@ namespace SocialMedia.Services
             if (string.IsNullOrWhiteSpace(query))
                 return ApiResponse<IEnumerable<FollowDto>>.SuccessResponse(new List<FollowDto>(), "Empty query.");
 
-            var cleanQuery = query.Trim().ToLower();
+            var cleanQuery = EscapeLikePattern.EscapeLikePatternMethod(query.Trim().ToLower());
 
             var dbQuery = _followRepository.QueryNoTracking()
                 .Where(f => f.FollowerId == targetProfile.Id);

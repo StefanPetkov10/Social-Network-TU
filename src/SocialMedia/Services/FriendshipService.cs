@@ -7,6 +7,7 @@ using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database.Models;
 using SocialMedia.Database.Models.Enums;
 using SocialMedia.DTOs.Friendship;
+using SocialMedia.Extensions;
 using SocialMedia.Services.Interfaces;
 
 namespace SocialMedia.Services
@@ -432,7 +433,7 @@ namespace SocialMedia.Services
                 return ApiResponse<IEnumerable<FriendDto>>.SuccessResponse(new List<FriendDto>(), "Empty query.");
             }
 
-            var cleanQuery = query.Trim().ToLower();
+            var cleanQuery = EscapeLikePattern.EscapeLikePatternMethod(query.Trim().ToLower());
 
             var dbQuery = _friendshipRepository.QueryNoTracking()
                 .Where(f => (f.RequesterId == listOwnerProfile.Id || f.AddresseeId == listOwnerProfile.Id)

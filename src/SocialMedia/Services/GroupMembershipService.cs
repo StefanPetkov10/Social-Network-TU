@@ -6,6 +6,7 @@ using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database.Models;
 using SocialMedia.Database.Models.Enums;
 using SocialMedia.DTOs.Group;
+using SocialMedia.Extensions;
 using SocialMedia.Services.Interfaces;
 
 namespace SocialMedia.Services
@@ -287,7 +288,7 @@ namespace SocialMedia.Services
             if (string.IsNullOrWhiteSpace(query))
                 return ApiResponse<IEnumerable<MemberDto>>.SuccessResponse(new List<MemberDto>(), "Empty query.");
 
-            var cleanQuery = query.Trim().ToLower();
+            var cleanQuery = EscapeLikePattern.EscapeLikePatternMethod(query.Trim().ToLower());
 
             var dbQuery = _groupMemberRepository.QueryNoTracking()
                 .Where(m => m.GroupId == groupId && m.Status == MembershipStatus.Approved);
