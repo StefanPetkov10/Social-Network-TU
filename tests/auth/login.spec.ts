@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Login Page', () => {
 
-       test.beforeEach(async ({ page }) => {
+    test.beforeEach(async ({ page }) => {
         await page.goto('/auth/login');
         await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
     });
@@ -39,7 +39,7 @@ test.describe('Login Page', () => {
 
         await page.getByRole('button', { name: 'Login', exact: true }).click();
 
-        const errorMessage = page.locator('p.text-red-600');
+        const errorMessage = page.locator('p[role="alert"]');
         await expect(errorMessage).toBeVisible({ timeout: 10_000 });
     });
 
@@ -61,7 +61,7 @@ test.describe('Login Page', () => {
     test('should show error when clicking forgot password without email', async ({ page }) => {
         await page.getByRole('button', { name: 'Forgot your password?' }).click();
 
-        const errorMessage = page.locator('p.text-red-600');
+        const errorMessage = page.locator('p[role="alert"]');
         await expect(errorMessage).toBeVisible();
         await expect(errorMessage).toContainText('Please enter your email');
     });
@@ -71,7 +71,7 @@ test.describe('Login Page', () => {
 
         await page.getByRole('button', { name: 'Forgot your password?' }).click();
 
-        const errorMessage = page.locator('p.text-red-600');
+        const errorMessage = page.locator('p[role="alert"]');
         await expect(errorMessage).toBeVisible();
         await expect(errorMessage).toContainText('valid email');
     });

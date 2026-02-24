@@ -49,7 +49,7 @@ export function OTPForm({ className, ...props }: React.ComponentProps<"div">) {
       { sessionToken, code: otp },
       {
         onSuccess: () => {
-           router.push("/auth/reset-password");
+          router.push("/auth/reset-password");
         },
         onError: (err) => setErrorMessage(getAxiosErrorMessage(err)),
       }
@@ -114,7 +114,7 @@ export function OTPForm({ className, ...props }: React.ComponentProps<"div">) {
               </Field>
 
               {errorMessage && (
-                <p className="text-red-600 text-sm text-center mt-2">{errorMessage}</p>
+                <p role="alert" className="text-red-600 text-sm text-center mt-2">{errorMessage}</p>
               )}
               
               {successMessage && (

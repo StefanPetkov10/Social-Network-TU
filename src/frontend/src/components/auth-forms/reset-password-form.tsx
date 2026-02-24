@@ -122,7 +122,7 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
               </Field>
 
               {errorMessage && (
-                <p className="text-red-600 text-sm text-center mt-2">{errorMessage}</p>
+                <p role="alert" className="text-red-600 text-sm text-center mt-2">{errorMessage}</p>
               )}
 
               <Field className="mt-4">
@@ -136,7 +136,7 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
               </Field>
 
               <FieldDescription className="text-center mt-4">
-                 <a href="/auth/login" className="text-primary hover:underline">
+                <a href="/auth/login" className="text-primary hover:underline">
                   Back to Login
                 </a>
               </FieldDescription>

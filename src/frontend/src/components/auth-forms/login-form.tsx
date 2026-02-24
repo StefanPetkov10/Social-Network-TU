@@ -131,7 +131,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
               </Field>
 
               {errorMessage && (
-                <p className="text-red-600 text-sm text-center">{errorMessage}</p>
+                <p role="alert" className="text-red-600 text-sm text-center">{errorMessage}</p>
               )}
 
               <Field>

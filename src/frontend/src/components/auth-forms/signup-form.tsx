@@ -22,7 +22,7 @@ import { Gender } from "@frontend/lib/types/enums";
 
 import { useRegistrationStore } from "@frontend/stores/useRegistrationStore";
 
-export default function SignupForm({...props }) {
+export default function SignupForm({ ...props }) {
   const router = useRouter();
   const register = useRegister();
 
@@ -78,11 +78,11 @@ export default function SignupForm({...props }) {
         new Date().getFullYear() -
         dob.getFullYear() -
         (new Date() <
-        new Date(
-          dob.getFullYear() + (new Date().getFullYear() - dob.getFullYear()),
-          dob.getMonth(),
-          dob.getDate()
-        )
+          new Date(
+            dob.getFullYear() + (new Date().getFullYear() - dob.getFullYear()),
+            dob.getMonth(),
+            dob.getDate()
+          )
           ? 1
           : 0);
 
@@ -127,7 +127,7 @@ export default function SignupForm({...props }) {
     });
   }
 
- return (
+  return (
     <div className={cn("flex flex-col gap-6", props.className)} {...props}>
       <Card className="overflow-hidden p-0">
         <CardContent className="grid p-0 md:grid-cols-2">
@@ -210,15 +210,15 @@ export default function SignupForm({...props }) {
                 <FieldDescription>Must be at least 8 characters long.</FieldDescription>
               </Field>
 
-              {localError && <div className="text-sm text-red-600">{localError}</div>}
+              {localError && <p role="alert" className="text-red-600 text-sm text-center">{localError}</p>}
 
-            <Button
-              type="submit"
-              disabled={register.isPending}
-              className="bg-primary hover:underline text-primary-foreground"
-            >
-              {register.isPending ? "Creating..." : "Create Account"}
-            </Button>
+              <Button
+                type="submit"
+                disabled={register.isPending}
+                className="bg-primary hover:underline text-primary-foreground"
+              >
+                {register.isPending ? "Creating..." : "Create Account"}
+              </Button>
 
 
               <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">Or continue with</FieldSeparator>
@@ -235,19 +235,19 @@ export default function SignupForm({...props }) {
               src="/TU-images/tu-icon.png"
               alt="Image"
               fill
-             className="object-contain object-center bg-white"
+              className="object-contain object-center bg-white"
               priority
             />
-       </div>
+          </div>
 
         </CardContent>
       </Card>
 
-     <FieldDescription className="px-6 text-center">
-       By clicking continue, you agree to our <a href="#" className="text-primary hover:text-primary-hover">Terms of Service</a> and <a href="#" className="text-primary hover:text-primary-hover">Privacy Policy</a>.
-    </FieldDescription>
+      <FieldDescription className="px-6 text-center">
+        By clicking continue, you agree to our <a href="#" className="text-primary hover:text-primary-hover">Terms of Service</a> and <a href="#" className="text-primary hover:text-primary-hover">Privacy Policy</a>.
+      </FieldDescription>
 
     </div>
   );
 }
-  
+
