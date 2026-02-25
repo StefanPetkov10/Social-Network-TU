@@ -3,7 +3,7 @@
 import { useState, useEffect, FormEvent, use } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { toast } from "sonner"; 
+import { toast } from "sonner";
 
 import { cn, getAxiosErrorMessage } from "@frontend/lib/utils";
 import { Button } from "@frontend/components/ui/button";
@@ -25,17 +25,30 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [accessChecked, setAccessChecked] = useState(false);
 
   useEffect(() => {
+    const authData = sessionStorage.getItem("auth-storage");
+    const isAuthenticated = authData && authData.includes("token");
+
+    if (isAuthenticated) {
+      router.replace("/");
+      return;
+    }
+
     const token = sessionStorage.getItem("resetPasswordSessionToken");
     if (!token) {
-      toast.error("Session expired", {
-        description: "Please request a new password reset link.",
-      });
-    } else {
-      setSessionToken(token);
+      router.replace("/auth/login");
+      return;
     }
+
+    setSessionToken(token);
+    setAccessChecked(true);
   }, [router]);
+
+  if (!accessChecked) {
+    return null;
+  }
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -87,7 +100,7 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card className="overflow-hidden p-0">
         <CardContent className="grid p-0 md:grid-cols-2">
-          
+
           <form onSubmit={handleSubmit} className="p-6 md:p-8">
             <FieldGroup>
               <div className="flex flex-col items-center gap-2 text-center mb-6">
@@ -126,9 +139,9 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
               )}
 
               <Field className="mt-4">
-                <Button 
-                  type="submit" 
-                  className="w-full" 
+                <Button
+                  type="submit"
+                  className="w-full"
                   disabled={resetPassword.isPending || !sessionToken}
                 >
                   {resetPassword.isPending ? "Resetting..." : "Reset Password"}
@@ -152,7 +165,7 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
               priority
             />
           </div>
-          
+
         </CardContent>
       </Card>
 

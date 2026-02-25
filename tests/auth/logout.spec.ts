@@ -1,15 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { loginAsTestUser } from '../helpers';
 
 test.describe('Logout', () => {
 
     test.beforeEach(async ({ page }) => {
-        await page.goto('/auth/login');
-        await page.getByRole('textbox', { name: 'Username or Email' }).fill(process.env.TEST_USER_EMAIL!);
-        await page.getByRole('textbox', { name: 'Password' }).fill(process.env.TEST_USER_PASSWORD!);
-        await page.getByRole('button', { name: 'Login', exact: true }).click();
-
-        await page.waitForURL('/', { timeout: 15_000 });
-        await expect(page).toHaveURL(/\/$/);
+        await loginAsTestUser(page);
     });
 
     test('should display user dropdown menu with logout option', async ({ page }) => {

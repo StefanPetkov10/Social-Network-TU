@@ -13,23 +13,38 @@ import { useVerifyForgotPasswordOTP, useResendOTP } from "@frontend/hooks/use-au
 
 export function OTPForm({ className, ...props }: React.ComponentProps<"div">) {
   const router = useRouter();
-  
+
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [otp, setOtp] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [accessChecked, setAccessChecked] = useState(false);
 
   const verifyOTP = useVerifyForgotPasswordOTP();
   const resendOTP = useResendOTP();
 
   useEffect(() => {
+    const authData = sessionStorage.getItem("auth-storage");
+    const isAuthenticated = authData && authData.includes("token");
+
+    if (isAuthenticated) {
+      router.replace("/");
+      return;
+    }
+
     const token = sessionStorage.getItem("resetPasswordSessionToken");
     if (!token) {
-      setErrorMessage("Session expired or invalid. Please try again.");
-    } else {
-      setSessionToken(token);
+      router.replace("/auth/login");
+      return;
     }
+
+    setSessionToken(token);
+    setAccessChecked(true);
   }, [router]);
+
+  if (!accessChecked) {
+    return null;
+  }
 
   const handleVerify = (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,7 +131,7 @@ export function OTPForm({ className, ...props }: React.ComponentProps<"div">) {
               {errorMessage && (
                 <p role="alert" className="text-red-600 text-sm text-center mt-2">{errorMessage}</p>
               )}
-              
+
               {successMessage && (
                 <p className="text-green-600 text-sm text-center mt-2">{successMessage}</p>
               )}

@@ -1,40 +1,31 @@
 import { test, expect } from '@playwright/test';
+import { setResetPasswordSessionToken, getErrorAlert } from '../helpers';
 
 test.describe('Reset Password Page', () => {
 
     test.describe('Without session token (direct access)', () => {
 
-        test('should display the reset password form elements', async ({ page }) => {
+        test('should redirect to login when accessed without session token', async ({ page }) => {
             await page.goto('/auth/reset-password');
 
-            await expect(page.getByRole('heading', { name: 'Reset Password' })).toBeVisible();
-            await expect(page.getByText('Enter your new password below')).toBeVisible();
-            await expect(page.locator('#new-password')).toBeVisible();
-            await expect(page.locator('#confirm-password')).toBeVisible();
-            await expect(page.getByRole('button', { name: 'Reset Password' })).toBeVisible();
-            await expect(page.getByRole('link', { name: 'Back to Login' })).toBeVisible();
-        });
-
-        test('should have Reset Password button disabled without session token', async ({ page }) => {
-            await page.goto('/auth/reset-password');
-
-            await expect(page.getByRole('button', { name: 'Reset Password' })).toBeDisabled();
+            await expect(page).toHaveURL(/\/auth\/login/, { timeout: 10_000 });
         });
     });
 
     test.describe('With session token', () => {
 
         test.beforeEach(async ({ page }) => {
-            await page.goto('/auth/login');
-            await page.evaluate(() => {
-                sessionStorage.setItem('resetPasswordSessionToken', 'test-session-token');
-            });
+            await setResetPasswordSessionToken(page);
             await page.goto('/auth/reset-password');
             await expect(page.getByRole('heading', { name: 'Reset Password' })).toBeVisible();
         });
 
-        test('should have Reset Password button enabled with session token', async ({ page }) => {
+        test('should display all reset password form elements', async ({ page }) => {
+            await expect(page.getByText('Enter your new password below')).toBeVisible();
+            await expect(page.locator('#new-password')).toBeVisible();
+            await expect(page.locator('#confirm-password')).toBeVisible();
             await expect(page.getByRole('button', { name: 'Reset Password' })).toBeEnabled();
+            await expect(page.getByRole('link', { name: 'Back to Login' })).toBeVisible();
         });
 
         test('should not submit with empty fields', async ({ page }) => {
@@ -98,4 +89,3 @@ test.describe('Reset Password Page', () => {
         });
     });
 });
- 

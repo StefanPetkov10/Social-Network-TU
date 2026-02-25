@@ -1,53 +1,30 @@
 import { test, expect } from '@playwright/test';
+import { setResetPasswordSessionToken, getErrorAlert } from '../helpers';
 
 test.describe('Forgot Password OTP Page', () => {
 
     test.describe('Without session token (direct access)', () => {
 
-        test('should show session expired error when accessed directly', async ({ page }) => {
+        test('should redirect to login when accessed without session token', async ({ page }) => {
             await page.goto('/auth/forgot-password-otp');
 
-            const errorMessage = page.locator('p[role="alert"]');
-            await expect(errorMessage).toBeVisible();
-            await expect(errorMessage).toHaveText('Session expired or invalid. Please try again.');
-        });
-
-        test('should display all OTP form elements', async ({ page }) => {
-            await page.goto('/auth/forgot-password-otp');
-
-            await expect(page.getByRole('heading', { name: 'Enter Verification Code' })).toBeVisible();
-            await expect(page.getByText('We sent a 6-digit code to your email')).toBeVisible();
-            await expect(page.getByText('Enter the 6-digit code sent to your email.')).toBeVisible();
-            await expect(page.getByRole('button', { name: 'Verify' })).toBeVisible();
-            await expect(page.getByRole('button', { name: 'Resend' })).toBeVisible();
-        });
-
-        test('should have Verify button disabled without session token', async ({ page }) => {
-            await page.goto('/auth/forgot-password-otp');
-
-            await expect(page.getByRole('button', { name: 'Verify' })).toBeDisabled();
-        });
-
-        test('should have Resend button disabled without session token', async ({ page }) => {
-            await page.goto('/auth/forgot-password-otp');
-
-            await expect(page.getByRole('button', { name: 'Resend' })).toBeDisabled();
+            await expect(page).toHaveURL(/\/auth\/login/, { timeout: 10_000 });
         });
     });
 
     test.describe('With session token', () => {
 
         test.beforeEach(async ({ page }) => {
-            await page.goto('/auth/login');
-            await page.evaluate(() => {
-                sessionStorage.setItem('resetPasswordSessionToken', 'test-session-token');
-            });
+            await setResetPasswordSessionToken(page);
             await page.goto('/auth/forgot-password-otp');
             await expect(page.getByRole('heading', { name: 'Enter Verification Code' })).toBeVisible();
         });
 
-        test('should have Verify button enabled with session token', async ({ page }) => {
+        test('should display all OTP form elements', async ({ page }) => {
+            await expect(page.getByText('We sent a 6-digit code to your email')).toBeVisible();
+            await expect(page.getByText('Enter the 6-digit code sent to your email.')).toBeVisible();
             await expect(page.getByRole('button', { name: 'Verify' })).toBeEnabled();
+            await expect(page.getByRole('button', { name: 'Resend' })).toBeVisible();
         });
 
         test('should show error when submitting without entering code', async ({ page }) => {
