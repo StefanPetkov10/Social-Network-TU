@@ -102,7 +102,9 @@ export function PostCommentDialog({
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl md:max-w-2xl h-[85vh] p-0 gap-0 bg-background flex flex-col overflow-hidden shadow-2xl border-none outline-none">
+      <DialogContent 
+        data-testid="comment-dialog"
+        className="sm:max-w-xl md:max-w-2xl h-[85vh] p-0 gap-0 bg-background flex flex-col overflow-hidden shadow-2xl border-none outline-none">
         
         <DialogHeader className="p-3 border-b flex flex-row items-center justify-between space-y-0 shrink-0 bg-background z-20 h-14">
             <DialogTitle className="flex-1 text-center font-bold text-base truncate px-8">
@@ -189,7 +191,8 @@ export function PostCommentDialog({
 
                     {post.content && (
                         <div className="mb-3">
-                            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+                            <p data-testid="post-content" 
+                                className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
                                 {post.content}
                             </p>
                         </div>
@@ -257,7 +260,8 @@ export function PostCommentDialog({
                     {(likesCount > 0 || post.commentsCount > 0) && (
                         <>
                             <div className="flex justify-between items-center text-xs text-muted-foreground py-2">
-                                <div 
+                                <div
+                                    data-testid="reaction-count" 
                                     className={cn(
                                         "flex items-center gap-1 transition-colors",
                                         likesCount > 0 && "cursor-pointer hover:text-blue-600"

@@ -106,7 +106,9 @@ export function PostCard({
 
   return (
     <>
-    <div className={cn(
+    <div 
+      data-testid="post-card"
+      className={cn(
         "bg-background rounded-xl border p-4 shadow-sm animate-in fade-in zoom-in duration-300",
         isPreview && "border-none shadow-none"
     )}>
@@ -251,6 +253,7 @@ export function PostCard({
 
       <div className="flex justify-between text-xs text-muted-foreground mb-2 px-1 min-h-[20px]">
           <div 
+            data-testid="reaction-count"
             className={cn(
                 "flex items-center gap-1 cursor-pointer hover:text-blue-600 transition-colors",
                 likesCount > 0 && "cursor-pointer hover:text-blue-600"

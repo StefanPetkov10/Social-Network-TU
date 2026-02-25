@@ -287,6 +287,7 @@ export function CommentInput({
                                 className="min-h-[36px] border-none shadow-none resize-none bg-transparent focus-visible:ring-0 p-1 text-sm max-h-[120px]"
                                 rows={1}
                                 autoFocus={autoFocus}
+                                data-testid="comment-textarea" 
                                 onInput={(e) => {
                                     const target = e.target as HTMLTextAreaElement;
                                     target.style.height = "auto";
@@ -309,6 +310,7 @@ export function CommentInput({
                                     onClick={() => mediaInputRef.current?.click()}
                                     type="button"
                                     title="Снимка"
+                                    data-testid="attach-image-btn" 
                                 >
                                     <ImageIcon className="h-4 w-4" />
                                 </Button>
@@ -320,6 +322,7 @@ export function CommentInput({
                                     onClick={() => docInputRef.current?.click()}
                                     type="button"
                                     title="Документ"
+                                    data-testid="attach-doc-btn" 
                                 >
                                     <FileText className="h-4 w-4" />
                                 </Button>
@@ -333,6 +336,7 @@ export function CommentInput({
                                 className="h-7 text-xs text-muted-foreground hover:text-destructive px-2"
                                 onClick={onCancel}
                                 type="button"
+                                data-testid="cancel-comment-btn" 
                             >
                                 Отказ
                             </Button>
@@ -346,6 +350,7 @@ export function CommentInput({
                         disabled={!isButtonEnabled || isPending}
                         onClick={submitForm(onSubmit)}
                         type="button"
+                        data-testid="send-comment-btn" 
                     >
                         {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : (mode === "edit" ? <Save className="h-4 w-4" /> : <Send className="h-4 w-4 ml-0.5" />)}
                     </Button>

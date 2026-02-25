@@ -45,6 +45,7 @@ export function ReactionButton({
     
     return (
         <div 
+            data-testid="reaction-trigger-area"
             className="relative inline-block"
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
