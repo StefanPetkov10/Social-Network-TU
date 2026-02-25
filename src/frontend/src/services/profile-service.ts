@@ -35,7 +35,7 @@ export const profileService = {
             NewPassword: newPassword,
             ConfirmNewPassword: confirmNewPassword
         };
-        const { data } = await api.post<ApiResponse<null>>(`/api/Profile/change-password`, payload);
+        const { data } = await api.put<ApiResponse<null>>(`/api/Profile/change-password`, payload);
         return data;
     }
 };

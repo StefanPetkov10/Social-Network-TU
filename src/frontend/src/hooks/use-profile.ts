@@ -5,25 +5,25 @@ import { ApiResponse } from "@frontend/lib/types/api";
 
 
 export function useProfile() {
-  return useQuery({
-    queryKey: ["user"],
-    queryFn: async () => {
-      const { data } = await profileService.getMyProfile();
-      return data;
-    },
-  });
+    return useQuery({
+        queryKey: ["user"],
+        queryFn: async () => {
+            const { data } = await profileService.getMyProfile();
+            return data;
+        },
+    });
 }
 
 export const useProfileById = (
-    userId: string, 
+    userId: string,
     options?: Partial<UseQueryOptions<ApiResponse<ProfileDto>, Error>>
 ) => {
     return useQuery({
         queryKey: ["user-profile-by-id", userId],
         queryFn: () => profileService.getProfileById(userId),
-        
+
         enabled: !!userId && (options?.enabled !== false),
-        
+
         ...options
     });
 };
@@ -32,7 +32,7 @@ export const useProfileByUsername = (username: string) => {
     return useQuery({
         queryKey: ["user-profile-by-username", username],
         queryFn: () => profileService.getProfileByUsername(username),
-        enabled: !!username && username !== "", 
+        enabled: !!username && username !== "",
         staleTime: 1000 * 60 * 5, // 5 минути
     });
 }
@@ -59,6 +59,13 @@ export const useUpdateBio = () => {
             queryClient.invalidateQueries({ queryKey: ["user"] });
             queryClient.invalidateQueries({ queryKey: ["user-profile-by-id"] });
         },
+    });
+};
+
+export const useChangePassword = () => {
+    return useMutation({
+        mutationFn: (data: { currentPassword: string; newPassword: string; confirmNewPassword: string }) =>
+            profileService.changePassword(data.currentPassword, data.newPassword, data.confirmNewPassword),
     });
 };
 

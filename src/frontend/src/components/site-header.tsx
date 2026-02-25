@@ -205,11 +205,14 @@ export function SiteHeader({ user }: SiteHeaderProps) {
             <DropdownMenuSeparator className="my-1" />
 
             <div className="space-y-1 mt-1">
-              <DropdownMenuItem className="transition-colors cursor-pointer p-3 rounded-lg hover:bg-accent focus:bg-accent">
+              <DropdownMenuItem
+                onClick={() => router.push('/profile/change-password')}
+                className="transition-colors cursor-pointer p-3 rounded-lg hover:bg-accent focus:bg-accent"
+              >
                 <div className="flex items-center justify-center h-10 w-10 rounded-full bg-muted mr-3">
                   <Settings className="!size-6 text-foreground" />
                 </div>
-                <span className="font-medium text-sm">Настройки</span>
+                <span className="font-medium text-sm">Смяна на парола</span>
               </DropdownMenuItem>
 
               <DropdownMenuItem onClick={handleLogout} className="transition-colors cursor-pointer p-3 rounded-lg hover:bg-accent focus:bg-accent">

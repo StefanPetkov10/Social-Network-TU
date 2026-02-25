@@ -26,8 +26,9 @@ export function OTPForm({ className, ...props }: React.ComponentProps<"div">) {
   useEffect(() => {
     const authData = sessionStorage.getItem("auth-storage");
     const isAuthenticated = authData && authData.includes("token");
+    const isPasswordChangeFlow = sessionStorage.getItem("passwordChangeFlow") === "true";
 
-    if (isAuthenticated) {
+    if (isAuthenticated && !isPasswordChangeFlow) {
       router.replace("/");
       return;
     }

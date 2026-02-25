@@ -30,8 +30,9 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
   useEffect(() => {
     const authData = sessionStorage.getItem("auth-storage");
     const isAuthenticated = authData && authData.includes("token");
+    const isPasswordChangeFlow = sessionStorage.getItem("passwordChangeFlow") === "true";
 
-    if (isAuthenticated) {
+    if (isAuthenticated && !isPasswordChangeFlow) {
       router.replace("/");
       return;
     }
@@ -85,12 +86,16 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
           setErrorMessage(getAxiosErrorMessage(err));
         },
         onSuccess: () => {
+          const wasPasswordChangeFlow = sessionStorage.getItem("passwordChangeFlow") === "true";
           sessionStorage.removeItem("resetPasswordSessionToken");
+          sessionStorage.removeItem("passwordChangeFlow");
           toast.success("Password updated successfully!", {
-            description: "You can now login with your new password.",
+            description: wasPasswordChangeFlow
+              ? "Паролата е променена успешно."
+              : "You can now login with your new password.",
             duration: 5000,
           });
-          router.push("/auth/login");
+          router.push(wasPasswordChangeFlow ? "/profile" : "/auth/login");
         },
       }
     );
