@@ -9,14 +9,14 @@ import { MainLayout } from "@frontend/components/main-layout";
 import ProtectedRoute from "@frontend/components/protected-route";
 import { LoadingScreen } from "@frontend/components/common/loading-screen";
 import { ErrorScreen } from "@frontend/components/common/error-screen";
-import { useProfile, useUpdateBio } from "@frontend/hooks/use-profile"; 
+import { useProfile, useUpdateBio } from "@frontend/hooks/use-profile";
 import { useUserPosts } from "@frontend/hooks/use-post";
-import { CreatePost } from "@frontend/components/post-forms/create-post-form"; 
-import { PostCard } from "@frontend/components/post-forms/post-card"; 
-import { ProfileMediaCard } from "@frontend/components/profile-form/profile-media-card"; 
+import { CreatePost } from "@frontend/components/post-forms/create-post-form";
+import { PostCard } from "@frontend/components/post-forms/post-card";
+import { ProfileMediaCard } from "@frontend/components/profile-form/profile-media-card";
 import { ProfileFriendsCard } from "@frontend/components/profile-form/profile-friends-card";
 import { useIntersection } from "@mantine/hooks";
-import { Input } from "@frontend/components/ui/input"; 
+import { Input } from "@frontend/components/ui/input";
 import { EditProfileDialog } from "@frontend/components/profile-form/profile-edit-dialog";
 import { getInitials, getUserDisplayName, getUserUsername, cn } from "@frontend/lib/utils";
 import { MediaGalleryView } from "@frontend/components/media/media-gallery-view";
@@ -52,7 +52,7 @@ export default function ProfilePage() {
         newParams.set("tab", urlKey);
         router.push(`${pathname}?${newParams.toString()}`, { scroll: false });
     };
-    
+
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isAddingBio, setIsAddingBio] = useState(false);
     const [bioInput, setBioInput] = useState("");
@@ -112,7 +112,7 @@ export default function ProfilePage() {
     const displayName = getUserDisplayName(profile);
     const initials = getInitials(displayName);
     const username = getUserUsername(profile);
-    
+
     const bio = profile.bio || "";
 
     const userDataForPost = {
@@ -130,7 +130,7 @@ export default function ProfilePage() {
         <ProtectedRoute>
             <MainLayout user={userForLayout}>
                 <div className="min-h-screen bg-gray-100 pb-10">
-                    
+
                     <div className="max-w-5xl ml-36 mx-auto w-full p-4 space-y-5">
 
                         <div className="bg-background rounded-xl border shadow-sm overflow-hidden">
@@ -149,14 +149,14 @@ export default function ProfilePage() {
                                         <h1 className="text-2xl md:text-3xl font-bold text-foreground">{displayName}</h1>
                                         <p className="text-muted-foreground font-medium">{username}</p>
 
-                                        <div className="max-w-lg mx-auto md:mx-0 mt-2 min-h-[40px]">
+                                        <div data-testid="profile-bio" className="max-w-lg mx-auto md:mx-0 mt-2 min-h-[40px]">
                                             {bio ? (
                                                 <p className="text-sm text-foreground/90 leading-relaxed break-words">
                                                     {bio}
                                                 </p>
                                             ) : isAddingBio ? (
                                                 <div className="flex items-center gap-2">
-                                                    <Input 
+                                                    <Input
                                                         value={bioInput}
                                                         onChange={(e) => setBioInput(e.target.value)}
                                                         placeholder="Напишете нещо за себе си..."
@@ -164,17 +164,17 @@ export default function ProfilePage() {
                                                         maxLength={500}
                                                         autoFocus
                                                     />
-                                                    <Button 
-                                                        size="icon" 
+                                                    <Button
+                                                        size="icon"
                                                         className="h-8 w-8 bg-green-600 hover:bg-green-700"
                                                         onClick={handleSaveBio}
                                                         disabled={isUpdatingBio}
                                                     >
-                                                        {isUpdatingBio ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4" />}
+                                                        {isUpdatingBio ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                                                     </Button>
-                                                    <Button 
-                                                        size="icon" 
-                                                        variant="ghost" 
+                                                    <Button
+                                                        size="icon"
+                                                        variant="ghost"
                                                         className="h-8 w-8 text-muted-foreground"
                                                         onClick={() => setIsAddingBio(false)}
                                                     >
@@ -182,7 +182,7 @@ export default function ProfilePage() {
                                                     </Button>
                                                 </div>
                                             ) : (
-                                                <div 
+                                                <div
                                                     onClick={() => setIsAddingBio(true)}
                                                     className="cursor-pointer group flex items-center justify-center md:justify-start gap-2"
                                                 >
@@ -195,22 +195,22 @@ export default function ProfilePage() {
                                         </div>
 
                                         <div className="flex items-center justify-center md:justify-start gap-5 text-sm font-medium pt-2 text-muted-foreground">
-                                            <span 
+                                            <span
                                                 className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors"
                                                 onClick={() => handleTabChange("Приятели")}
                                             >
                                                 <Users className="h-4 w-4" />
                                                 <strong className="text-foreground">{profile.friendsCount}</strong> Приятели
                                             </span>
-                                            
-                                            <span 
+
+                                            <span
                                                 className="hover:text-foreground cursor-pointer transition-colors"
                                                 onClick={() => setShowFollowersDialog(true)}
                                             >
                                                 <strong className="text-foreground">{profile.followersCount}</strong> Последователи
                                             </span>
 
-                                            <span 
+                                            <span
                                                 className="hover:text-foreground cursor-pointer transition-colors"
                                                 onClick={() => setShowFollowingDialog(true)}
                                             >
@@ -219,7 +219,7 @@ export default function ProfilePage() {
                                         </div>
                                     </div>
 
-                                    <Button 
+                                    <Button
                                         className="w-full md:w-auto gap-2 bg-primary hover:bg-primary/90 h-9 px-4"
                                         onClick={() => setIsEditModalOpen(true)}
                                     >
@@ -227,7 +227,7 @@ export default function ProfilePage() {
                                     </Button>
                                 </div>
                             </div>
-                            
+
                             <div className="px-5 border-t flex gap-6 overflow-x-auto scrollbar-hide">
                                 {["Публикации", "Приятели", "Медия", "Документи"].map((tab) => (
                                     <button
@@ -235,9 +235,9 @@ export default function ProfilePage() {
                                         onClick={() => handleTabChange(tab)}
                                         className={cn(
                                             "py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap px-1",
-                                            activeTab === tab 
-                                            ? "border-blue-600 text-blue-600" 
-                                            : "border-transparent text-muted-foreground hover:text-foreground"
+                                            activeTab === tab
+                                                ? "border-blue-600 text-blue-600"
+                                                : "border-transparent text-muted-foreground hover:text-foreground"
                                         )}
                                     >
                                         {tab}
@@ -246,34 +246,34 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        <EditProfileDialog 
-                            isOpen={isEditModalOpen} 
-                            onClose={() => setIsEditModalOpen(false)} 
-                            profile={profile} 
+                        <EditProfileDialog
+                            isOpen={isEditModalOpen}
+                            onClose={() => setIsEditModalOpen(false)}
+                            profile={profile}
                         />
 
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
                             <div className={cn(
                                 "lg:col-span-1 space-y-6",
                                 "h-fit",
-                                activeTab === "Публикации" 
-                                    ? "sticky bottom-36 self-end"  
-                                    : "sticky top-28 self-start"  
+                                activeTab === "Публикации"
+                                    ? "sticky bottom-36 self-end"
+                                    : "sticky top-28 self-start"
                             )}>
                                 {activeTab !== "Приятели" && (
-                                    <ProfileFriendsCard 
-                                    profileId={profile.id} 
-                                    currentUsername={profile.username} 
-                                    loggedInUsername={profile?.username} 
-                                />                      
-                             )}                                 
+                                    <ProfileFriendsCard
+                                        profileId={profile.id}
+                                        currentUsername={profile.username}
+                                        loggedInUsername={profile?.username}
+                                    />
+                                )}
                                 {activeTab !== "Медия" && activeTab !== "Документи" && (
                                     <ProfileMediaCard profileId={profile.id} />
                                 )}
                             </div>
 
                             <div className="lg:col-span-2 space-y-4">
-                                
+
                                 {activeTab === "Публикации" && (
                                     <>
                                         {userDataForPost && <CreatePost user={userDataForPost} />}
@@ -318,13 +318,13 @@ export default function ProfilePage() {
 
                                 {activeTab === "Медия" && (
                                     <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                         <div className="bg-white rounded-xl border p-4 shadow-sm mb-4">
-                                             <h2 className="text-lg font-bold flex items-center gap-2">
-                                                <ImageIcon className="w-5 h-5 text-primary" /> 
+                                        <div className="bg-white rounded-xl border p-4 shadow-sm mb-4">
+                                            <h2 className="text-lg font-bold flex items-center gap-2">
+                                                <ImageIcon className="w-5 h-5 text-primary" />
                                                 Галерия
                                             </h2>
-                                         </div>
-                                         <MediaGalleryView id={profile.id} type="user" />
+                                        </div>
+                                        <MediaGalleryView id={profile.id} type="user" />
                                     </div>
                                 )}
 
@@ -346,17 +346,17 @@ export default function ProfilePage() {
 
                 {profile && profile.id && (
                     <>
-                        <FollowersListDialog 
-                            open={showFollowersDialog} 
-                            onOpenChange={setShowFollowersDialog} 
+                        <FollowersListDialog
+                            open={showFollowersDialog}
+                            onOpenChange={setShowFollowersDialog}
                             profileId={profile.id}
-                            isMyProfile={true} 
+                            isMyProfile={true}
                         />
-                        <FollowingListDialog 
-                            open={showFollowingDialog} 
-                            onOpenChange={setShowFollowingDialog} 
+                        <FollowingListDialog
+                            open={showFollowingDialog}
+                            onOpenChange={setShowFollowingDialog}
                             profileId={profile.id}
-                            isMyProfile={true} 
+                            isMyProfile={true}
                         />
                     </>
                 )}

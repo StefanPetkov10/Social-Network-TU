@@ -5,7 +5,7 @@ import { Input } from "@frontend/components/ui/input";
 import { Label } from "@frontend/components/ui/label";
 import { Textarea } from "@frontend/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@frontend/components/ui/select";
-import { Loader2, Upload, AlertCircle } from "lucide-react"; 
+import { Loader2, Upload, AlertCircle } from "lucide-react";
 import { ProfileDto, UpdateProfileDto } from "@frontend/lib/types/profile";
 import { Gender } from "@frontend/lib/types/enums";
 import { useEditProfile } from "@frontend/hooks/use-profile";
@@ -19,7 +19,7 @@ interface EditProfileDialogProps {
 
 export function EditProfileDialog({ isOpen, onClose, profile }: EditProfileDialogProps) {
     const { mutate: editProfile, isPending } = useEditProfile();
-    
+
     const [formData, setFormData] = useState<UpdateProfileDto>({
         firstName: "",
         lastName: "",
@@ -30,7 +30,7 @@ export function EditProfileDialog({ isOpen, onClose, profile }: EditProfileDialo
     });
 
     const [previewImage, setPreviewImage] = useState<string | null>(null);
-    const [bioError, setBioError] = useState<string | null>(null); 
+    const [bioError, setBioError] = useState<string | null>(null);
 
     const MAX_BIO_LENGTH = 100;
 
@@ -39,20 +39,20 @@ export function EditProfileDialog({ isOpen, onClose, profile }: EditProfileDialo
             setFormData({
                 firstName: profile.firstName || "",
                 lastName: profile.lastName || "",
-                username: profile.username || "", 
+                username: profile.username || "",
                 bio: profile.bio || "",
-                sex: profile.sex === Gender.Female ? Gender.Female : Gender.Male, 
+                sex: profile.sex === Gender.Female ? Gender.Female : Gender.Male,
                 photoBase64: null
             });
             setPreviewImage(profile.authorAvatar || null);
-            setBioError(null); 
+            setBioError(null);
         }
     }, [isOpen, profile]);
 
     const handleBioChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const val = e.target.value;
-        setFormData({...formData, bio: val});
-        
+        setFormData({ ...formData, bio: val });
+
         if (val.length > MAX_BIO_LENGTH) {
             setBioError(`Описанието не може да надвишава ${MAX_BIO_LENGTH} символа.`);
         } else {
@@ -75,7 +75,7 @@ export function EditProfileDialog({ isOpen, onClose, profile }: EditProfileDialo
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (formData.bio && formData.bio.length > MAX_BIO_LENGTH) return;
 
         editProfile(formData, {
@@ -83,7 +83,7 @@ export function EditProfileDialog({ isOpen, onClose, profile }: EditProfileDialo
                 onClose();
             },
             onError: (err) => {
-               console.error("Грешка при редакция:", err);
+                console.error("Грешка при редакция:", err);
             }
         });
     };
@@ -97,7 +97,7 @@ export function EditProfileDialog({ isOpen, onClose, profile }: EditProfileDialo
                 <DialogHeader>
                     <DialogTitle>Редактиране на профил</DialogTitle>
                 </DialogHeader>
-                
+
                 <form onSubmit={handleSubmit} className="space-y-4 py-4">
                     <div className="flex flex-col items-center gap-4">
                         <Avatar className="h-24 w-24 border-2">
@@ -109,12 +109,12 @@ export function EditProfileDialog({ isOpen, onClose, profile }: EditProfileDialo
                                 <Upload className="w-4 h-4" />
                                 Качи нова снимка
                             </Label>
-                            <Input 
-                                id="avatar-upload" 
-                                type="file" 
-                                accept="image/*" 
-                                className="hidden" 
-                                onChange={handleFileChange} 
+                            <Input
+                                id="avatar-upload"
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handleFileChange}
                             />
                         </div>
                     </div>
@@ -122,19 +122,19 @@ export function EditProfileDialog({ isOpen, onClose, profile }: EditProfileDialo
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="firstName">Име</Label>
-                            <Input 
-                                id="firstName" 
-                                value={formData.firstName} 
-                                onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                            <Input
+                                id="firstName"
+                                value={formData.firstName}
+                                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                                 required
                             />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="lastName">Фамилия</Label>
-                            <Input 
-                                id="lastName" 
-                                value={formData.lastName} 
-                                onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                            <Input
+                                id="lastName"
+                                value={formData.lastName}
+                                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                                 required
                             />
                         </div>
@@ -142,10 +142,10 @@ export function EditProfileDialog({ isOpen, onClose, profile }: EditProfileDialo
 
                     <div className="space-y-2">
                         <Label htmlFor="username">Потребителско име</Label>
-                        <Input 
-                            id="username" 
-                            value={formData.username} 
-                            onChange={(e) => setFormData({...formData, username: e.target.value})}
+                        <Input
+                            id="username"
+                            value={formData.username}
+                            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                             required
                         />
                         <p className="text-[10px] text-muted-foreground">
@@ -155,9 +155,9 @@ export function EditProfileDialog({ isOpen, onClose, profile }: EditProfileDialo
 
                     <div className="space-y-2">
                         <Label htmlFor="sex">Пол</Label>
-                        <Select 
-                            value={formData.sex.toString()} 
-                            onValueChange={(val) => setFormData({...formData, sex: Number(val) as Gender})}
+                        <Select
+                            value={formData.sex.toString()}
+                            onValueChange={(val) => setFormData({ ...formData, sex: Number(val) as Gender })}
                         >
                             <SelectTrigger>
                                 <SelectValue placeholder="Избери пол" />
@@ -176,10 +176,10 @@ export function EditProfileDialog({ isOpen, onClose, profile }: EditProfileDialo
                                 {currentBioLength}/{MAX_BIO_LENGTH}
                             </span>
                         </div>
-                        <Textarea 
-                            id="bio" 
+                        <Textarea
+                            id="bio"
                             placeholder="Разкажете малко за себе си..."
-                            value={formData.bio} 
+                            value={formData.bio}
                             onChange={handleBioChange}
                             className={`resize-none h-24 ${isOverLimit ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                         />
@@ -192,10 +192,20 @@ export function EditProfileDialog({ isOpen, onClose, profile }: EditProfileDialo
                     </div>
 
                     <DialogFooter>
-                        <Button type="button" variant="outline" onClick={onClose}>
+                        <Button
+                            data-testid="cancel-button"
+                            type="button"
+                            variant="outline"
+                            onClick={onClose}
+                            className="cursor-pointer"
+                        >
                             Отказ
                         </Button>
-                        <Button type="submit" disabled={isPending || isOverLimit}>
+                        <Button
+                            type="submit"
+                            disabled={isPending || isOverLimit}
+                            className="cursor-pointer"
+                        >
                             {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Запази промените
                         </Button>

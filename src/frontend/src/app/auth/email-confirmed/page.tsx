@@ -19,6 +19,8 @@ export default function EmailConfirmedPage() {
 
   const resetStore = useRegistrationStore((state) => state.reset);
   
+  const startRegistrationFlow = useRegistrationStore((state) => state.startRegistrationFlow);
+
   const [error, setError] = useState("");
   const [processing, setProcessing] = useState(true);
   const [accessChecked, setAccessChecked] = useState(false);
@@ -67,7 +69,12 @@ export default function EmailConfirmedPage() {
   };
   
   const handleLogin = () => router.push("/auth/login");
-  const handleGoToResend = () => router.push("/auth/confirmation-sent");
+  const handleGoToResend = () => {
+
+    startRegistrationFlow();
+    router.push("/auth/confirmation-sent");
+
+  };
   const handleGoToHome = () => router.push("/");
 
   if (!accessChecked) {

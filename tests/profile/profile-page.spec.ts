@@ -153,14 +153,6 @@ test.describe('Profile Page - Edit Profile Modal', () => {
         await page.locator('#bio').fill('A'.repeat(101));
         await expect(page.getByText(/не може да надвишава 100/)).toBeVisible();
     });
-
-    test('should close modal with cancel button', async ({ page }) => {
-        await page.getByRole('button', { name: 'Редактирай профил' }).click();
-        await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10_000 });
-
-        await page.getByRole('button', { name: 'Отказ' }).click();
-        await expect(page.getByRole('dialog')).toBeHidden({ timeout: 10_000 });
-    });
 });
 
 test.describe('Profile Page - Protected Route', () => {

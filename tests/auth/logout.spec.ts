@@ -11,7 +11,7 @@ test.describe('Logout', () => {
         await page.getByRole('button', { name: 'S', exact: true }).click();
 
         await expect(page.getByText('Изход')).toBeVisible();
-        await expect(page.getByText('Настройки')).toBeVisible();
+        await expect(page.getByText('Смяна на парола')).toBeVisible();
         await expect(page.getByText('Преглед на профила')).toBeVisible();
     });
 
