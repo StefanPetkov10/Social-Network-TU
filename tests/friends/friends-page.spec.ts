@@ -121,3 +121,23 @@ test.describe('Friends Page - Suggestions', () => {
         expect(mutualVisible || newVisible).toBeTruthy();
     });
 });
+
+test.describe('Friends Page - Navigation', () => {
+    test('should redirect to login if not authenticated', async ({ page }) => {
+        await loginAsTestUser(page);
+        await page.evaluate(() => sessionStorage.removeItem('auth-storage'));
+        await page.goto('/friends');
+        await expect(page).toHaveURL(/\/auth\/login/, { timeout: 10_000 });
+    });
+
+   test('should navigate to friend requests from sidebar', async ({ page }) => {
+        await loginAsTestUser(page);
+        await page.goto('/friends');
+        await expect(page.getByRole('heading', { name: 'Покани за приятелство' })).toBeVisible({ timeout: 15_000 });
+
+        await page.getByRole('link', { name: 'Начало' }).click();
+
+        await expect(page).toHaveURL(/\/friends/, { timeout: 10_000 });
+        await expect(page.getByRole('heading', { name: 'Покани за приятелство' })).toBeVisible();
+    });
+});

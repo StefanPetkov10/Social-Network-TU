@@ -19,20 +19,22 @@ export default function MyGroupsPage() {
   const { data: groupsData, isLoading: isGroupsLoading, isError: isGroupsError } = useMyGroups();
   const groups = groupsData?.data || [];
 
-  if (isProfileLoading) return <LoadingScreen />;
-  if (isProfileError || !profile) return <ErrorScreen message={(profileError as any)?.message} />;
-
   const userForLayout = {
     name: getUserDisplayName(profile),
-    avatar: profile.authorAvatar || ""
+    avatar: profile?.authorAvatar || ""
   };
 
   return (
     <ProtectedRoute>
-      <SidebarProvider>
-        <div className="h-screen w-full bg-[#f0f2f5] overflow-hidden flex flex-col text-foreground">
-          
-          <SiteHeader user={userForLayout} />
+      {isProfileLoading ? (
+        <LoadingScreen />
+      ) : isProfileError || !profile ? (
+        <ErrorScreen message={(profileError as any)?.message} />
+      ) : (
+        <SidebarProvider>
+          <div className="h-screen w-full bg-[#f0f2f5] overflow-hidden flex flex-col text-foreground">
+
+            <SiteHeader user={userForLayout} />
 
           <div className="flex flex-1 overflow-hidden pt-16">
             
@@ -88,7 +90,7 @@ export default function MyGroupsPage() {
             </div>
           </div>
         </div>
-      </SidebarProvider>
-    </ProtectedRoute>
-  );
-}
+        </SidebarProvider>
+      )}
+    </ProtectedRoute> 
+  )};

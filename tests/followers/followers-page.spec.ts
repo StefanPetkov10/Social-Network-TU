@@ -159,6 +159,13 @@ test.describe('Followers - Follower Cards', () => {
 });
 
 test.describe('Followers - Navigation', () => {
+    test('should redirect to login if not authenticated', async ({ page }) => {
+     await loginAsTestUser(page);
+        await page.evaluate(() => sessionStorage.removeItem('auth-storage'));
+        await page.goto('/followers');
+        await expect(page).toHaveURL(/\/auth\/login/, { timeout: 10_000 });
+    });
+
     test('should navigate to followers from main sidebar', async ({ page }) => {
         await loginAsTestUser(page);
         await page.goto('/followers');

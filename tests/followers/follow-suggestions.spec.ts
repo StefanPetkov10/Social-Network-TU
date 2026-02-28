@@ -110,6 +110,13 @@ test.describe('Follow Suggestions - Suggestion Cards (mocked)', () => {
 });
 
 test.describe('Follow Suggestions - Navigation', () => {
+    test('should redirect to login if not authenticated', async ({ page }) => {
+        await loginAsTestUser(page);
+        await page.evaluate(() => sessionStorage.removeItem('auth-storage'));
+        await page.goto('/followers/suggestions');
+        await expect(page).toHaveURL(/\/auth\/login/, { timeout: 10_000 });
+    });
+
     test('should navigate to suggestions from sidebar', async ({ page }) => {
         await loginAsTestUser(page);
         await page.goto('/followers');

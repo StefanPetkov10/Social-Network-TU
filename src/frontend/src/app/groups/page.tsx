@@ -28,31 +28,27 @@ export default function GroupsPage() {
 
   const { ref, entry } = useIntersection({ root: null, threshold: 1 });
 
+  const userForLayout = {
+      name: getUserDisplayName(profile),
+      avatar: profile?.authorAvatar || ""
+  };
+
   useEffect(() => {
     if (entry?.isIntersecting && hasNextPage) {
       fetchNextPage();
     }
   }, [entry, hasNextPage, fetchNextPage]);
 
-  if (isProfileLoading) return <LoadingScreen />;
-  if (isError || !profile) return <ErrorScreen message={(error as any)?.message} />;
-
-  const userForLayout = {
-    name: getUserDisplayName(profile),
-    avatar: profile.authorAvatar || ""
-  };
-
-  const userDataForPost = {
-    firstName: profile.firstName,
-    lastName: profile.lastName ?? "",
-    photo: profile.authorAvatar ?? null
-  };
-
   return (
     <ProtectedRoute>
-      <SidebarProvider>
-        <div className="h-screen w-full bg-[#f0f2f5] overflow-hidden flex flex-col text-foreground">
-          <SiteHeader user={userForLayout} />
+      {isProfileLoading ? (
+        <LoadingScreen />
+      ) : isError || !profile ? (
+        <ErrorScreen message={(error as any)?.message} />
+      ) : (
+        <SidebarProvider>
+          <div className="h-screen w-full bg-[#f0f2f5] overflow-hidden flex flex-col text-foreground">
+            <SiteHeader user={userForLayout} />
 
           <div className="flex flex-1 overflow-hidden pt-16">
             <div className="h-full overflow-y-auto shrink-0 hidden md:block">
@@ -101,9 +97,10 @@ export default function GroupsPage() {
                 </main>
               </div>
             </div>
+            </div>
           </div>
-        </div>
-      </SidebarProvider>
+        </SidebarProvider>
+      )}
     </ProtectedRoute>
   );
 }

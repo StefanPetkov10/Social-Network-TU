@@ -158,7 +158,7 @@ test.describe('Profile Page - Edit Profile Modal', () => {
 test.describe('Profile Page - Protected Route', () => {
 
     test('should redirect to login if not authenticated', async ({ page }) => {
-        await page.goto('/');
+        await page.goto('/profile');
         await page.evaluate(() => sessionStorage.removeItem('auth-storage'));
         await page.goto('/profile');
         await expect(page).toHaveURL(/\/auth\/login/, { timeout: 10_000 });

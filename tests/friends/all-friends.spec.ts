@@ -6,7 +6,7 @@ const mockFriendsData = {
     message: null,
     data: [
         {
-            profileId: 'profile-001',
+            profileId: 'profile-01',
             displayFullName: 'Иван Иванов',
             username: 'ivan_ivanov',
             authorAvatar: null,
@@ -17,7 +17,7 @@ const mockFriendsData = {
             mutualFriendsCount: 3,
         },
         {
-            profileId: 'profile-002',
+            profileId: 'profile-02',
             displayFullName: 'Мария Петрова',
             username: 'maria_p',
             authorAvatar: null,
@@ -154,6 +154,13 @@ test.describe('All Friends - Friend Cards', () => {
 });
 
 test.describe('All Friends - Navigation', () => {
+    test('should redirect to login if not authenticated', async ({ page }) => {
+        await loginAsTestUser(page);
+        await page.evaluate(() => sessionStorage.removeItem('auth-storage'));
+        await page.goto('/friends/all-friends');
+        await expect(page).toHaveURL(/\/auth\/login/, { timeout: 10_000 });
+    });
+
     test('should navigate to all friends from sidebar', async ({ page }) => {
         await loginAsTestUser(page);
         await page.goto('/friends');

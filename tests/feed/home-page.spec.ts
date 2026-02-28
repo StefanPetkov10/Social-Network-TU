@@ -86,5 +86,33 @@ test.describe('Home Page', () => {
             await page.goto('/');
             await expect(page).toHaveURL(/\/auth\/login/, { timeout: 10_000 });
         });
+
+        test('should navigate to messages from sidebar.', async ({ page }) => {
+            await page.getByRole('link', { name: 'Съобщения' }).click();
+
+            await expect(page).toHaveURL(/\/messages/, { timeout: 10_000 });
+            await expect(page.getByRole('heading', { name: 'Съобщения' })).toBeVisible();
+        });
+
+        test('should navigate to friends from sidebar.', async ({ page }) => {
+            await page.getByRole('link', { name: 'Приятели' }).click();
+
+            await expect(page).toHaveURL(/\/friends/, { timeout: 10_000 });
+            await expect(page.getByRole('heading', { name: 'Покани за приятелство' })).toBeVisible();
+        });
+
+        test('should navigate to followers from sidebar.', async ({ page }) => {
+            await page.getByRole('link', { name: 'Последователи' }).click();
+
+            await expect(page).toHaveURL(/\/followers/, { timeout: 10_000 });
+            await expect(page.getByRole('heading', { name: 'Моите последователи' })).toBeVisible();
+        });
+
+        test('should navigate to groups from sidebar.', async ({ page }) => {
+            await page.getByRole('link', { name: 'моите групи' }).click();
+
+            await expect(page).toHaveURL(/\/groups/, { timeout: 10_000 });
+            await expect(page.getByRole('heading', { name: 'Скорошна дейност' })).toBeVisible();
+        });
     });
 });
