@@ -22,5 +22,12 @@ namespace SocialMedia.Controllers
             var result = await _searchService.SearchUsersAsync(User, search);
             return Ok(result);
         }
+
+        [HttpGet("groups")]
+        public async Task<IActionResult> SearchGroups([FromQuery] string search)
+        {
+            var result = await _searchService.SearchGroupsAsync(User, search);
+            return Ok(result);
+        }
     }
 }

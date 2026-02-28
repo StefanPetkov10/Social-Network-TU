@@ -1,5 +1,9 @@
 "use client";
-
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useDebounce } from "@frontend/hooks/use-debounce";
+import { searchService } from "@frontend/services/search-service";
+import { Lock, Globe } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
@@ -39,6 +43,19 @@ export function GroupsSidebar() {
     },
   ];
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 300);
+
+  const { data: searchResults, isFetching: isSearching } = useQuery({
+    queryKey: ["search-groups", debouncedSearch],
+    queryFn: () => searchService.searchGroups(debouncedSearch),
+    enabled: debouncedSearch.trim().length > 0,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const handleGroupClick = (groupName: string) => {
+    setSearchQuery("");
+  };
   return (
     <div className="w-[19rem] hidden md:block border-r border-gray-200 bg-white sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto shrink-0">
       <div className="p-4">
@@ -49,13 +66,53 @@ export function GroupsSidebar() {
             </button>
         </div>
 
-        <div className="px-2 mb-4">
-            <input 
-                type="text" 
-                placeholder="Търсене на групи" 
-                className="w-full bg-gray-100 border-none rounded-full px-4 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-            />
-        </div>
+        <div className="px-2 mb-4 relative z-50">
+          <input
+            type="text"
+            placeholder="Търсене на групи"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-gray-100 border-none rounded-full px-4 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+          />
+          {searchQuery.trim().length > 0 && (
+            <div className="absolute top-11 left-2 right-2 bg-background border shadow-lg rounded-xl overflow-hidden flex flex-col z-[100] max-h-[350px]">
+              {isSearching ? (
+                <div className="p-4 flex justify-center items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="animate-spin h-4 w-4" /> Търсене...
+                </div>
+              ) : searchResults?.data?.length > 0 ? (
+                <div className="overflow-y-auto">
+                  {searchResults.data.map((group: any) => (
+                    <Link
+                      href={`/groups/${encodeURIComponent(group.name)}`}
+                      key={group.id}
+                      className="flex flex-col p-3 hover:bg-muted cursor-pointer transition-colors border-b last:border-b-0"
+                      onClick={() => handleGroupClick(group.name)}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        {group.isPrivate ? (
+                          <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
+                        ) : (
+                          <Globe className="h-3 w-3 text-muted-foreground shrink-0" />
+                        )}
+                        <span className="font-semibold text-sm truncate">{group.name}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground truncate max-w-[140px]">
+                          {group.description || "Няма описание"}
+                        </span>
+                        <span className="text-xs font-medium text-primary shrink-0">
+                          {group.membersCount} {group.membersCount === 1 ? 'член' : 'членове'}
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-4 text-center text-sm text-muted-foreground">Няма намерени групи.</div>
+              )}
+            </div>
+          )}
 
         <div className="space-y-1 mb-6">
           {menuItems.map((item) => {
@@ -134,5 +191,6 @@ export function GroupsSidebar() {
         </div>
       </div>
     </div>
+  </div>
   );
 } 
