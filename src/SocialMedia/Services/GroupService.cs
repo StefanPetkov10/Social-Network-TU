@@ -1,5 +1,4 @@
-﻿using System.Security.Claims;
-using AutoMapper;
+﻿using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SocialMedia.Common;
@@ -9,6 +8,7 @@ using SocialMedia.Database.Models.Enums;
 using SocialMedia.DTOs.Group;
 using SocialMedia.DTOs.Post;
 using SocialMedia.Services.Interfaces;
+using System.Security.Claims;
 using Profile = SocialMedia.Database.Models.Profile;
 
 namespace SocialMedia.Services
