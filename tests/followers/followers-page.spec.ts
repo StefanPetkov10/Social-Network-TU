@@ -152,7 +152,7 @@ test.describe('Followers - Follower Cards', () => {
     });
 
     test('should show remove button in dropdown', async ({ page }) => {
-        await page.locator('#radix-_r_2_').first().click();
+        await page.getByTestId('follower-card-menu').first().click();
 
         await expect(page.getByRole('menuitem', { name: 'Премахни последовател' })).toBeVisible();
     });

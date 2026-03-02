@@ -176,16 +176,17 @@ export function PostCard({
           </div>
         </div>
 
-        <div className="-mt-1 -mr-1">
-             <PostOptions 
-                postId={post.id}
-                isSavedPage={isSavedPage}
-                isOwner={isOwner}
-                canDelete={canDelete}
-                onEdit={() => setIsEditOpen(true)}
-                onDelete={() => setIsDeleteDialogOpen(true)}
-                onSave={() => setIsSaveDialogOpen(true)}
-             />
+        <div data-testid="post-options-btn"
+             className="-mt-1 -mr-1">
+                <PostOptions 
+                    postId={post.id}
+                    isSavedPage={isSavedPage}
+                    isOwner={isOwner}
+                    canDelete={canDelete}
+                    onEdit={() => setIsEditOpen(true)}
+                    onDelete={() => setIsDeleteDialogOpen(true)}
+                    onSave={() => setIsSaveDialogOpen(true)}
+                />
         </div>
       </div>
 

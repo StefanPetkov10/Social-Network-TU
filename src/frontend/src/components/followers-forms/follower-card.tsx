@@ -38,7 +38,8 @@ export function FollowerCard({
         onClick={() => onViewProfile(follower)}
         className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col items-center text-center h-full cursor-pointer group hover:shadow-md transition-all hover:-translate-y-1 relative"
     >
-      <div className="absolute top-3 right-3" onClick={(e) => e.stopPropagation()}>
+      <div data-testid="follower-card-menu"
+        className="absolute top-3 right-3" onClick={(e) => e.stopPropagation()}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-600">

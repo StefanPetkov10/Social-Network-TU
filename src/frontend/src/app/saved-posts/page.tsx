@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { MainLayout } from "@frontend/components/main-layout";
 import ProtectedRoute from "@frontend/components/protected-route";
@@ -30,6 +30,17 @@ export default function SavedPage() {
 
   const generalCollection = collections?.data?.find(c => c.name === SYSTEM_DEFAULT_COLLECTION);
   const otherCollections = collections?.data?.filter(c => c.name !== SYSTEM_DEFAULT_COLLECTION) || [];
+
+  useEffect(() => {
+    if (!loadingCollections && collections?.data) {
+      if (activeCollection !== SYSTEM_DEFAULT_COLLECTION) {
+        const collectionExists = collections.data.some(c => c.name === activeCollection);
+        if (!collectionExists) {
+          setActiveCollection(SYSTEM_DEFAULT_COLLECTION);
+        }
+      }
+    }
+  }, [collections, activeCollection, loadingCollections]);
 
   return (
     <ProtectedRoute>
@@ -100,13 +111,13 @@ export default function SavedPage() {
                                 "font-bold truncate text-lg md:text-xl leading-tight",
                                 generalCollection?.coverImageUrl ? "text-white" : "text-foreground"
                             )}>
-                                Всички
+                                Основна
                             </h3>
                             <span className={cn(
                                 "text-xs font-medium mt-1 inline-block px-2 py-0.5 rounded",
                                 generalCollection?.coverImageUrl ? "text-white/90 bg-white/20 backdrop-blur-md" : "text-muted-foreground bg-black/5"
                             )}>
-                                {generalCollection?.count || 0} публикации
+                                {generalCollection?.count || 0} {generalCollection?.count === 1 ? "публикация" : "публикации"}
                             </span>
                          </div>
                     </div>
@@ -147,7 +158,7 @@ export default function SavedPage() {
                                         "px-2 py-0.5 rounded text-xs font-medium",
                                         col.coverImageUrl ? "bg-white/20 backdrop-blur-md text-white" : "bg-black/5 text-muted-foreground"
                                     )}>
-                                        {col.count} публикации
+                                        {col.count} {col.count === 1 ? "публикация" : "публикации"}
                                     </span>
                                 </div>
                             </div>
@@ -174,24 +185,25 @@ export default function SavedPage() {
                     <Skeleton className="h-[500px] w-full rounded-2xl" />
                  </div>
              ) : posts?.data?.length === 0 ? (
-                 <div className="flex flex-col items-center justify-center py-20 w-full text-center rounded-3xl bg-muted/20 border-2 border-dashed border-muted-foreground/20">
-                     <div className="bg-background p-6 rounded-full mb-6 shadow-sm ring-1 ring-border">
-                        <FolderOpen className="w-12 h-12 text-muted-foreground" />
+
+                 activeCollection === SYSTEM_DEFAULT_COLLECTION ? (
+                     <div className="flex flex-col items-center justify-center py-20 w-full text-center rounded-3xl bg-muted/20 border-2 border-dashed border-muted-foreground/20">
+                         <div className="bg-background p-6 rounded-full mb-6 shadow-sm ring-1 ring-border">
+                            <FolderOpen className="w-12 h-12 text-muted-foreground" />
+                         </div>
+                         <h3 className="text-2xl font-bold mb-3 text-foreground">Колекцията е празна</h3>
+                         <p className="text-muted-foreground text-lg max-w-md mb-8">
+                            Все още не сте запазили постове.
+                         </p>
+                         
+                         <Link href="/">
+                            <Button size="lg" className="gap-2 rounded-full px-8">
+                                <Home className="w-5 h-5" />
+                                Към фийда
+                            </Button>
+                         </Link>
                      </div>
-                     <h3 className="text-2xl font-bold mb-3 text-foreground">Колекцията е празна</h3>
-                     <p className="text-muted-foreground text-lg max-w-md mb-8">
-                        {activeCollection !== SYSTEM_DEFAULT_COLLECTION
-                            ? `В "${activeCollection}" все още няма нищо.`
-                            : "Все още не сте запазили нищо."}
-                     </p>
-                     
-                     <Link href="/">
-                        <Button size="lg" className="gap-2 rounded-full px-8">
-                            <Home className="w-5 h-5" />
-                            Към новините
-                        </Button>
-                     </Link>
-                 </div>
+                 ) : null
              ) : (
                  <div className="w-full flex justify-center">
                      <div className={cn("flex flex-col gap-8 w-full max-w-3xl transition-opacity duration-300", isFetching ? "opacity-60" : "opacity-100")}>
