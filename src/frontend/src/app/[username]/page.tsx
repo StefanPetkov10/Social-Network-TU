@@ -54,6 +54,7 @@ import { DocumentsListView } from "@frontend/components/media/documents-list-vie
 import { FriendsListView } from "@frontend/components/profile-form/friends-list-view";
 import { FollowersListDialog, FollowingListDialog } from "@frontend/components/profile-form/follows-lists";
 import { EditProfileDialog } from "@frontend/components/profile-form/profile-edit-dialog"; 
+import ProtectedRoute from "@frontend/components/protected-route";
 
 type RequestStatusUI = "pending_received" | "pending_sent" | "friend" | "none";
 
@@ -262,7 +263,16 @@ export default function UserProfilePage({ params }: PageProps) {
   }), [myProfile]);
 
   if (isMeLoading) return <ProfilePageSkeleton />;
-  if (myProfile && myProfile.username.toLowerCase() === username.toLowerCase()) {
+
+  if (!myProfile) {
+      return (
+          <ProtectedRoute>
+              <ProfilePageSkeleton />
+          </ProtectedRoute>
+      );
+  }
+
+  if (myProfile?.username.toLowerCase() === username.toLowerCase()) {
       return <ProfilePageSkeleton />;
   }
 
@@ -282,7 +292,8 @@ export default function UserProfilePage({ params }: PageProps) {
   } : null;
 
   return (
-    <SidebarProvider>
+    <ProtectedRoute>
+      <SidebarProvider>
     <div className="min-h-screen w-full bg-gray-100 flex flex-col text-foreground">
         
         <SiteHeader user={userForHeader} />
@@ -410,7 +421,7 @@ export default function UserProfilePage({ params }: PageProps) {
                                         {uiStatus === 'friend' && (
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="secondary" className="bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 gap-2 h-9 w-full">
+                                                    <Button data-testid="friends-dropdown-btn" variant="secondary" className="bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 gap-2 h-9 w-full">
                                                         <UserCheck className="h-4 w-4" /> Приятели
                                                     </Button>
                                                 </DropdownMenuTrigger>
@@ -626,6 +637,7 @@ export default function UserProfilePage({ params }: PageProps) {
         )}  
     </div>
     </SidebarProvider>
+    </ProtectedRoute>
   );
 }
 

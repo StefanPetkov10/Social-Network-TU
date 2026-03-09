@@ -330,7 +330,7 @@ export function FriendProfileView({
                                 {uiStatus === 'friend' && (
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="secondary" className="w-full gap-2 bg-green-50 text-green-700 hover:bg-green-100 border border-green-200">
+                                            <Button data-testid="friends-dropdown-btn" variant="secondary" className="w-full gap-2 bg-green-50 text-green-700 hover:bg-green-100 border border-green-200">
                                                 <UserCheck className="h-4 w-4" /> Приятели
                                             </Button>
                                         </DropdownMenuTrigger>

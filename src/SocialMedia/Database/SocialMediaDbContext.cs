@@ -68,6 +68,9 @@ namespace SocialMedia.Database
                 .HasForeignKey(r => r.MessageId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            builder.Entity<Post>()
+                .HasQueryFilter(m => !m.IsDeleted);
+
             // builder.Entity<MessageReadReceipt>()
             //.HasKey(r => new { r.MessageId, r.ProfileId });
 
