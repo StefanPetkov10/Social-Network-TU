@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import Link from "next/link";
-import { useParams, useSearchParams, useRouter, usePathname } from "next/navigation"; 
+import { useRouter, useSearchParams, usePathname } from "next/navigation"; 
 import { 
   Loader2, 
   Users, 
@@ -65,7 +65,6 @@ import { GroupMembersView } from "@frontend/components/groups-forms/group-member
 import { MediaGalleryView } from "@frontend/components/media/media-gallery-view";
 import { DocumentsListView } from "@frontend/components/media/documents-list-view";
 
-
 const TAB_MAP: Record<string, string> = {
     "posts": "Публикации",
     "people": "Хора",
@@ -82,9 +81,15 @@ const REVERSE_TAB_MAP: Record<string, string> = {
     "Чакащи": "requests"
 };
 
-export default function GroupPage() {
-    const params = useParams();
-    const groupName = decodeURIComponent(params.name as string);
+interface PageProps {
+  params: Promise<{
+    name: string;
+  }>;
+}
+
+export default function GroupPage({ params }: PageProps) {
+    const { name: rawGroupName } = use(params);
+    const groupName = decodeURIComponent(rawGroupName);
     
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -98,17 +103,15 @@ export default function GroupPage() {
     const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
+    const { data: currentUser, isLoading: isMeLoading } = useProfile();
     const { data: groupData, isLoading: isGroupLoading, isError } = useGroupByName(groupName);
     const group = groupData?.data;
-
-    const { data: currentUser } = useProfile();
 
     const { mutate: joinGroup, isPending: isJoining } = useJoinGroup();
     const { mutate: leaveGroup, isPending: isLeaving } = useLeaveGroup();
     const { mutate: deleteGroup, isPending: isDeleting } = useDeleteGroup();
 
     const { data: membersData } = useGroupMembers(group?.id || "");
-    
     const previewMembers = membersData?.pages[0]?.data?.slice(0, 6) || [];
 
     const {
@@ -125,10 +128,10 @@ export default function GroupPage() {
     });
 
     useEffect(() => {
-        if (entry?.isIntersecting && hasNextPage) {
+        if (entry?.isIntersecting && hasNextPage && activeTab === "Публикации") {
             fetchNextPage();
         }
-    }, [entry, hasNextPage, fetchNextPage]);
+    }, [entry, hasNextPage, fetchNextPage, activeTab]);
 
     useEffect(() => {
         const tabParam = searchParams.get("tab") || "posts";
@@ -142,7 +145,6 @@ export default function GroupPage() {
     const isPending = group?.hasRequestedJoin;
 
     const canModerate = isOwner || isAdmin;
-
     const shouldFetchRequests = !!group?.id && group.isPrivate && (isOwner || isAdmin);
     
     const { data: requestsData } = useGroupRequests(group?.id || "", { 
@@ -159,6 +161,16 @@ export default function GroupPage() {
         router.push(`${pathname}?${newParams.toString()}`, { scroll: false });
     };
 
+    if (isMeLoading) return <LoadingScreen />;
+
+    if (!currentUser) {
+        return (
+            <ProtectedRoute>
+                <LoadingScreen />
+            </ProtectedRoute>
+        );
+    }
+
     if (isGroupLoading) return <LoadingScreen />;
     if (isError || !group) return <ErrorScreen message="Групата не е намерена или възникна грешка." />;
 
@@ -167,7 +179,6 @@ export default function GroupPage() {
     
     const showRequestsTab = group.isPrivate && (isOwner || isAdmin);
     const tabs = showRequestsTab ? [...baseTabs, "Чакащи"] : baseTabs;
-
 
     const userForLayout = {
         name: getUserDisplayName(currentUser),
