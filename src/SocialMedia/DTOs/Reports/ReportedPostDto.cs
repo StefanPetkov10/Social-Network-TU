@@ -1,4 +1,5 @@
 using SocialMedia.Database.Models.Enums;
+using SocialMedia.DTOs.Post;
 
 namespace SocialMedia.DTOs.Reports
 {
@@ -9,6 +10,8 @@ namespace SocialMedia.DTOs.Reports
         public Guid PostId { get; set; }
         public string PostContent { get; set; }
         public string PostAuthorName { get; set; }
+        
+        public IEnumerable<PostMediaDto>? PostMedia { get; set; }
 
         public Guid ReporterId { get; set; }
         public string ReporterName { get; set; }

@@ -42,3 +42,12 @@ export enum GroupRole {
   Admin = 1,
   Member = 2,
 }
+
+export enum ReportReason {
+    SpamOrMisleading = 1,
+    HarassmentOrBullying = 2,
+    HateSpeechOrSymbols = 3,
+    ViolenceOrDangerousOrganizations = 4,
+    NudityOrSexualContent = 5,
+    Other = 6
+}

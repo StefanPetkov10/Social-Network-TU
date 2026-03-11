@@ -14,16 +14,19 @@ namespace SocialMedia.Services
         private readonly IRepository<ReportedPost, Guid> _reportedPostRepository;
         private readonly IRepository<Post, Guid> _postRepository;
         private readonly IRepository<Profile, Guid> _profileRepository;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         public ReportService(
             UserManager<ApplicationUser> userManager,
             IRepository<ReportedPost, Guid> reportedPostRepository,
             IRepository<Post, Guid> postRepository,
-            IRepository<Profile, Guid> profileRepository) : base(userManager)
+            IRepository<Profile, Guid> profileRepository,
+            IHttpContextAccessor httpContextAccessor) : base(userManager)
         {
             _reportedPostRepository = reportedPostRepository;
             _postRepository = postRepository;
             _profileRepository = profileRepository;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task<ApiResponse<bool>> ReportPostAsync(ClaimsPrincipal userClaims, Guid postId, ReportPostRequest request)
@@ -73,28 +76,40 @@ namespace SocialMedia.Services
             if (invalidUserResponse != null) return invalidUserResponse;
 
             var reports = await _reportedPostRepository.QueryNoTracking()
+                .IgnoreQueryFilters()
                 .Include(r => r.Post)
                     .ThenInclude(p => p.Profile)
+                .Include(r => r.Post)
+                    .ThenInclude(p => p.Media)
                 .Include(r => r.Reporter)
                 .Include(r => r.ResolvedBy)
                 .OrderBy(r => r.IsResolved) 
                 .ThenByDescending(r => r.CreatedAt) 
                 .ToListAsync();
 
+            var baseUrl = $"{_httpContextAccessor.HttpContext!.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}";
             var dtos = reports.Select(r => new ReportedPostDto
             {
                 Id = r.Id,
                 PostId = r.PostId,
-                PostContent = r.Post.Content,
-                PostAuthorName = $"{r.Post.Profile.FirstName} {r.Post.Profile.LastName}",
+                PostContent = r.Post?.Content ?? "[Изтрита публикация]",
+                PostAuthorName = r.Post?.Profile != null ? $"{r.Post.Profile.FullName}" : "[Неизвестен автор]",
+                PostMedia = r.Post?.Media?.Select(m => new SocialMedia.DTOs.Post.PostMediaDto 
+                { 
+                    Id = m.Id, 
+                    Url = $"{baseUrl}/{m.FilePath}", 
+                    MediaType = m.MediaType, 
+                    FileName = m.FileName, 
+                    Order = m.Order 
+                }),
                 ReporterId = r.ReporterId,
-                ReporterName = $"{r.Reporter.FirstName} {r.Reporter.LastName}",
+                ReporterName = $"{r.Reporter.FullName}",
                 ReasonType = r.ReasonType,
                 ReasonComment = r.ReasonComment,
                 CreatedAt = r.CreatedAt,
                 IsResolved = r.IsResolved,
                 AdminComment = r.AdminComment,
-                ResolvedByName = r.ResolvedBy != null ? $"{r.ResolvedBy.FirstName} {r.ResolvedBy.LastName}" : null,
+                ResolvedByName = r.ResolvedBy != null ? $"{r.ResolvedBy.FullName}" : null,
                 ResolvedAt = r.ResolvedAt
             });
 
@@ -151,7 +166,7 @@ namespace SocialMedia.Services
             report.IsResolved = true;
             report.ResolvedById = adminProfile.Id;
             report.ResolvedAt = DateTime.UtcNow;
-            report.AdminComment = "Report dismissed.";
+            report.AdminComment = "Докладът е отхвърлен като неоснователен.";
 
             await _reportedPostRepository.UpdateAsync(report);
             await _reportedPostRepository.SaveChangesAsync();

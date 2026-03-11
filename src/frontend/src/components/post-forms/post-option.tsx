@@ -30,6 +30,7 @@ interface PostOptionsProps {
   onEdit: () => void;
   onDelete: () => void;
   onSave: () => void;
+  onReport: () => void;
 }
 
 export function PostOptions({ 
@@ -39,7 +40,8 @@ export function PostOptions({
   canDelete = false,
   onEdit,
   onDelete,
-  onSave
+  onSave,
+  onReport
 }: PostOptionsProps) {
   const { mutate: removeSaved, isPending: isRemoving } = useRemoveSavedPost();
   const [isOpen, setIsOpen] = useState(false);
@@ -126,10 +128,15 @@ export function PostOptions({
         )}
         
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="cursor-pointer gap-2 text-muted-foreground">
-           <Flag className="w-4 h-4" />
-           Докладвай
-        </DropdownMenuItem>
+        {!isOwner && (
+            <DropdownMenuItem 
+                onClick={() => { onReport(); setIsOpen(false); }} 
+                className="cursor-pointer gap-2 text-muted-foreground"
+            >
+               <Flag className="w-4 h-4" />
+               Докладвай
+            </DropdownMenuItem>
+        )}
 
       </DropdownMenuContent>
     </DropdownMenu>

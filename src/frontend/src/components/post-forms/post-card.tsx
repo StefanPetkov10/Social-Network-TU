@@ -33,6 +33,7 @@ import { ReactionButton, REACTION_CONFIG } from "@frontend/components/ui/reactio
 import { ReactionListDialog } from "../reaction-dialog/reaction-list-dialog";
 import { SavePostDialog } from "@frontend/components/saved-posts-form/save-post-dialog";
 import { PostOptions } from "@frontend/components/post-forms/post-option";
+import { ReportPostDialog } from "./report-post-dialog";
 
 import {
   AlertDialog,
@@ -71,6 +72,7 @@ export function PostCard({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false)
 
   const { mutate: deletePost, isPending: isDeleting } = useDeletePost();
 
@@ -186,6 +188,7 @@ export function PostCard({
                     onEdit={() => setIsEditOpen(true)}
                     onDelete={() => setIsDeleteDialogOpen(true)}
                     onSave={() => setIsSaveDialogOpen(true)}
+                    onReport={() => setIsReportDialogOpen(true)}
                 />
         </div>
       </div>
@@ -374,6 +377,12 @@ export function PostCard({
         onOpenChange={setIsSaveDialogOpen} 
         postId={post.id} 
       />
+
+    <ReportPostDialog 
+        open={isReportDialogOpen} 
+        onOpenChange={setIsReportDialogOpen} 
+        postId={post.id} 
+    />
     </>
   );
 }

@@ -10,7 +10,11 @@ import {
   LifeBuoy,
   Send,
   MessageCircle,
+  ShieldAlert,
 } from "lucide-react"
+
+import { jwtDecode } from "jwt-decode"
+import { useAuthStore } from "@frontend/stores/useAuthStore"
 
 import { NavMain } from "@frontend/components/home-forms/nav-main"
 import { NavSecondary } from "@frontend/components/home-forms/nav-secondary"
@@ -26,6 +30,7 @@ import { getInitials } from "@frontend/lib/utils";
 import { useMyGroups } from "@frontend/hooks/use-groups"
 import { useConversations } from "@frontend/hooks/use-chat-query"
 import { useEffect } from "react"
+import { useProfile } from "@frontend/hooks/use-profile"
 
 type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
   user: {
@@ -45,6 +50,18 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
   const { setOpen } = useSidebar();
   const isMessagesPage = pathname.startsWith("/messages");
 
+  const token = useAuthStore((state) => state.accessToken);
+  let isAdmin = false;
+  if (token) {
+    try {
+      const decoded: any = jwtDecode(token);
+      const roleClaim = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
+      const roles = decoded[roleClaim] || decoded.role || [];
+      isAdmin = Array.isArray(roles) ? roles.includes("Admin") : roles === "Admin";
+    } catch (e) {
+      console.error("Error decoding token for roles", e);
+    }
+  }
   useEffect(() => {
     if (isMessagesPage) {
       setOpen(false);
@@ -71,8 +88,13 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
             url: `/groups/${group.name}`
           }))
           : [{ title: "Нямате групи", url: "/groups/discover" }],
-
     },
+    ...(isAdmin ? [{
+      title: "Админ Панел",
+      url: "/admin/reports",
+      icon: ShieldAlert,
+      isActive: pathname.startsWith("/admin")
+    }] : []),
   ];
 
   const navSecondaryItems = [
