@@ -108,7 +108,7 @@ test.describe('Home Page', () => {
                     groupId: null,
                     groupName: null,
                     createdAt: new Date().toISOString(),
-                    isOwner: false 
+                    isOwner: false
                 }
             ]
         };
@@ -181,10 +181,16 @@ test.describe('Home Page', () => {
             await expect(page.getByPlaceholder('Търсене...')).toBeVisible();
         });
 
-        test('should redirect to login if not authenticated', async ({ page }) => {
-            await page.evaluate(() => sessionStorage.removeItem('auth-storage'));
-            await page.goto('/');
-            await expect(page).toHaveURL(/\/auth\/login/, { timeout: 10_000 });
+        test('should redirect to login if not authenticated', async ({ browser }) => {
+            // Auth lives in-memory only (Zustand, no sessionStorage/localStorage).
+            // Use a fresh browser context that was never authenticated.
+            const freshContext = await browser.newContext();
+            const freshPage = await freshContext.newPage();
+
+            await freshPage.goto('/');
+            await expect(freshPage).toHaveURL(/\/auth\/login/, { timeout: 10_000 });
+
+            await freshContext.close();
         });
 
         test('should navigate to messages from sidebar.', async ({ page }) => {

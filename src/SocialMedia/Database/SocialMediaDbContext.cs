@@ -27,6 +27,7 @@ namespace SocialMedia.Database
         public DbSet<MessageReadReceipt> MessageReadReceipts { get; set; }
         public DbSet<EmailOtpCode> EmailOtpCodes { get; set; }
         public DbSet<PasswordResetSession> PasswordResetSessions { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

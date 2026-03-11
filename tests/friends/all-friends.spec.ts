@@ -154,11 +154,12 @@ test.describe('All Friends - Friend Cards', () => {
 });
 
 test.describe('All Friends - Navigation', () => {
-    test('should redirect to login if not authenticated', async ({ page }) => {
-        await loginAsTestUser(page);
-        await page.evaluate(() => sessionStorage.removeItem('auth-storage'));
-        await page.goto('/friends/all-friends');
-        await expect(page).toHaveURL(/\/auth\/login/, { timeout: 10_000 });
+    test('should redirect to login if not authenticated', async ({ browser }) => {
+        const freshContext = await browser.newContext();
+        const freshPage = await freshContext.newPage();
+        await freshPage.goto('/friends/all-friends');
+        await expect(freshPage).toHaveURL(/\/auth\/login/, { timeout: 10_000 });
+        await freshContext.close();
     });
 
     test('should navigate to all friends from sidebar', async ({ page }) => {

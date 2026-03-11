@@ -64,7 +64,7 @@ export default function ChangePasswordPage() {
     const { data: profile, isLoading: isProfileLoading } = useProfile();
     const { mutate: changePassword, isPending } = useChangePassword();
     const { mutate: forgotPasswordOtp, isPending: isForgotPending } = useForgotPasswordOtp();
-    const token = useAuthStore((s) => s.token);
+    const token = useAuthStore((s) => s.accessToken);
     const userEmail = useMemo(() => getEmailFromToken(token), [token]);
 
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);

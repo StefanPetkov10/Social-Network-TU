@@ -15,7 +15,7 @@ export const useChatSocket = (chatId: string | null) => {
     const [isConnected, setIsConnected] = useState(false);
     const { setOnlineUsers, addOnlineUser, removeOnlineUser } = useSocketStore();
     const queryClient = useQueryClient();
-    const token = useAuthStore((state) => state.token);
+    const token = useAuthStore((state) => state.accessToken);
     const { data: myProfile } = useProfile();
 
     const profileRef = useRef(myProfile);

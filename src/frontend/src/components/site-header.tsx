@@ -22,7 +22,7 @@ import {
   DropdownMenuLabel,
 } from "@frontend/components/ui/dropdown-menu";
 
-import { useAuthStore } from "@frontend/stores/useAuthStore";
+import { useLogout } from "@frontend/hooks/use-auth";
 
 interface SiteHeaderProps {
   user: { name: string; avatar: string };
@@ -34,11 +34,15 @@ export function SiteHeader({ user }: SiteHeaderProps) {
 
   const queryClient = useQueryClient();
   const router = useRouter();
-  const logout = useAuthStore((s) => s.logout);
+  const { mutateAsync: performLogout } = useLogout();
 
   const handleLogout = async () => {
     await queryClient.cancelQueries();
-    logout();
+    try {
+      await performLogout();
+    } catch (error) {
+      console.warn("Server logout failed, clearing local session anyway.");
+    }
     queryClient.clear();
     router.replace("/auth/login");
   };

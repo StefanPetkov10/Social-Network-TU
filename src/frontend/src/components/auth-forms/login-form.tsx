@@ -26,13 +26,13 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
   const login = useLogin();
   const forgotPasswordOtp = useForgotPasswordOtp();
 
-  const token = useAuthStore((s) => s.token);
-  
+  const accessToken = useAuthStore((s) => s.accessToken);
+
   useEffect(() => {
-    if (token) {
+    if (accessToken) {
       router.replace("/");
     }
-  }, [token, router]);
+  }, [accessToken, router]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -40,7 +40,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
       setErrorMessage("Please fill in both fields.");
       return;
     }
-    
+
     login.mutate({ Identifier: identifier, Password: password }, {
       onError: (err) => setErrorMessage(getAxiosErrorMessage(err)),
       onSuccess: () => setErrorMessage(null),

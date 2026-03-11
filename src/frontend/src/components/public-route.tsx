@@ -1,24 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "../stores/useAuthStore";
 
 export default function PublicRoute({ children }: { children: React.ReactNode }) {
-  const token = useAuthStore((s) => s.token);
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const isInitializing = useAuthStore((s) => s.isInitializing);
   const router = useRouter();
-  const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    if (token) {
+    if (!isInitializing && accessToken) {
       router.replace("/");
-      return;
     }
+  }, [isInitializing, accessToken, router]);
 
-    setChecked(true);
-  }, [token, router]);
+  if (isInitializing) return null;
 
-  if (!checked) return null;
+  if (accessToken) return null;
 
   return <>{children}</>;
 }

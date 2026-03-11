@@ -82,16 +82,6 @@ export default function ProfilePage() {
         }
     }, [entry, hasNextPage, fetchNextPage, activeTab]);
 
-    useEffect(() => {
-        if (isError) {
-            const status = (error as any)?.response?.status || (error as any)?.status;
-            if (status === 401) {
-                localStorage.removeItem("token");
-                router.push("/auth/login");
-            }
-        }
-    }, [isError, error, router]);
-
     const handleSaveBio = () => {
         if (!bioInput.trim()) return;
         updateBio(bioInput, {
@@ -104,8 +94,6 @@ export default function ProfilePage() {
     if (isLoading) return <LoadingScreen />;
 
     if (isError || !profile) {
-        const status = (error as any)?.response?.status || (error as any)?.status;
-        if (status === 401) return null;
         return <ErrorScreen message={(error as any)?.message} />;
     }
 

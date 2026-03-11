@@ -149,11 +149,11 @@ namespace SocialMedia
                 config.AddProfile<CommentMapping>();
             });
 
+            var frontendUrl = builder.Configuration["FrontendUrl"] ?? "http://localhost:3000";
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("LocalDev", p => p
-                    //.WithOrigins("http://localhost:3000")
-                    .SetIsOriginAllowed(origin => true)
+                    .WithOrigins(frontendUrl)
                     .AllowAnyHeader()
                     .AllowAnyMethod()
                     .AllowCredentials()

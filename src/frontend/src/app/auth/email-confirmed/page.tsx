@@ -8,6 +8,7 @@ import { CheckCircle2, XCircle, RefreshCw } from "lucide-react";
 import { useConfirmEmail } from "@frontend/hooks/use-auth";
 import { getAxiosErrorMessage } from "@frontend/lib/utils";
 import { useRegistrationStore } from "@frontend/stores/useRegistrationStore";
+import { useAuthStore } from "@frontend/stores/useAuthStore";
 
 export default function EmailConfirmedPage() {
   const router = useRouter();
@@ -20,27 +21,28 @@ export default function EmailConfirmedPage() {
   const resetStore = useRegistrationStore((state) => state.reset);
   
   const startRegistrationFlow = useRegistrationStore((state) => state.startRegistrationFlow);
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const isInitializing = useAuthStore((s) => s.isInitializing);
 
   const [error, setError] = useState("");
   const [processing, setProcessing] = useState(true);
   const [accessChecked, setAccessChecked] = useState(false);
 
   useEffect(() => {
-    const authData = localStorage.getItem("auth-storage");
-    const isAuthenticated = authData && authData.includes("token");
-    
-    if (isAuthenticated) { 
-        router.replace("/");
-        return; 
+    if (isInitializing) return;
+
+    if (accessToken) {
+      router.replace("/");
+      return;
     }
 
     if (!userId || !token) {
-        router.replace("/auth/login"); 
-        return; 
+      router.replace("/auth/login");
+      return;
     }
-    
+
     setAccessChecked(true);
-    
+
     confirmEmail.mutate(
       { userId, token },
       {
@@ -60,7 +62,7 @@ export default function EmailConfirmedPage() {
         },
       }
     );
-  }, [router, userId, token, resetStore]); 
+  }, [router, userId, token, resetStore, isInitializing, accessToken]);
   
   const handleRetry = () => {
     setProcessing(true);
@@ -73,7 +75,6 @@ export default function EmailConfirmedPage() {
 
     startRegistrationFlow();
     router.push("/auth/confirmation-sent");
-
   };
   const handleGoToHome = () => router.push("/");
 

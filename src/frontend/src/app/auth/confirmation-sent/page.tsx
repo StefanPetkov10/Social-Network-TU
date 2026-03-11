@@ -8,6 +8,7 @@ import { Input } from "@frontend/components/ui/input";
 import { useResendConfirmation } from "@frontend/hooks/use-auth";
 import { getAxiosErrorMessage } from "@frontend/lib/utils";
 import { useRegistrationStore } from "@frontend/stores/useRegistrationStore";
+import { useAuthStore } from "@frontend/stores/useAuthStore";
 
 export default function ConfirmationSentPage() {
   const router = useRouter();
@@ -25,13 +26,17 @@ export default function ConfirmationSentPage() {
 
   const [accessChecked, setAccessChecked] = useState(false);
 
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const isInitializing = useAuthStore((s) => s.isInitializing);
+
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
   useEffect(() => {
-    const authData = localStorage.getItem("auth-storage");
-    if (authData && authData.includes("token")) { 
+    if (isInitializing) return;
+
+    if (accessToken) { 
         router.replace("/");
         return; 
     }
@@ -43,7 +48,7 @@ export default function ConfirmationSentPage() {
     
     setAccessChecked(true);
     
-  }, [isInProgress, router, isMounted]);
+  }, [isInProgress, router, isMounted, accessToken, isInitializing]);
 
   if (!isMounted || !isInProgress) {
     return null; 

@@ -35,8 +35,8 @@ test.describe('Groups Discover Page', () => {
             await page.reload();
             await expect(page.getByRole('heading', { name: 'Намерете своята общност' })).toBeVisible({ timeout: 15_000 });
 
-            await expect(page.getByText('Група 1')).toBeVisible();
-            await expect(page.getByText('Група 2')).toBeVisible();
+            await expect(page.getByRole('heading', { name: 'Група 1' }).first()).toBeVisible();
+            await expect(page.getByRole('heading', { name: 'Група 2' }).first()).toBeVisible();
 
             await expect(page.getByRole('button', { name: 'Присъедини се' }).first()).toBeVisible();
         });
@@ -61,10 +61,12 @@ test.describe('Groups Discover Page', () => {
     });
 
     test.describe('Navigation', () => {
-        test('should redirect to login if not authenticated', async ({ page }) => {
-            await page.evaluate(() => sessionStorage.removeItem('auth-storage'));
-            await page.goto('/groups/discover');
-            await expect(page).toHaveURL(/\/auth\/login/, { timeout: 10_000 });
+        test('should redirect to login if not authenticated', async ({ browser }) => {
+            const freshContext = await browser.newContext();
+            const freshPage = await freshContext.newPage();
+            await freshPage.goto('/groups/discover');
+            await expect(freshPage).toHaveURL(/\/auth\/login/, { timeout: 10_000 });
+            await freshContext.close();
         });
 
         test('should have active link in sidebar', async ({ page }) => {

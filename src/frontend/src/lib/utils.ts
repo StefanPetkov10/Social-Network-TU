@@ -15,8 +15,17 @@ export function getAxiosErrorMessage(err: unknown): string {
 
   if ((err as AxiosError).isAxiosError) {
     const axiosErr = err as AxiosError<any>;
-    const data = axiosErr.response?.data;
-    if (!data) return axiosErr.message;
+    const response = axiosErr.response;
+    const data = response?.data;
+
+    if (!response || !data) return axiosErr.message;
+
+    const contentType = response.headers?.['content-type'] || '';
+    const isHtmlOrText = contentType.includes('text/html') || contentType.includes('text/plain');
+    
+    if (response.status >= 500 && isHtmlOrText) {
+        return "Възникна неочаквана сървърна грешка. Моля, опитайте отново по-късно."; 
+    }
 
     if (data.errors && typeof data.errors === "object") {
       const allErrors = Object.values(data.errors)
@@ -27,9 +36,12 @@ export function getAxiosErrorMessage(err: unknown): string {
 
     if (data.message) return data.message;
 
+    if (typeof data === 'string') {
+        return data;
+    }
+
     return JSON.stringify(data);
   }
-
   return (err as Error).message ?? String(err);
 }
 

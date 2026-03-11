@@ -18,7 +18,7 @@ const mockMyProfile = {
         followersCount: 3,
         followingCount: 7,
         isFollowed: false,
-        friendshipStatus: -1,   
+        friendshipStatus: -1,
         isFriendRequestSender: false,
         friendshipRequestId: null,
     },
@@ -41,7 +41,7 @@ const mockStrangerProfile = {
         followersCount: 40,
         followingCount: 18,
         isFollowed: false,
-        friendshipStatus: -1,  
+        friendshipStatus: -1,
         isFriendRequestSender: false,
         friendshipRequestId: null,
     },
@@ -51,7 +51,7 @@ const mockPendingSentProfile = {
     ...mockStrangerProfile,
     data: {
         ...mockStrangerProfile.data,
-        friendshipStatus: 0,   
+        friendshipStatus: 0,
         isFriendRequestSender: true,
         friendshipRequestId: 'req-id-01',
     },
@@ -61,7 +61,7 @@ const mockPendingReceivedProfile = {
     ...mockStrangerProfile,
     data: {
         ...mockStrangerProfile.data,
-        friendshipStatus: 0,   
+        friendshipStatus: 0,
         isFriendRequestSender: false,
         friendshipRequestId: 'req-id-02',
     },
@@ -71,7 +71,7 @@ const mockFriendProfile = {
     ...mockStrangerProfile,
     data: {
         ...mockStrangerProfile.data,
-        friendshipStatus: 1,   
+        friendshipStatus: 1,
         isFollowed: true,
         isFriendRequestSender: false,
         friendshipRequestId: null,
@@ -295,11 +295,12 @@ test.describe('Username Page - Own Profile Redirect', () => {
 });
 
 test.describe('Username Page - Protected Route', () => {
-    test('should redirect to login when not authenticated', async ({ page }) => {
-        await page.goto('/auth/login');
-        await page.evaluate(() => sessionStorage.removeItem('auth-storage'));
-        await page.goto('/petar_s');
-        await expect(page).toHaveURL(/\/auth\/login/, { timeout: 10_000 });
+    test('should redirect to login when not authenticated', async ({ browser }) => {
+        const freshContext = await browser.newContext();
+        const freshPage = await freshContext.newPage();
+        await freshPage.goto('/petar_s');
+        await expect(freshPage).toHaveURL(/\/auth\/login/, { timeout: 10_000 });
+        await freshContext.close();
     });
 });
 

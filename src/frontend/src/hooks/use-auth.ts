@@ -2,11 +2,16 @@ import { useMutation } from "@tanstack/react-query";
 import api from "../lib/axios";
 import { useAuthStore } from "../stores/useAuthStore";
 import { RegisterDto } from "@frontend/lib/types/auth";
-import { ApiResponse } from "@frontend/lib/types/api"; 
+import { ApiResponse } from "@frontend/lib/types/api";
 
 interface LoginPayload {
   Identifier: string;
   Password: string;
+}
+
+interface LoginResponseData {
+  accessToken: string;
+  expiresIn: number;
 }
 
 export function useRegister() {
@@ -19,17 +24,50 @@ export function useRegister() {
 }
 
 export function useLogin() {
-  const setToken = useAuthStore((s) => s.setToken);
+  const setAccessToken = useAuthStore((s) => s.setAccessToken);
 
-  return useMutation<ApiResponse<string>, Error, LoginPayload>({
+  return useMutation<ApiResponse<LoginResponseData>, Error, LoginPayload>({
     mutationFn: async (payload) => {
-      const { data } = await api.post<ApiResponse<string>>("/api/Auth/login", payload);
+      const { data } = await api.post<ApiResponse<LoginResponseData>>("/api/Auth/login", payload);
       return data;
     },
     onSuccess: (response) => {
-      if (response.success && response.data) {
-        setToken(response.data);
+      if (response.success && response.data?.accessToken) {
+        setAccessToken(response.data.accessToken);
       }
+    },
+  });
+}
+
+export function useRefreshToken() {
+  const setAccessToken = useAuthStore((s) => s.setAccessToken);
+
+  return useMutation<ApiResponse<LoginResponseData>, Error, void>({
+    mutationFn: async () => {
+      const { data } = await api.post<ApiResponse<LoginResponseData>>("/api/Auth/refresh");
+      return data;
+    },
+    onSuccess: (response) => {
+      if (response.success && response.data?.accessToken) {
+        setAccessToken(response.data.accessToken);
+      }
+    },
+  });
+}
+
+export function useLogout() {
+  const logout = useAuthStore((s) => s.logout);
+
+  return useMutation<ApiResponse<null>, Error, void>({
+    mutationFn: async () => {
+      const { data } = await api.post<ApiResponse<null>>("/api/Auth/logout");
+      return data;
+    },
+    onSuccess: () => {
+      logout();
+    },
+    onError: () => {
+      logout();
     },
   });
 }

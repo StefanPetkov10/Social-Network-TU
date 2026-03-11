@@ -199,21 +199,147 @@ namespace SocialMedia.Controllers
             if (user.Profile != null)
                 claims.Add(new Claim("profile_id", user.Profile.Id.ToString()));
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:SecretKey"]!));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["JWT:SecretKey"]!));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var token = new JwtSecurityToken(
-                issuer: _config["Jwt:Issuer"],
-                audience: _config["Jwt:Audience"],
+                issuer: _config["JWT:Issuer"],
+                audience: _config["JWT:Audience"],
                 claims: claims,
-                expires: DateTime.UtcNow.AddDays(7),
+                expires: DateTime.UtcNow.AddMinutes(15),
                 signingCredentials: creds);
 
-            var jwt = new JwtSecurityTokenHandler().WriteToken(token);
+            var accessToken = new JwtSecurityTokenHandler().WriteToken(token);
+
+            var rawRefresh = RefreshTokenHelper.GenerateRawToken();
+            var refreshHash = RefreshTokenHelper.HashToken(rawRefresh);
+
+            var refreshToken = new RefreshToken
+            {
+                UserId = user.Id,
+                TokenHash = refreshHash,
+                ExpiresAt = DateTime.UtcNow.AddDays(7),
+                CreatedAt = DateTime.UtcNow,
+            };
+            await _context.RefreshTokens.AddAsync(refreshToken);
+            await _context.SaveChangesAsync();
+
+            // HttpOnly cookie — JavaScript cannot read this
+            Response.Cookies.Append("refresh_token", rawRefresh, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.None,
+                Expires = DateTimeOffset.UtcNow.AddDays(7),
+                Path = "/"
+            });
 
             _logger.LogInformation("User {UserName} logged in successfully.", user.UserName);
 
-            return Ok(ApiResponse<string>.SuccessResponse(jwt, "Login successful."));
+            return Ok(ApiResponse<object>.SuccessResponse(new
+            {
+                accessToken,
+                expiresIn = 900 
+            }, "Login successful."));
+        }
+
+        [HttpPost("refresh")]
+        public async Task<IActionResult> Refresh()
+        {
+            var rawToken = Request.Cookies["refresh_token"];
+            if (string.IsNullOrEmpty(rawToken))
+                return Unauthorized(ApiResponse<object>.ErrorResponse("No refresh token."));
+
+            var hash = RefreshTokenHelper.HashToken(rawToken);
+
+            var stored = await _context.RefreshTokens
+                .Include(r => r.User)
+                    .ThenInclude(u => u.Profile)
+                .FirstOrDefaultAsync(r => r.TokenHash == hash);
+
+            if (stored == null || stored.IsRevoked || stored.ExpiresAt < DateTime.UtcNow)
+            {
+                Response.Cookies.Delete("refresh_token", new CookieOptions { Secure = true, SameSite = SameSiteMode.None, Path = "/" });
+                return Unauthorized(ApiResponse<object>.ErrorResponse("Session expired. Please log in again."));
+            }
+
+            var user = stored.User;
+
+            stored.IsRevoked = true;
+
+            var newRaw = RefreshTokenHelper.GenerateRawToken();
+            var newHash = RefreshTokenHelper.HashToken(newRaw);
+            var newRefresh = new RefreshToken
+            {
+                UserId = user.Id,
+                TokenHash = newHash,
+                ExpiresAt = DateTime.UtcNow.AddDays(7),
+                CreatedAt = DateTime.UtcNow,
+            };
+            await _context.RefreshTokens.AddAsync(newRefresh);
+            await _context.SaveChangesAsync();
+
+            Response.Cookies.Append("refresh_token", newRaw, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.None,
+                Expires = DateTimeOffset.UtcNow.AddDays(7),
+                Path = "/"
+            });
+
+            var claims = new List<Claim>
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+                new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
+                new Claim(ClaimTypes.Name, user.UserName ?? string.Empty),
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
+
+            var roles = await _userManager.GetRolesAsync(user);
+            foreach (var role in roles)
+                claims.Add(new Claim(ClaimTypes.Role, role));
+
+            if (user.Profile != null)
+                claims.Add(new Claim("profile_id", user.Profile.Id.ToString()));
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["JWT:SecretKey"]!));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var jwtToken = new JwtSecurityToken(
+                issuer: _config["JWT:Issuer"],
+                audience: _config["JWT:Audience"],
+                claims: claims,
+                expires: DateTime.UtcNow.AddMinutes(15),
+                signingCredentials: creds);
+
+            var accessToken = new JwtSecurityTokenHandler().WriteToken(jwtToken);
+
+            return Ok(ApiResponse<object>.SuccessResponse(new
+            {
+                accessToken,
+                expiresIn = 900
+            }, "Token refreshed."));
+        }
+
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout()
+        {
+            var rawToken = Request.Cookies["refresh_token"];
+            if (!string.IsNullOrEmpty(rawToken))
+            {
+                var hash = RefreshTokenHelper.HashToken(rawToken);
+                var stored = await _context.RefreshTokens
+                    .FirstOrDefaultAsync(r => r.TokenHash == hash);
+                if (stored != null)
+                {
+                    stored.IsRevoked = true;
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+            Response.Cookies.Delete("refresh_token", new CookieOptions { Secure = true, SameSite = SameSiteMode.None, Path = "/" });
+            return Ok(ApiResponse<object>.SuccessResponse(null, "Logged out."));
         }
 
         [HttpPost("request-otp")]

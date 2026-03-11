@@ -40,7 +40,7 @@ test.describe('Email Confirmed Page', () => {
 
             await page.getByRole('button', { name: 'Go to Homepage' }).click();
 
-            await expect(page).toHaveURL(/\/$/);
+            await expect(page).toHaveURL(/\/auth\/login/);
         });
     });
 

@@ -16,6 +16,7 @@ import {
 } from "@frontend/components/ui/field";
 import { Input } from "@frontend/components/ui/input";
 import { useResetPassword } from "@frontend/hooks/use-auth";
+import { useAuthStore } from "@frontend/stores/useAuthStore";
 
 export function ResetPasswordForm({ className, ...props }: React.ComponentProps<"div">) {
   const router = useRouter();
@@ -27,12 +28,15 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [accessChecked, setAccessChecked] = useState(false);
 
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const isInitializing = useAuthStore((s) => s.isInitializing);
+
   useEffect(() => {
-    const authData = sessionStorage.getItem("auth-storage");
-    const isAuthenticated = authData && authData.includes("token");
+    if (isInitializing) return;
+
     const isPasswordChangeFlow = sessionStorage.getItem("passwordChangeFlow") === "true";
 
-    if (isAuthenticated && !isPasswordChangeFlow) {
+    if (accessToken && !isPasswordChangeFlow) {
       router.replace("/");
       return;
     }
@@ -45,7 +49,7 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
 
     setSessionToken(token);
     setAccessChecked(true);
-  }, [router]);
+  }, [router, isInitializing, accessToken]);
 
   if (!accessChecked) {
     return null;

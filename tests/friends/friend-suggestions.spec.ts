@@ -106,11 +106,12 @@ test.describe('Friend Suggestions - Suggestion Cards (mocked)', () => {
 });
 
 test.describe('Friend Suggestions - Navigation', () => {
-    test('should redirect to login if not authenticated', async ({ page }) => {
-        await loginAsTestUser(page);
-        await page.evaluate(() => sessionStorage.removeItem('auth-storage'));
-        await page.goto('/friends/friend-suggestion');
-        await expect(page).toHaveURL(/\/auth\/login/, { timeout: 10_000 });
+    test('should redirect to login if not authenticated', async ({ browser }) => {
+        const freshContext = await browser.newContext();
+        const freshPage = await freshContext.newPage();
+        await freshPage.goto('/friends/friend-suggestion');
+        await expect(freshPage).toHaveURL(/\/auth\/login/, { timeout: 10_000 });
+        await freshContext.close();
     });
 
     test('should navigate to suggestions from sidebar', async ({ page }) => {

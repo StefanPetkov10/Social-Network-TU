@@ -426,3 +426,10 @@ FodyWeavers.xsd
 
 # Playwright env variables
 .env
+
+# ── SECRETS — never commit these ──────────────────────────────
+# appsettings.Development.json contains real DB/JWT/SMTP credentials
+src/SocialMedia/appsettings.Development.json
+
+# Runtime file uploads (user content)
+src/SocialMedia/Uploads/

@@ -23,16 +23,15 @@ test.describe('Logout', () => {
         await expect(page).toHaveURL(/\/auth\/login/, { timeout: 10_000 });
     });
 
-    test('should clear auth token from sessionStorage after logout', async ({ page }) => {
+    test('should clear in-memory auth token after logout', async ({ page }) => {
         await page.getByRole('button', { name: 'S', exact: true }).click();
 
         await page.getByText('Изход').click();
 
         await expect(page).toHaveURL(/\/auth\/login/, { timeout: 10_000 });
 
-        const authStorage = await page.evaluate(() => sessionStorage.getItem('auth-storage'));
-        const parsed = authStorage ? JSON.parse(authStorage) : null;
-        expect(parsed?.state?.token).toBeNull();
+        await page.goto('/');
+        await expect(page).toHaveURL(/\/auth\/login/, { timeout: 10_000 });
     });
 
     test('should not be able to access home page after logout', async ({ page }) => {

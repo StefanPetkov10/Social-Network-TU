@@ -116,21 +116,9 @@ export default function Home() {
     }
   }, [entry, hasNextPage, fetchNextPage]);
 
-  useEffect(() => {
-    if (isError) {
-      const status = (error as any)?.response?.status || (error as any)?.status;
-      if (status === 401) {
-        localStorage.removeItem("token");
-        router.push("/auth/login");
-      }
-    }
-  }, [isError, error, router]);
-
   if (isProfileLoading) return <LoadingScreen />;
 
   if (isError || !profile) {
-    const status = (error as any)?.response?.status || (error as any)?.status;
-    if (status === 401) return null;
     return <ErrorScreen message={(error as any)?.message} />;
   }
 

@@ -393,11 +393,12 @@ test.describe('Group View Page - Posts Tab', () => {
 });
 
 test.describe('Group View Page - Navigation', () => {
-    test('should redirect to login if not authenticated', async ({ page }) => {
-        await loginAsTestUser(page);
-        await page.evaluate(() => sessionStorage.removeItem('auth-storage'));
-        await page.goto(GROUP_URL);
-        await expect(page).toHaveURL(/\/auth\/login/, { timeout: 10_000 });
+    test('should redirect to login if not authenticated', async ({ browser }) => {
+        const freshContext = await browser.newContext();
+        const freshPage = await freshContext.newPage();
+        await freshPage.goto(GROUP_URL);
+        await expect(freshPage).toHaveURL(/\/auth\/login/, { timeout: 10_000 });
+        await freshContext.close();
     });
 
     test('should navigate to Хора tab via sidebar Виж всички button', async ({ page }) => {

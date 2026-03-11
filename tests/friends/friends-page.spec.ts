@@ -123,14 +123,15 @@ test.describe('Friends Page - Suggestions', () => {
 });
 
 test.describe('Friends Page - Navigation', () => {
-    test('should redirect to login if not authenticated', async ({ page }) => {
-        await loginAsTestUser(page);
-        await page.evaluate(() => sessionStorage.removeItem('auth-storage'));
-        await page.goto('/friends');
-        await expect(page).toHaveURL(/\/auth\/login/, { timeout: 10_000 });
+    test('should redirect to login if not authenticated', async ({ browser }) => {
+        const freshContext = await browser.newContext();
+        const freshPage = await freshContext.newPage();
+        await freshPage.goto('/friends');
+        await expect(freshPage).toHaveURL(/\/auth\/login/, { timeout: 10_000 });
+        await freshContext.close();
     });
 
-   test('should navigate to friend requests from sidebar', async ({ page }) => {
+    test('should navigate to friend requests from sidebar', async ({ page }) => {
         await loginAsTestUser(page);
         await page.goto('/friends');
         await expect(page.getByRole('heading', { name: 'Покани за приятелство' })).toBeVisible({ timeout: 15_000 });
