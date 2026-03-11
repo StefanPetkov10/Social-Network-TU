@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -120,7 +120,7 @@ namespace SocialMedia.Services
                 .Include(p => p.Reactions)
                 .FirstOrDefaultAsync(p => p.Id == postId);
 
-            if (post == null || post.IsDeleted) return NotFoundResponse<PostDto>("Post");
+            if (post == null) return NotFoundResponse<PostDto>("Post");
             var authorProfile = await _profileRepository.GetByIdAsync(post.ProfileId);
 
             if (post.GroupId.HasValue)
@@ -185,7 +185,6 @@ namespace SocialMedia.Services
                 .Include(p => p.Profile)
                 .ThenInclude(p => p.User)
                 .Include(p => p.Reactions)
-                .Where(p => !p.IsDeleted)
                 .Where(p =>
                     (p.GroupId.HasValue && myGroupIds.Contains(p.GroupId.Value))
                     ||
@@ -234,7 +233,7 @@ namespace SocialMedia.Services
                 .Include(p => p.Profile)
                 .ThenInclude(p => p.User)
                 .Include(p => p.Reactions)
-                .Where(p => !p.IsDeleted && p.ProfileId == profileId)
+                .Where(p => p.ProfileId == profileId)
                 .Where(p =>
                     p.Visibility == PostVisibility.Public ||
                     isOwner ||
@@ -267,7 +266,7 @@ namespace SocialMedia.Services
             var post = _postRepository.Query()
                 .Include(p => p.Media)
                 .Include(p => p.Reactions)
-                .FirstOrDefault(p => p.Id == postId && !p.IsDeleted);
+                .FirstOrDefault(p => p.Id == postId);
 
             if (post == null) return NotFoundResponse<PostDto>("Post");
 
@@ -365,8 +364,7 @@ namespace SocialMedia.Services
 
             var query = _postMediaRepository.QueryNoTracking()
                 .Include(m => m.Post)
-                .Where(m => !m.Post.IsDeleted
-                    && m.Post.ProfileId == profileId
+                .Where(m => m.Post.ProfileId == profileId
                     && m.Post.GroupId == null)
                 .Where(m => m.Post.Visibility == PostVisibility.Public || isOwner ||
                            (m.Post.Visibility == PostVisibility.FriendsOnly && isFriend));
@@ -417,8 +415,7 @@ namespace SocialMedia.Services
 
             var query = _postMediaRepository.QueryNoTracking()
                 .Include(m => m.Post)
-                .Where(m => !m.Post.IsDeleted
-                    && m.Post.ProfileId == profileId
+                .Where(m => m.Post.ProfileId == profileId
                     && m.Post.GroupId == null)
                 .Where(m => m.Post.Visibility == PostVisibility.Public || isOwner ||
                            (m.Post.Visibility == PostVisibility.FriendsOnly && isFriend));
@@ -474,7 +471,7 @@ namespace SocialMedia.Services
 
             var query = _postMediaRepository.QueryNoTracking()
                 .Include(m => m.Post)
-                .Where(m => !m.Post.IsDeleted && m.Post.GroupId == groupId);
+                .Where(m => m.Post.GroupId == groupId);
 
             if (mediaTypeGroup == MediaTypeGroup.Documents)
             {

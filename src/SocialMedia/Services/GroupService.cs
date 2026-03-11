@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SocialMedia.Common;
@@ -296,8 +296,7 @@ namespace SocialMedia.Services
                 return ApiResponse<IEnumerable<PostDto>>.SuccessResponse(Enumerable.Empty<PostDto>(), "No groups found.");
 
             var queryPosts = _postRepository.QueryNoTracking()
-                .Where(p => p.GroupId != null && !p.IsDeleted
-                    && myMembership.Contains(p.GroupId.Value))
+                .Where(p => p.GroupId != null && myMembership.Contains(p.GroupId.Value))
                 .Include(p => p.Profile)
                     .ThenInclude(u => u.User)
                 .Include(p => p.Group)
@@ -358,7 +357,7 @@ namespace SocialMedia.Services
             }
 
             var queryPosts = _postRepository.QueryNoTracking()
-                .Where(p => p.GroupId == groupId && !p.IsDeleted)
+                .Where(p => p.GroupId == groupId)
                 .Include(p => p.Media)
                 .Include(p => p.Profile)
                     .ThenInclude(p => p.User)

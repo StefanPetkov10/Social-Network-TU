@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -122,7 +122,7 @@ namespace SocialMedia.Services
                 .Include(c => c.Replies).ThenInclude(r => r.Media)
                 .Include(c => c.Replies).ThenInclude(r => r.Reactions)
                 .Include(c => c.Post)
-                .Where(c => c.PostId == postId && c.Depth == 0 && !c.IsDeleted)
+                .Where(c => c.PostId == postId && c.Depth == 0)
                 .OrderByDescending(c => c.CreatedDate) // Главните коментари: Newest First
                 .AsQueryable();
 
@@ -165,7 +165,7 @@ namespace SocialMedia.Services
                 .Include(c => c.Media)
                 .Include(c => c.Reactions)
                 .Include(c => c.Replies)
-                .Where(c => c.ParentCommentId == commentId && !c.IsDeleted)
+                .Where(c => c.ParentCommentId == commentId)
                 .OrderBy(c => c.CreatedDate)
                 .AsQueryable();
 

@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SocialMedia.Common;
@@ -139,15 +139,16 @@ namespace SocialMedia.Services
                 .ToList();
 
             var allMessages = await _messageRepository.QueryNoTracking()
+                .IgnoreQueryFilters()
                 .Include(m => m.Sender)
                 .Include(m => m.Group)
                 .Include(m => m.Receiver)
                 .Include(m => m.ReadReceipts)
-                .Where(m => !m.IsDeleted && (
+                .Where(m => 
                     (m.SenderId == viewerProfile.Id || m.ReceiverId == viewerProfile.Id)
                     ||
                     (m.GroupId.HasValue && myGroupIds.Contains(m.GroupId.Value))
-                ))
+                )
                 .OrderByDescending(m => m.CreatedDate)
                 .ToListAsync();
 
@@ -397,7 +398,7 @@ namespace SocialMedia.Services
             var mediaDtos = new List<MessageMediaDto>();
             string baseUrl = $"{_httpContextAccessor.HttpContext?.Request.Scheme}://{_httpContextAccessor.HttpContext?.Request.Host}";
 
-            if (!m.IsDeleted && m.Media != null)
+            if (m.Media != null)
             {
                 mediaDtos = m.Media.Select(att => new MessageMediaDto
                 {
@@ -410,7 +411,7 @@ namespace SocialMedia.Services
             }
 
             var reactionDtos = new List<MessageReactionDto>();
-            if (!m.IsDeleted && m.Reactions != null && m.Reactions.Any())
+            if (m.Reactions != null && m.Reactions.Any())
             {
                 reactionDtos = m.Reactions.Select(r => new MessageReactionDto
                 {

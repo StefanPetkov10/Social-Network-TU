@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using SocialMedia.Database.Models;
+using System.Linq.Expressions;
+using System.Reflection;
 
 namespace SocialMedia.Database
 {
@@ -69,8 +71,19 @@ namespace SocialMedia.Database
                 .HasForeignKey(r => r.MessageId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            builder.Entity<Post>()
-                .HasQueryFilter(m => !m.IsDeleted);
+            foreach (var entityType in builder.Model.GetEntityTypes())
+            {
+                var isDeletedProperty = entityType.FindProperty("IsDeleted");
+                if (isDeletedProperty != null && isDeletedProperty.ClrType == typeof(bool))
+                {
+                    var parameter = Expression.Parameter(entityType.ClrType, "e");
+                    var propertyAccess = Expression.Property(parameter, isDeletedProperty.PropertyInfo!);
+                    var notExpression = Expression.Not(propertyAccess);
+                    var filter = Expression.Lambda(notExpression, parameter);
+
+                    entityType.SetQueryFilter(filter);
+                }
+            }
 
             // builder.Entity<MessageReadReceipt>()
             //.HasKey(r => new { r.MessageId, r.ProfileId });

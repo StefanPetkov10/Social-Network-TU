@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -92,7 +92,7 @@ namespace SocialMedia.Services
                 .Include(sp => sp.Post).ThenInclude(p => p.Media)
                 .Include(sp => sp.Post).ThenInclude(p => p.Reactions)
                 .Include(sp => sp.Post).ThenInclude(p => p.Group)
-                .Where(sp => sp.ProfileId == profile.Id && !sp.Post.IsDeleted);
+                .Where(sp => sp.ProfileId == profile.Id);
 
             query = query.Where(sp => sp.CollectionName == targetCollection ||
                                      (targetCollection == SystemDefaultCollection && (sp.CollectionName == null || sp.CollectionName == "")));
