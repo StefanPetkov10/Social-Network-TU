@@ -30,6 +30,7 @@ namespace SocialMedia.Database
         public DbSet<EmailOtpCode> EmailOtpCodes { get; set; }
         public DbSet<PasswordResetSession> PasswordResetSessions { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<ReportedPost> ReportedPosts { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -70,6 +71,24 @@ namespace SocialMedia.Database
                 .WithMany(m => m.Reactions)
                 .HasForeignKey(r => r.MessageId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<ReportedPost>()
+                .HasOne(rp => rp.Post)
+                .WithMany()
+                .HasForeignKey(rp => rp.PostId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<ReportedPost>()
+                .HasOne(rp => rp.Reporter)
+                .WithMany()
+                .HasForeignKey(rp => rp.ReporterId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<ReportedPost>()
+                .HasOne(rp => rp.ResolvedBy)
+                .WithMany()
+                .HasForeignKey(rp => rp.ResolvedById)
+                .OnDelete(DeleteBehavior.SetNull);
 
             foreach (var entityType in builder.Model.GetEntityTypes())
             {
