@@ -1,11 +1,12 @@
 ﻿using FluentValidation;
+using SocialMedia.Database;
 using SocialMedia.DTOs.Profile;
 
 namespace SocialMedia.Validators.Profile_Validation
 {
     public class ChangePasswordValidator : AbstractValidator<ChangePasswordDto>
     {
-        public ChangePasswordValidator()
+        public ChangePasswordValidator(SocialMediaDbContext db)
         {
             RuleFor(x => x.CurrentPassword).NotEmpty();
 
