@@ -33,13 +33,15 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
          <ReactQueryProvider>
-           <AuthInitializer />
-           <SocketInitializer />
-          {children}
+           <AuthInitializer>
+             <SocketInitializer />
+             {children}
+           </AuthInitializer>
+           
           <Toaster 
-          position="top-right" 
-          richColors={true}    
-        />
+            position="top-right" 
+            richColors={true}    
+          />
         </ReactQueryProvider>
       </body>
     </html>

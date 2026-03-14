@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   webapi:
     build:
@@ -8,6 +6,12 @@ services:
     ports:
       - "8080:8080"
       - "8081:8081"
+    networks:
+      - laravel_network
+    depends_on:
+      - postgres
+      - redis
+
   postgres:
     image: postgres:16.1
     restart: always
@@ -19,6 +23,9 @@ services:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+    networks:
+      - laravel_network
+
   redis:
     image: redis:alpine
     container_name: laravel_redis
@@ -45,5 +52,3 @@ volumes:
 networks:
   laravel_network:
     driver: bridge
-
-

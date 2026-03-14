@@ -15,6 +15,7 @@ using SocialMedia.Database.Models;
 using SocialMedia.Extensions;
 using SocialMedia.Hubs;
 using SocialMedia.Services;
+using SocialMedia.Services.Caching;
 using SocialMedia.Services.Interfaces;
 using SocialMedia.Validators;
 using SocialMedia.Validators.CommentValidation;
@@ -181,7 +182,16 @@ namespace SocialMedia
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
+            var redisConnectionString = builder.Configuration.GetSection("Redis:ConnectionString").Value;
 
+            builder.Services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = redisConnectionString;
+            });
+
+            //ConnectionMultiplexer (трябва за триенето на множество ключове наведнъж)
+            builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
+                StackExchange.Redis.ConnectionMultiplexer.Connect(redisConnectionString!));
 
             var app = builder.Build();
 

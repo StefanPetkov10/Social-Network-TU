@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +8,7 @@ using SocialMedia.Database.Models;
 using SocialMedia.Database.Models.Enums;
 using SocialMedia.DTOs.Profile;
 using SocialMedia.Services.Interfaces;
+using SocialMedia.Services.Caching;
 
 namespace SocialMedia.Services
 {
@@ -17,18 +18,24 @@ namespace SocialMedia.Services
         private readonly IRepository<Follow, Guid> _followRepo;
         private readonly IRepository<Friendship, Guid> _friendshipRepo;
         private readonly IMapper _mapper;
+        private readonly ICacheService _cacheService;
+
+        private readonly TimeSpan _cacheTtl = TimeSpan.FromHours(24);
 
         public ProfileService(
             UserManager<ApplicationUser> userManager,
             IRepository<Database.Models.Profile, Guid> profileRepo,
-            IRepository<Follow, Guid> followRepo, IRepository<Friendship, Guid> friendshipRepo,
-            IMapper mapper
+            IRepository<Follow, Guid> followRepo,
+            IRepository<Friendship, Guid> friendshipRepo,
+            IMapper mapper,
+            ICacheService cacheService
         ) : base(userManager)
         {
             _profileRepo = profileRepo;
             _followRepo = followRepo;
             _friendshipRepo = friendshipRepo;
             _mapper = mapper;
+            _cacheService = cacheService;
         }
 
         public async Task<ApiResponse<ProfileDto>> GetProfileAsync(ClaimsPrincipal userClaims)
@@ -41,34 +48,71 @@ namespace SocialMedia.Services
             if (profile == null)
                 return NotFoundResponse<ProfileDto>("Profile");
 
-            var dto = await MapProfileToDto(profile);
+            string cacheKey = $"profile:id:{profile.Id}";
+            var dto = await _cacheService.GetAsync<ProfileDto>(cacheKey);
+
+            if (dto == null)
+            {
+                dto = await MapProfileToDto(profile);
+                await _cacheService.SetAsync(cacheKey, dto, _cacheTtl);
+
+                if (!string.IsNullOrEmpty(dto.Username) && dto.Username != "Unknown")
+                {
+                    await _cacheService.SetAsync($"profile:username:{dto.Username.ToUpper()}", dto, _cacheTtl);
+                }
+            }
+
             return ApiResponse<ProfileDto>.SuccessResponse(dto, "Profile retrieved successfully.");
         }
 
         public async Task<ApiResponse<ProfileDto>> GetProfileByUsernameAsync(ClaimsPrincipal userClaims, string username)
         {
-            var profile = await _profileRepo
-                .FirstOrDefaultAsync(p => p.User.UserName != null && p.User.UserName.ToUpper() == username.ToUpper());
+            string cacheKey = $"profile:username:{username.ToUpper()}";
+            var dto = await _cacheService.GetAsync<ProfileDto>(cacheKey);
 
-            if (profile == null)
-                return NotFoundResponse<ProfileDto>("Profile");
+            if (dto == null)
+            {
+                var profile = await _profileRepo
+                    .QueryNoTracking()
+                    .Include(p => p.User)
+                    .FirstOrDefaultAsync(p => p.User.UserName != null && p.User.UserName.ToUpper() == username.ToUpper());
 
-            var dto = await MapProfileToDto(profile);
+                if (profile == null)
+                    return NotFoundResponse<ProfileDto>("Profile");
 
-            await PopulateRelationshipData(userClaims, dto, profile.Id);
+                dto = await MapProfileToDto(profile);
+
+                await _cacheService.SetAsync(cacheKey, dto, _cacheTtl);
+                await _cacheService.SetAsync($"profile:id:{dto.Id}", dto, _cacheTtl);
+            }
+
+            await PopulateRelationshipData(userClaims, dto, dto.Id);
 
             return ApiResponse<ProfileDto>.SuccessResponse(dto, "Profile retrieved successfully.");
         }
 
         public async Task<ApiResponse<ProfileDto>> GetProfileByIdAsync(ClaimsPrincipal userClaims, Guid profileId)
         {
-            var profile = await _profileRepo.GetByIdAsync(profileId);
-            if (profile == null)
-                return NotFoundResponse<ProfileDto>("Profile");
+            string cacheKey = $"profile:id:{profileId}";
+            var dto = await _cacheService.GetAsync<ProfileDto>(cacheKey);
 
-            var dto = await MapProfileToDto(profile);
+            if (dto == null)
+            {
+                var profile = await _profileRepo.GetByIdAsync(profileId);
+                if (profile == null)
+                    return NotFoundResponse<ProfileDto>("Profile");
 
-            await PopulateRelationshipData(userClaims, dto, profile.Id);
+                dto = await MapProfileToDto(profile);
+
+                await _cacheService.SetAsync(cacheKey, dto, _cacheTtl);
+
+                if (!string.IsNullOrEmpty(dto.Username) && dto.Username != "Unknown")
+                {
+                    await _cacheService.SetAsync($"profile:username:{dto.Username.ToUpper()}", dto, _cacheTtl);
+                }
+            }
+
+            await PopulateRelationshipData(userClaims, dto, profileId);
 
             return ApiResponse<ProfileDto>.SuccessResponse(dto, "Profile retrieved successfully.");
         }
@@ -124,7 +168,6 @@ namespace SocialMedia.Services
             {
                 dto.FriendshipStatus = (int)friendship.Status;
                 dto.FriendshipRequestId = friendship.Id;
-
                 dto.IsFriendRequestSender = friendship.RequesterId == myProfile.Id;
             }
             else
@@ -147,6 +190,8 @@ namespace SocialMedia.Services
             var user = await _userManager.FindByIdAsync(appUserId.ToString());
             if (user == null)
                 return NotFoundResponse<object>("User");
+
+            string oldUsername = user.UserName;
 
             if (user.UserName.ToUpper() != dto.Username.ToUpper())
             {
@@ -178,6 +223,13 @@ namespace SocialMedia.Services
             await _profileRepo.UpdateAsync(profile);
             await _profileRepo.SaveChangesAsync();
 
+            await _cacheService.RemoveAsync($"profile:id:{profile.Id}");
+            if (!string.IsNullOrEmpty(oldUsername))
+            {
+                await _cacheService.RemoveAsync($"profile:username:{oldUsername.ToUpper()}");
+            }
+            await _cacheService.RemoveAsync($"profile:username:{dto.Username.ToUpper()}");
+
             return ApiResponse<object>.SuccessResponse(null, "Profile updated successfully.");
         }
 
@@ -195,6 +247,13 @@ namespace SocialMedia.Services
 
             await _profileRepo.UpdateAsync(profile);
             await _profileRepo.SaveChangesAsync();
+
+            await _cacheService.RemoveAsync($"profile:id:{profile.Id}");
+            var user = await _userManager.FindByIdAsync(appUserId.ToString());
+            if (user != null && !string.IsNullOrEmpty(user.UserName))
+            {
+                await _cacheService.RemoveAsync($"profile:username:{user.UserName.ToUpper()}");
+            }
 
             return ApiResponse<string>.SuccessResponse(bio, "Bio updated successfully.");
         }

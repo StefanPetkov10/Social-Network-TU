@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import api, { refreshAuthToken } from "@frontend/lib/axios";
+import { refreshAuthToken } from "@frontend/lib/axios";
 import { useAuthStore } from "@frontend/stores/useAuthStore";
 
-export function AuthInitializer() {
+export function AuthInitializer({ children }: { children: React.ReactNode }) {
   const accessToken = useAuthStore((s) => s.accessToken);
-  const setAccessToken = useAuthStore((s) => s.setAccessToken);
+  const isInitializing = useAuthStore((s) => s.isInitializing);
   const setInitializing = useAuthStore((s) => s.setInitializing);
 
   useEffect(() => {
@@ -23,5 +23,13 @@ export function AuthInitializer() {
       });
   }, [accessToken, setInitializing]);
 
-  return null;
+  if (isInitializing) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <p className="text-gray-500">Зареждане...</p>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
 }
