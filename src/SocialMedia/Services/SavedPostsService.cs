@@ -9,6 +9,7 @@ using SocialMedia.Database.Models.Enums;
 using SocialMedia.DTOs.Post;
 using SocialMedia.DTOs.SavedPosts;
 using SocialMedia.Services.Interfaces;
+using SocialMedia.Services.Caching; 
 
 namespace SocialMedia.Services
 {
@@ -20,19 +21,24 @@ namespace SocialMedia.Services
         private readonly IRepository<Database.Models.Profile, Guid> _profileRepository;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IMapper _mapper;
+        private readonly ICacheService _cacheService;
+
+        private readonly TimeSpan _cacheTtl = TimeSpan.FromHours(24);
 
         public SavedPostsService(
             UserManager<ApplicationUser> userManager,
             IRepository<SavedPosts, Guid> savedPostsRepository,
             IRepository<Database.Models.Profile, Guid> profileRepository,
             IHttpContextAccessor httpContextAccessor,
-            IMapper mapper)
+            IMapper mapper,
+            ICacheService cacheService)
             : base(userManager)
         {
             _savedPostsRepository = savedPostsRepository;
             _profileRepository = profileRepository;
             _httpContextAccessor = httpContextAccessor;
             _mapper = mapper;
+            _cacheService = cacheService; 
         }
 
         public async Task<ApiResponse<IEnumerable<SavedCollectionDto>>> GetMyCollectionsAsync(ClaimsPrincipal userClaims)
@@ -41,6 +47,15 @@ namespace SocialMedia.Services
             if (invalidUserResponse != null) return invalidUserResponse;
 
             var profile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (profile == null) return ApiResponse<IEnumerable<SavedCollectionDto>>.ErrorResponse("Profile not found.");
+
+            string cacheKey = $"saved_collections:{profile.Id}";
+            var cachedCollections = await _cacheService.GetAsync<IEnumerable<SavedCollectionDto>>(cacheKey);
+
+            if (cachedCollections != null)
+            {
+                return ApiResponse<IEnumerable<SavedCollectionDto>>.SuccessResponse(cachedCollections, "Collections retrieved.");
+            }
 
             var collectionsData = await _savedPostsRepository.QueryNoTracking()
                 .Where(sp => sp.ProfileId == profile.Id)
@@ -68,6 +83,8 @@ namespace SocialMedia.Services
             .ThenByDescending(x => x.Count)
             .ToList();
 
+            await _cacheService.SetAsync(cacheKey, result, _cacheTtl);
+
             return ApiResponse<IEnumerable<SavedCollectionDto>>.SuccessResponse(result, "Collections retrieved.");
         }
 
@@ -82,10 +99,19 @@ namespace SocialMedia.Services
             if (invalidUserResponse != null) return invalidUserResponse;
 
             var profile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (profile == null) return ApiResponse<IEnumerable<PostDto>>.ErrorResponse("Profile not found.");
 
             string targetCollection = string.IsNullOrWhiteSpace(collectionName) || collectionName == "General"
                 ? SystemDefaultCollection
                 : collectionName;
+
+            string cacheKey = $"saved_posts:{profile.Id}:{targetCollection}:{skip}:{take}";
+            var cachedPosts = await _cacheService.GetAsync<IEnumerable<PostDto>>(cacheKey);
+
+            if (cachedPosts != null)
+            {
+                return ApiResponse<IEnumerable<PostDto>>.SuccessResponse(cachedPosts, "Saved posts retrieved.");
+            }
 
             var query = _savedPostsRepository.QueryNoTracking()
                 .Include(sp => sp.Post).ThenInclude(p => p.Profile).ThenInclude(pr => pr.User)
@@ -127,6 +153,8 @@ namespace SocialMedia.Services
                 postDtos.Add(dto);
             }
 
+            await _cacheService.SetAsync(cacheKey, postDtos, _cacheTtl);
+
             return ApiResponse<IEnumerable<PostDto>>.SuccessResponse(postDtos, "Saved posts retrieved.");
         }
 
@@ -155,6 +183,9 @@ namespace SocialMedia.Services
                     existingSave.CollectionName = targetCollection;
                     existingSave.SavedAt = DateTime.UtcNow;
                     await _savedPostsRepository.SaveChangesAsync();
+
+                    await InvalidateSavedPostsCachesAsync(profile.Id);
+
                     return ApiResponse<string>.SuccessResponse(targetCollection, "Post moved to collection.");
                 }
                 return ApiResponse<string>.SuccessResponse(existingSave.CollectionName, "Post is already saved.");
@@ -172,6 +203,8 @@ namespace SocialMedia.Services
             await _savedPostsRepository.AddAsync(newSave);
             await _savedPostsRepository.SaveChangesAsync();
 
+            await InvalidateSavedPostsCachesAsync(profile.Id);
+
             return ApiResponse<string>.SuccessResponse(targetCollection, "Post saved successfully.");
         }
 
@@ -181,6 +214,7 @@ namespace SocialMedia.Services
             if (invalidUserResponse != null) return invalidUserResponse;
 
             var profile = await _profileRepository.GetByApplicationIdAsync(userId);
+            if (profile == null) return ApiResponse<object>.ErrorResponse("Profile not found.");
 
             var savedEntry = await _savedPostsRepository.Query()
                 .FirstOrDefaultAsync(sp => sp.PostId == postId && sp.ProfileId == profile.Id);
@@ -193,7 +227,15 @@ namespace SocialMedia.Services
             await _savedPostsRepository.DeleteAsync(savedEntry);
             await _savedPostsRepository.SaveChangesAsync();
 
+            await InvalidateSavedPostsCachesAsync(profile.Id);
+
             return ApiResponse<object>.SuccessResponse(true, "Removed from saved.");
+        }
+
+        private async Task InvalidateSavedPostsCachesAsync(Guid profileId)
+        {
+            await _cacheService.RemoveAsync($"saved_collections:{profileId}");
+            await _cacheService.RemoveByPrefixAsync($"saved_posts:{profileId}");
         }
     }
 }

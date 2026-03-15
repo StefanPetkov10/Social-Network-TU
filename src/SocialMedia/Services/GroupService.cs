@@ -10,6 +10,7 @@ using SocialMedia.DTOs.Post;
 using SocialMedia.Services.Interfaces;
 using System.Security.Claims;
 using Profile = SocialMedia.Database.Models.Profile;
+using SocialMedia.Services.Caching; 
 
 namespace SocialMedia.Services
 {
@@ -22,6 +23,9 @@ namespace SocialMedia.Services
         private readonly IRepository<Friendship, Guid> _friendshipRepository;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IMapper _mapper;
+        private readonly ICacheService _cacheService;
+
+        private readonly TimeSpan _cacheTtl = TimeSpan.FromHours(24);
 
         public GroupService(IRepository<Group, Guid> groupRepository,
             IRepository<GroupMembership, Guid> membershipRepository,
@@ -29,7 +33,8 @@ namespace SocialMedia.Services
             IRepository<Profile, Guid> profileRepository,
             IRepository<Friendship, Guid> friendshipRepository,
             IHttpContextAccessor httpContextAccessor,
-            IMapper mapper, UserManager<ApplicationUser> userManager)
+            IMapper mapper, UserManager<ApplicationUser> userManager,
+            ICacheService cacheService) 
             : base(userManager)
         {
             _membershipRepository = membershipRepository;
@@ -40,6 +45,7 @@ namespace SocialMedia.Services
             _profileRepository = profileRepository;
             _httpContextAccessor = httpContextAccessor;
             _mapper = mapper;
+            _cacheService = cacheService; 
         }
 
         public async Task<ApiResponse<GroupDto>> CreateGroupAsync(ClaimsPrincipal userClaims, CreateGroupDto dto)
@@ -71,6 +77,8 @@ namespace SocialMedia.Services
             await _membershipRepository.AddAsync(membership);
 
             await _groupRepository.SaveChangesAsync();
+
+            await InvalidateGroupCachesAsync(profile.Id, group.Id);
 
             var resultDto = _mapper.Map<GroupDto>(group);
             resultDto.IsPrivate = group.Privacy == GroupPrivacy.Private;
@@ -395,6 +403,14 @@ namespace SocialMedia.Services
             if (profile == null)
                 return NotFoundResponse<IEnumerable<GroupDto>>("Profile");
 
+            string cacheKey = $"user_groups:{profile.Id}";
+
+            var cachedGroups = await _cacheService.GetAsync<IEnumerable<GroupDto>>(cacheKey);
+            if (cachedGroups != null)
+            {
+                return ApiResponse<IEnumerable<GroupDto>>.SuccessResponse(cachedGroups, "My groups retrieved from cache.");
+            }
+
             var myMembership = await _membershipRepository.QueryNoTracking()
                 .Where(m => m.ProfileId == profile.Id && m.Status == MembershipStatus.Approved)
                 .Select(m => m.GroupId)
@@ -424,8 +440,12 @@ namespace SocialMedia.Services
                 return dto;
             }).ToList();
 
-            return ApiResponse<IEnumerable<GroupDto>>.SuccessResponse(dtos, "My groups retrieved.");
+            if (dtos.Any())
+            {
+                await _cacheService.SetAsync(cacheKey, dtos, _cacheTtl);
+            }
 
+            return ApiResponse<IEnumerable<GroupDto>>.SuccessResponse(dtos, "My groups retrieved.");
         }
 
         public async Task<ApiResponse<object>> UpdateGroupAsync(ClaimsPrincipal userClaims, Guid groupId, UpdateGroupDto dto)
@@ -465,6 +485,8 @@ namespace SocialMedia.Services
             _groupRepository.UpdateAsync(updateGroup);
             await _groupRepository.SaveChangesAsync();
 
+            await InvalidateGroupCachesAsync(profile.Id, group.Id);
+
             return ApiResponse<object>.SuccessResponse(null, "Group updated successfully.");
         }
 
@@ -492,7 +514,16 @@ namespace SocialMedia.Services
             _groupRepository.DeleteAsync(group);
             await _groupRepository.SaveChangesAsync();
 
+            await InvalidateGroupCachesAsync(profile.Id, group.Id);
+
             return ApiResponse<object>.SuccessResponse(null, "Group deleted successfully.");
+        }
+
+        private async Task InvalidateGroupCachesAsync(Guid profileId, Guid groupId)
+        {
+            await _cacheService.RemoveByPrefixAsync($"user_groups:{profileId}");
+
+            await _cacheService.RemoveAsync($"group:{groupId}");
         }
 
         private ApiResponse<PostDto> SuccessPostDto(Post post, Database.Models.Profile profile, string message, Guid? currentUserId = null)
