@@ -8,26 +8,40 @@ using SocialMedia.Database.Models.Enums;
 using SocialMedia.DTOs.Group;
 using SocialMedia.Extensions;
 using SocialMedia.Services.Interfaces;
+using SocialMedia.Services.Caching;
 
 namespace SocialMedia.Services
 {
+    public class GroupMembersCacheModel
+    {
+        public List<MemberDto> Dtos { get; set; } = new();
+        public DateTime? LastJoinedDate { get; set; }
+        public Guid? LastProfileId { get; set; }
+        public int TotalCount { get; set; }
+    }
+
     public class GroupMembershipService : BaseService, IGroupMembershipService
     {
         private readonly IRepository<Group, Guid> _groupRepository;
         private readonly IRepository<GroupMembership, Guid> _groupMemberRepository;
         private readonly IRepository<Profile, Guid> _profileRepository;
         private readonly IRepository<Friendship, Guid> _friendshipRepository;
+        private readonly ICacheService _cacheService;
+
+        private readonly TimeSpan _cacheTtl = TimeSpan.FromHours(24);
 
         public GroupMembershipService(UserManager<ApplicationUser> userManager,
             IRepository<Group, Guid> groupRepository,
-                IRepository<Profile, Guid> profileRepository,
-                IRepository<GroupMembership, Guid> groupMemberRepository,
-                IRepository<Friendship, Guid> friendshipRepository) : base(userManager)
+            IRepository<Profile, Guid> profileRepository,
+            IRepository<GroupMembership, Guid> groupMemberRepository,
+            IRepository<Friendship, Guid> friendshipRepository,
+            ICacheService cacheService) : base(userManager)
         {
             _groupRepository = groupRepository;
             _profileRepository = profileRepository;
             _groupMemberRepository = groupMemberRepository;
             _friendshipRepository = friendshipRepository;
+            _cacheService = cacheService;
         }
 
         public async Task<ApiResponse<object>> JoinGroupAsync(ClaimsPrincipal userClaims, Guid groupId)
@@ -50,6 +64,9 @@ namespace SocialMedia.Services
                         existingMembership.JoinedOn = DateTime.UtcNow;
                         await _groupMemberRepository.UpdateAsync(existingMembership);
                         await _groupMemberRepository.SaveChangesAsync();
+
+                        await InvalidateGroupMembershipCachesAsync(profile!.Id, groupId);
+
                         return ApiResponse<object>.SuccessResponse("Rejoined successfully.");
                     default:
                         return ApiResponse<object>.ErrorResponse("Error.", new[] { "Invalid status." });
@@ -68,6 +85,8 @@ namespace SocialMedia.Services
 
             await _groupMemberRepository.AddAsync(newMembership);
             await _groupMemberRepository.SaveChangesAsync();
+
+            await InvalidateGroupMembershipCachesAsync(profile.Id, groupId);
 
             var msg = newMembership.Status == MembershipStatus.Approved ? "Joined successfully." : "Request sent.";
             return ApiResponse<object>.SuccessResponse(msg);
@@ -88,6 +107,8 @@ namespace SocialMedia.Services
             await _groupMemberRepository.UpdateAsync(membership);
             await _groupMemberRepository.SaveChangesAsync();
 
+            await InvalidateGroupMembershipCachesAsync(profile!.Id, groupId);
+
             return ApiResponse<object>.SuccessResponse("You left the group.");
         }
 
@@ -107,6 +128,8 @@ namespace SocialMedia.Services
             await _groupMemberRepository.UpdateAsync(targetMembership);
             await _groupMemberRepository.SaveChangesAsync();
 
+            await InvalidateGroupMembershipCachesAsync(targetMembership.ProfileId, groupId);
+
             return ApiResponse<object>.SuccessResponse("Member approved.");
         }
 
@@ -124,6 +147,8 @@ namespace SocialMedia.Services
 
             await _groupMemberRepository.UpdateAsync(targetMembership);
             await _groupMemberRepository.SaveChangesAsync();
+
+            await InvalidateGroupMembershipCachesAsync(targetMembership.ProfileId, groupId);
 
             return ApiResponse<object>.SuccessResponse("Request rejected.");
         }
@@ -148,6 +173,8 @@ namespace SocialMedia.Services
             await _groupMemberRepository.UpdateAsync(targetMembership);
             await _groupMemberRepository.SaveChangesAsync();
 
+            await InvalidateGroupMembershipCachesAsync(targetMembership.ProfileId, groupId);
+
             return ApiResponse<object>.SuccessResponse("Member removed.");
         }
 
@@ -168,6 +195,7 @@ namespace SocialMedia.Services
                 ownerMembership.Role = GroupRole.Admin;
                 targetMembership.Role = GroupRole.Owner;
                 await _groupMemberRepository.UpdateAsync(ownerMembership);
+                await InvalidateGroupMembershipCachesAsync(ownerMembership.ProfileId, groupId);
             }
             else
             {
@@ -176,6 +204,8 @@ namespace SocialMedia.Services
 
             await _groupMemberRepository.UpdateAsync(targetMembership);
             await _groupMemberRepository.SaveChangesAsync();
+
+            await InvalidateGroupMembershipCachesAsync(targetMembership.ProfileId, groupId);
 
             return ApiResponse<object>.SuccessResponse("Role updated.");
         }
@@ -203,7 +233,7 @@ namespace SocialMedia.Services
                 IsMe = false,
                 IsFriend = false,
                 MutualFriendsCount = 0
-            });
+            }).ToList();
 
             return ApiResponse<IEnumerable<MemberDto>>.SuccessResponse(memberDtos);
         }
@@ -220,7 +250,17 @@ namespace SocialMedia.Services
                 .OrderBy(m => m.Role)
                 .ToListAsync();
 
-            var dtos = await MapMembershipsToDtosAsync(admins, profile!.Id, groupId);
+            var rawDtos = admins.Select(m => new MemberDto
+            {
+                ProfileId = m.ProfileId,
+                FullName = m.Profile.FullName,
+                Username = m.Profile.User.UserName,
+                AuthorAvatar = m.Profile.Photo,
+                Role = m.Role,
+                JoinedOn = m.JoinedOn
+            }).ToList();
+
+            var dtos = await PopulateViewerRelationshipsAsync(rawDtos, profile!.Id, groupId);
             return ApiResponse<IEnumerable<MemberDto>>.SuccessResponse(dtos);
         }
 
@@ -238,7 +278,17 @@ namespace SocialMedia.Services
                 .Skip(skip).Take(take)
                 .ToListAsync();
 
-            var dtos = await MapMembershipsToDtosAsync(friends, profile.Id, groupId);
+            var rawDtos = friends.Select(m => new MemberDto
+            {
+                ProfileId = m.ProfileId,
+                FullName = m.Profile.FullName,
+                Username = m.Profile.User.UserName,
+                AuthorAvatar = m.Profile.Photo,
+                Role = m.Role,
+                JoinedOn = m.JoinedOn
+            }).ToList();
+
+            var dtos = await PopulateViewerRelationshipsAsync(rawDtos, profile.Id, groupId);
             return ApiResponse<IEnumerable<MemberDto>>.SuccessResponse(dtos);
         }
 
@@ -248,35 +298,70 @@ namespace SocialMedia.Services
             var (profile, group, _, error) = await ValidateAccess(userClaims, groupId);
             if (error != null) return ApiResponse<IEnumerable<MemberDto>>.ErrorResponse(error);
 
-            var totalCount = await _groupMemberRepository.QueryNoTracking()
-                .CountAsync(m => m.GroupId == groupId && m.Status == MembershipStatus.Approved);
+            string cacheKey = $"group_members:{groupId}:{take}";
+            GroupMembersCacheModel cacheData = null;
 
-            var query = _groupMemberRepository.QueryNoTracking()
-                .Where(m => m.GroupId == groupId && m.Status == MembershipStatus.Approved)
-                .Include(m => m.Profile).ThenInclude(p => p.User)
-                .AsQueryable();
-
-            if (lastJoinedDate.HasValue && lastProfileId.HasValue)
+            if (lastJoinedDate == null && lastProfileId == null)
             {
-                query = query.Where(m => m.JoinedOn < lastJoinedDate.Value ||
-                                        (m.JoinedOn == lastJoinedDate.Value && m.ProfileId.CompareTo(lastProfileId.Value) < 0));
-            }
-            else if (lastJoinedDate.HasValue)
-            {
-                query = query.Where(m => m.JoinedOn < lastJoinedDate.Value);
+                cacheData = await _cacheService.GetAsync<GroupMembersCacheModel>(cacheKey);
             }
 
-            var membersData = await query
-                .OrderByDescending(m => m.JoinedOn)
-                .ThenByDescending(m => m.ProfileId)
-                .Take(take)
-                .ToListAsync();
+            if (cacheData == null)
+            {
+                var totalCount = await _groupMemberRepository.QueryNoTracking()
+                    .CountAsync(m => m.GroupId == groupId && m.Status == MembershipStatus.Approved);
 
-            var dtos = await MapMembershipsToDtosAsync(membersData, profile!.Id, groupId);
-            var lastItem = dtos.LastOrDefault();
+                var query = _groupMemberRepository.QueryNoTracking()
+                    .Where(m => m.GroupId == groupId && m.Status == MembershipStatus.Approved)
+                    .Include(m => m.Profile).ThenInclude(p => p.User)
+                    .AsQueryable();
 
-            return ApiResponse<IEnumerable<MemberDto>>.SuccessResponse(dtos, "Members retrieved",
-                    new { lastJoinedDate = lastItem?.JoinedOn, lastProfileId = lastItem?.ProfileId, totalCount = totalCount }
+                if (lastJoinedDate.HasValue && lastProfileId.HasValue)
+                {
+                    query = query.Where(m => m.JoinedOn < lastJoinedDate.Value ||
+                                            (m.JoinedOn == lastJoinedDate.Value && m.ProfileId.CompareTo(lastProfileId.Value) < 0));
+                }
+                else if (lastJoinedDate.HasValue)
+                {
+                    query = query.Where(m => m.JoinedOn < lastJoinedDate.Value);
+                }
+
+                var membersData = await query
+                    .OrderByDescending(m => m.JoinedOn)
+                    .ThenByDescending(m => m.ProfileId)
+                    .Take(take)
+                    .ToListAsync();
+
+                var rawDtos = membersData.Select(m => new MemberDto
+                {
+                    ProfileId = m.ProfileId,
+                    FullName = m.Profile.FullName,
+                    Username = m.Profile.User.UserName,
+                    AuthorAvatar = m.Profile.Photo,
+                    Role = m.Role,
+                    JoinedOn = m.JoinedOn
+                }).ToList();
+
+                var lastItem = membersData.LastOrDefault();
+
+                cacheData = new GroupMembersCacheModel
+                {
+                    Dtos = rawDtos,
+                    TotalCount = totalCount,
+                    LastJoinedDate = lastItem?.JoinedOn,
+                    LastProfileId = lastItem?.ProfileId
+                };
+
+                if (lastJoinedDate == null && lastProfileId == null && rawDtos.Any())
+                {
+                    await _cacheService.SetAsync(cacheKey, cacheData, _cacheTtl);
+                }
+            }
+
+            var finalDtos = await PopulateViewerRelationshipsAsync(cacheData.Dtos, profile!.Id, groupId);
+
+            return ApiResponse<IEnumerable<MemberDto>>.SuccessResponse(finalDtos, "Members retrieved",
+                    new { lastJoinedDate = cacheData.LastJoinedDate, lastProfileId = cacheData.LastProfileId, totalCount = cacheData.TotalCount }
             );
         }
 
@@ -311,7 +396,17 @@ namespace SocialMedia.Services
                 .Include(m => m.Profile).ThenInclude(p => p.User)
                 .ToListAsync();
 
-            var dtos = await MapMembershipsToDtosAsync(membersData, profile!.Id, groupId);
+            var rawDtos = membersData.Select(m => new MemberDto
+            {
+                ProfileId = m.ProfileId,
+                FullName = m.Profile.FullName,
+                Username = m.Profile.User.UserName,
+                AuthorAvatar = m.Profile.Photo,
+                Role = m.Role,
+                JoinedOn = m.JoinedOn
+            }).ToList();
+
+            var dtos = await PopulateViewerRelationshipsAsync(rawDtos, profile!.Id, groupId);
 
             return ApiResponse<IEnumerable<MemberDto>>.SuccessResponse(dtos, "Search completed.", new { totalCount = dtos.Count });
         }
@@ -374,7 +469,7 @@ namespace SocialMedia.Services
                     HasReceivedRequest = hasReceivedRequest,
                     PendingRequestId = (hasSentRequest || hasReceivedRequest) ? friendship?.Id : null
                 };
-            });
+            }).ToList();
 
             return ApiResponse<IEnumerable<MemberDto>>.SuccessResponse(dtos);
         }
@@ -412,12 +507,18 @@ namespace SocialMedia.Services
             return (profile, group, membership, null);
         }
 
-        private async Task<List<MemberDto>> MapMembershipsToDtosAsync(IEnumerable<GroupMembership> memberships, Guid viewerProfileId, Guid groupId)
+        private async Task InvalidateGroupMembershipCachesAsync(Guid profileId, Guid groupId)
         {
-            var dtos = new List<MemberDto>();
-            if (!memberships.Any()) return dtos;
+            await _cacheService.RemoveByPrefixAsync($"user_groups:{profileId}");
+            await _cacheService.RemoveAsync($"group:{groupId}");
+            await _cacheService.RemoveByPrefixAsync($"group_members:{groupId}");
+        }
 
-            var displayedProfileIds = memberships.Select(m => m.ProfileId).ToList();
+        private async Task<List<MemberDto>> PopulateViewerRelationshipsAsync(List<MemberDto> dtos, Guid viewerProfileId, Guid groupId)
+        {
+            if (!dtos.Any()) return dtos;
+
+            var displayedProfileIds = dtos.Select(m => m.ProfileId).ToList();
             var myFriendIds = await GetUserFriendIdsAsync(viewerProfileId);
 
             var friendships = await _friendshipRepository.QueryNoTracking()
@@ -439,34 +540,18 @@ namespace SocialMedia.Services
                })
                .ToListAsync();
 
-            foreach (var m in memberships)
+            foreach (var m in dtos)
             {
                 var friendship = friendships.FirstOrDefault(f => f.RequesterId == m.ProfileId || f.AddresseeId == m.ProfileId);
                 var mutualInfo = membersWithCount.FirstOrDefault(x => x.ProfileId == m.ProfileId);
 
-                bool isMe = m.ProfileId == viewerProfileId;
-                bool isFriend = friendship?.Status == FriendshipStatus.Accepted;
-                bool hasSentRequest = friendship?.Status == FriendshipStatus.Pending && friendship.RequesterId == viewerProfileId;
-                bool hasReceivedRequest = friendship?.Status == FriendshipStatus.Pending && friendship.AddresseeId == viewerProfileId;
+                m.IsMe = m.ProfileId == viewerProfileId;
+                m.IsFriend = friendship?.Status == FriendshipStatus.Accepted;
+                m.HasSentRequest = friendship?.Status == FriendshipStatus.Pending && friendship.RequesterId == viewerProfileId;
+                m.HasReceivedRequest = friendship?.Status == FriendshipStatus.Pending && friendship.AddresseeId == viewerProfileId;
+                m.PendingRequestId = (m.HasSentRequest || m.HasReceivedRequest) ? friendship?.Id : null;
 
-                dtos.Add(new MemberDto
-                {
-                    ProfileId = m.ProfileId,
-                    FullName = m.Profile.FullName,
-                    Username = m.Profile.User.UserName,
-                    AuthorAvatar = m.Profile.Photo,
-                    Role = m.Role,
-                    JoinedOn = m.JoinedOn,
-
-                    IsMe = isMe,
-                    IsFriend = isFriend,
-
-                    MutualFriendsCount = isMe ? 0 : (mutualInfo?.MutualCount ?? 0),
-
-                    HasSentRequest = hasSentRequest,
-                    HasReceivedRequest = hasReceivedRequest,
-                    PendingRequestId = (hasSentRequest || hasReceivedRequest) ? friendship?.Id : null
-                });
+                m.MutualFriendsCount = m.IsMe ? 0 : (mutualInfo?.MutualCount ?? 0);
             }
 
             return dtos;

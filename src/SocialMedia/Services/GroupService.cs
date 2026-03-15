@@ -78,7 +78,7 @@ namespace SocialMedia.Services
 
             await _groupRepository.SaveChangesAsync();
 
-            await InvalidateGroupCachesAsync(profile.Id, group.Id);
+            await InvalidateGroupCachesAsync(profile.Id, group.Id, group.Name);
 
             var resultDto = _mapper.Map<GroupDto>(group);
             resultDto.IsPrivate = group.Privacy == GroupPrivacy.Private;
@@ -94,82 +94,65 @@ namespace SocialMedia.Services
 
         public async Task<ApiResponse<GroupDto>> GetGroupByNameAsync(ClaimsPrincipal userClaims, string name)
         {
-            var group = _groupRepository.QueryNoTracking()
-                .Include(g => g.Members)
-                .FirstOrDefault(g => g.Name == name);
-
-            if (group == null)
-                return NotFoundResponse<GroupDto>("Group");
-
             var invalidUserResponse = GetUserIdOrUnauthorized<GroupDto>(userClaims, out var userId);
-
             var profile = await _profileRepository.GetByApplicationIdAsync(userId);
 
-            var dto = MapGroupToDtoWithPermissions(group, profile);
+            string cacheKey = $"group:name:{name.ToUpper()}";
+            var dto = await _cacheService.GetAsync<GroupDto>(cacheKey);
+
+            if (dto == null)
+            {
+                var group = await _groupRepository.QueryNoTracking()
+                    .Include(g => g.Members)
+                    .FirstOrDefaultAsync(g => g.Name == name);
+
+                if (group == null)
+                    return NotFoundResponse<GroupDto>("Group");
+
+                dto = _mapper.Map<GroupDto>(group);
+                dto.IsPrivate = group.Privacy == GroupPrivacy.Private;
+                dto.MembersCount = group.Members.Count(m => m.Status == MembershipStatus.Approved);
+
+                await _cacheService.SetAsync(cacheKey, dto, _cacheTtl);
+                await _cacheService.SetAsync($"group:{dto.Id}", dto, _cacheTtl);
+            }
+
+            dto = await PopulateGroupPermissionsAsync(dto, profile?.Id);
 
             return ApiResponse<GroupDto>.SuccessResponse(dto);
         }
 
         public async Task<ApiResponse<GroupDto>> GetGroupByIdAsync(ClaimsPrincipal userClaims, Guid groupId)
         {
-            var group = _groupRepository.QueryNoTracking()
-                .Include(g => g.Members)
-                .FirstOrDefault(g => g.Id == groupId);
-
-            if (group == null)
-                return NotFoundResponse<GroupDto>("Group");
-
             var invalidUserResponse = GetUserIdOrUnauthorized<GroupDto>(userClaims, out var userId);
             var profile = await _profileRepository.GetByApplicationIdAsync(userId);
 
-            var dto = MapGroupToDtoWithPermissions(group, profile);
+            string cacheKey = $"group:{groupId}";
+            var dto = await _cacheService.GetAsync<GroupDto>(cacheKey);
+
+            if (dto == null)
+            {
+                var group = await _groupRepository.QueryNoTracking()
+                    .Include(g => g.Members)
+                    .FirstOrDefaultAsync(g => g.Id == groupId);
+
+                if (group == null)
+                    return NotFoundResponse<GroupDto>("Group");
+
+                dto = _mapper.Map<GroupDto>(group);
+                dto.IsPrivate = group.Privacy == GroupPrivacy.Private;
+                dto.MembersCount = group.Members.Count(m => m.Status == MembershipStatus.Approved);
+
+                await _cacheService.SetAsync(cacheKey, dto, _cacheTtl);
+                if (!string.IsNullOrEmpty(dto.Name))
+                {
+                    await _cacheService.SetAsync($"group:name:{dto.Name.ToUpper()}", dto, _cacheTtl);
+                }
+            }
+
+            dto = await PopulateGroupPermissionsAsync(dto, profile?.Id);
 
             return ApiResponse<GroupDto>.SuccessResponse(dto);
-        }
-
-        private GroupDto MapGroupToDtoWithPermissions(Group group, Profile? currentUserProfile)
-        {
-            var membership = currentUserProfile != null
-                ? group.Members.FirstOrDefault(m => m.ProfileId == currentUserProfile.Id)
-                : null;
-
-            var dto = _mapper.Map<GroupDto>(group);
-
-            dto.IsPrivate = group.Privacy == GroupPrivacy.Private;
-            dto.MembersCount = group.Members.Count(m => m.Status == MembershipStatus.Approved);
-
-            if (membership != null && membership.Status == MembershipStatus.Approved)
-            {
-                dto.IsMember = true;
-                dto.IsAdmin = membership.Role == GroupRole.Admin || membership.Role == GroupRole.Owner;
-                dto.IsOwner = membership.Role == GroupRole.Owner;
-                dto.HasRequestedJoin = false;
-
-                dto.CanViewPosts = true;
-                dto.CanCreatePost = true;
-            }
-            else if (membership != null && membership.Status == MembershipStatus.Pending)
-            {
-                dto.IsMember = false;
-                dto.IsAdmin = false;
-                dto.IsOwner = false;
-                dto.HasRequestedJoin = true;
-
-                dto.CanViewPosts = !dto.IsPrivate;
-                dto.CanCreatePost = false;
-            }
-            else
-            {
-                dto.IsMember = false;
-                dto.IsAdmin = false;
-                dto.IsOwner = false;
-                dto.HasRequestedJoin = false;
-
-                dto.CanViewPosts = !dto.IsPrivate;
-                dto.CanCreatePost = false;
-            }
-
-            return dto;
         }
 
         public async Task<ApiResponse<IEnumerable<GroupDto>>> GetGroupsDiscoverAsync(ClaimsPrincipal userClaims, Guid? lastGroupId = null, int take = 20)
@@ -247,7 +230,6 @@ namespace SocialMedia.Services
 
                 finalResultList.AddRange(otherGroups);
             }
-
 
             if (lastGroupId.HasValue && lastGroupId.Value != Guid.Empty)
             {
@@ -470,6 +452,8 @@ namespace SocialMedia.Services
                 && membership.Role != GroupRole.Owner))
                 return ApiResponse<object>.ErrorResponse("Forbidden.", new[] { "You do not have permission to update this group." });
 
+            string oldName = group.Name;
+
             if (!string.Equals(group.Name, dto.Name, StringComparison.OrdinalIgnoreCase))
             {
                 var existingGroup = await _groupRepository
@@ -479,13 +463,15 @@ namespace SocialMedia.Services
                     return ApiResponse<object>.ErrorResponse("Group name already taken.", new[] { "Group name must be unique." });
                 }
             }
+
             var updateGroup = _mapper.Map(dto, group);
             updateGroup.Privacy = dto.GroupPrivacy;
 
             _groupRepository.UpdateAsync(updateGroup);
             await _groupRepository.SaveChangesAsync();
 
-            await InvalidateGroupCachesAsync(profile.Id, group.Id);
+            await InvalidateGroupCachesAsync(profile.Id, group.Id, oldName);
+            await InvalidateGroupCachesAsync(profile.Id, group.Id, updateGroup.Name);
 
             return ApiResponse<object>.SuccessResponse(null, "Group updated successfully.");
         }
@@ -511,19 +497,73 @@ namespace SocialMedia.Services
             if (membership == null || membership.Role != GroupRole.Owner)
                 return ApiResponse<object>.ErrorResponse("Forbidden.", new[] { "You do not have permission to delete this group." });
 
+            string groupName = group.Name;
+
             _groupRepository.DeleteAsync(group);
             await _groupRepository.SaveChangesAsync();
 
-            await InvalidateGroupCachesAsync(profile.Id, group.Id);
+            await InvalidateGroupCachesAsync(profile.Id, group.Id, groupName);
 
             return ApiResponse<object>.SuccessResponse(null, "Group deleted successfully.");
         }
 
-        private async Task InvalidateGroupCachesAsync(Guid profileId, Guid groupId)
+        private async Task InvalidateGroupCachesAsync(Guid profileId, Guid groupId, string? groupName = null)
         {
             await _cacheService.RemoveByPrefixAsync($"user_groups:{profileId}");
-
             await _cacheService.RemoveAsync($"group:{groupId}");
+
+            if (!string.IsNullOrEmpty(groupName))
+            {
+                await _cacheService.RemoveAsync($"group:name:{groupName.ToUpper()}");
+            }
+        }
+
+        private async Task<GroupDto> PopulateGroupPermissionsAsync(GroupDto dto, Guid? currentProfileId)
+        {
+            if (currentProfileId == null)
+            {
+                dto.IsMember = false;
+                dto.IsAdmin = false;
+                dto.IsOwner = false;
+                dto.HasRequestedJoin = false;
+
+                dto.CanViewPosts = !dto.IsPrivate;
+                dto.CanCreatePost = false;
+                return dto;
+            }
+
+            var membership = await _membershipRepository.QueryNoTracking()
+                .FirstOrDefaultAsync(m => m.GroupId == dto.Id && m.ProfileId == currentProfileId.Value);
+
+            if (membership != null && membership.Status == MembershipStatus.Approved)
+            {
+                dto.IsMember = true;
+                dto.IsAdmin = membership.Role == GroupRole.Admin || membership.Role == GroupRole.Owner;
+                dto.IsOwner = membership.Role == GroupRole.Owner;
+                dto.HasRequestedJoin = false;
+                dto.CanViewPosts = true;
+                dto.CanCreatePost = true;
+            }
+            else if (membership != null && membership.Status == MembershipStatus.Pending)
+            {
+                dto.IsMember = false;
+                dto.IsAdmin = false;
+                dto.IsOwner = false;
+                dto.HasRequestedJoin = true;
+                dto.CanViewPosts = !dto.IsPrivate;
+                dto.CanCreatePost = false;
+            }
+            else
+            {
+                dto.IsMember = false;
+                dto.IsAdmin = false;
+                dto.IsOwner = false;
+                dto.HasRequestedJoin = false;
+                dto.CanViewPosts = !dto.IsPrivate;
+                dto.CanCreatePost = false;
+            }
+
+            return dto;
         }
 
         private ApiResponse<PostDto> SuccessPostDto(Post post, Database.Models.Profile profile, string message, Guid? currentUserId = null)
