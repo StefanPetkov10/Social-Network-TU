@@ -9,25 +9,38 @@ using SocialMedia.Database.Models.Enums;
 using SocialMedia.DTOs.Follow;
 using SocialMedia.Extensions;
 using SocialMedia.Services.Interfaces;
+using SocialMedia.Services.Caching;
 
 namespace SocialMedia.Services
 {
+    public class FollowCacheModel
+    {
+        public List<FollowDto> Dtos { get; set; } = new();
+        public DateTime? NextCursor { get; set; }
+    }
+
     public class FollowService : BaseService, IFollowService
     {
         private readonly IRepository<Follow, Guid> _followRepository;
         private readonly IRepository<Friendship, Guid> _friendshipRepository;
         private readonly IRepository<Database.Models.Profile, Guid> _profileRepository;
         private readonly IMapper _mapper;
+        private readonly ICacheService _cacheService;
+
+        private readonly TimeSpan _cacheTtl = TimeSpan.FromHours(24);
 
         public FollowService(UserManager<ApplicationUser> userManager,
-            IRepository<Follow, Guid> followRepository, IRepository<Friendship, Guid> friendshipRepository,
+            IRepository<Follow, Guid> followRepository,
+            IRepository<Friendship, Guid> friendshipRepository,
             IRepository<Database.Models.Profile, Guid> profileRepository,
-            IMapper mapper) : base(userManager)
+            IMapper mapper,
+            ICacheService cacheService) : base(userManager)
         {
             _followRepository = followRepository;
             _friendshipRepository = friendshipRepository;
             _profileRepository = profileRepository;
             _mapper = mapper;
+            _cacheService = cacheService;
         }
 
         public async Task<ApiResponse<bool>> FollowAsync(ClaimsPrincipal userClaims, Guid followingId)
@@ -56,6 +69,11 @@ namespace SocialMedia.Services
             await _followRepository.AddAsync(follow);
             await _followRepository.SaveChangesAsync();
 
+            await _cacheService.RemoveAsync($"profile:id:{follower.Id}");
+            await _cacheService.RemoveAsync($"profile:id:{followingId}");
+            await _cacheService.RemoveByPrefixAsync($"following:{follower.Id}");
+            await _cacheService.RemoveByPrefixAsync($"followers:{followingId}");
+
             return ApiResponse<bool>.SuccessResponse(true, "Followed successfully.");
         }
 
@@ -74,6 +92,11 @@ namespace SocialMedia.Services
 
             await _followRepository.DeleteAsync(follow);
             await _followRepository.SaveChangesAsync();
+
+            await _cacheService.RemoveAsync($"profile:id:{follower.Id}");
+            await _cacheService.RemoveAsync($"profile:id:{followingId}");
+            await _cacheService.RemoveByPrefixAsync($"following:{follower.Id}");
+            await _cacheService.RemoveByPrefixAsync($"followers:{followingId}");
 
             return ApiResponse<bool>.SuccessResponse(true, "Unfollowed successfully.");
         }
@@ -94,6 +117,11 @@ namespace SocialMedia.Services
             await _followRepository.DeleteAsync(follow);
             await _followRepository.SaveChangesAsync();
 
+            await _cacheService.RemoveAsync($"profile:id:{followerId}");
+            await _cacheService.RemoveAsync($"profile:id:{myProfile.Id}");
+            await _cacheService.RemoveByPrefixAsync($"following:{followerId}");
+            await _cacheService.RemoveByPrefixAsync($"followers:{myProfile.Id}");
+
             return ApiResponse<bool>.SuccessResponse(true, "Follower removed.");
         }
 
@@ -110,29 +138,52 @@ namespace SocialMedia.Services
             var targetProfile = await _profileRepository.GetByIdAsync(targetProfileId);
             if (targetProfile == null) return NotFoundResponse<IEnumerable<FollowDto>>("Target profile");
 
-            var query = _followRepository.QueryNoTracking()
-               .Where(f => f.FollowingId == targetProfile.Id);
+            string cacheKey = $"followers:{targetProfileId}:{take}";
+            FollowCacheModel cacheData = null;
 
-            if (lastFollowerDate.HasValue)
+            if (lastFollowerDate == null)
             {
-                query = query.Where(f => f.CreatedAt < lastFollowerDate.Value);
+                cacheData = await _cacheService.GetAsync<FollowCacheModel>(cacheKey);
             }
 
-            var followers = await query
-                .OrderByDescending(f => f.CreatedAt)
-                .Take(take)
-                .Include(f => f.Follower)
-                    .ThenInclude(p => p.User)
-                .ToListAsync();
+            if (cacheData == null)
+            {
+                var query = _followRepository.QueryNoTracking()
+                   .Where(f => f.FollowingId == targetProfile.Id);
 
-            if (!followers.Any())
+                if (lastFollowerDate.HasValue)
+                {
+                    query = query.Where(f => f.CreatedAt < lastFollowerDate.Value);
+                }
+
+                var followers = await query
+                    .OrderByDescending(f => f.CreatedAt)
+                    .Take(take)
+                    .Include(f => f.Follower)
+                        .ThenInclude(p => p.User)
+                    .ToListAsync();
+
+                var profiles = followers.Select(f => f.Follower).ToList();
+                var rawDtos = _mapper.Map<List<FollowDto>>(profiles); 
+
+                cacheData = new FollowCacheModel
+                {
+                    Dtos = rawDtos,
+                    NextCursor = followers.LastOrDefault()?.CreatedAt
+                };
+
+                if (lastFollowerDate == null && rawDtos.Any())
+                {
+                    await _cacheService.SetAsync(cacheKey, cacheData, _cacheTtl);
+                }
+            }
+
+            if (!cacheData.Dtos.Any())
                 return ApiResponse<IEnumerable<FollowDto>>.SuccessResponse(new List<FollowDto>(), "No followers found.");
 
-            var profiles = followers.Select(f => f.Follower).ToList();
-            var dtos = await MapProfilesToFollowDtosAsync(profiles, viewerProfileId);
+            var finalDtos = await PopulateViewerRelationshipsAsync(cacheData.Dtos, viewerProfileId);
 
-            var nextCursor = followers.LastOrDefault()?.CreatedAt;
-            return ApiResponse<IEnumerable<FollowDto>>.SuccessResponse(dtos, "Followers retrieved.", new { nextCursor });
+            return ApiResponse<IEnumerable<FollowDto>>.SuccessResponse(finalDtos, "Followers retrieved.", new { nextCursor = cacheData.NextCursor });
         }
 
         public async Task<ApiResponse<IEnumerable<FollowDto>>> GetFollowingAsync(
@@ -144,33 +195,55 @@ namespace SocialMedia.Services
             if (take <= 0 || take > 50) take = 20;
 
             var viewerProfileId = await GetViewerProfileIdAsync(userClaims);
-
             var targetProfile = await _profileRepository.GetByIdAsync(targetProfileId);
             if (targetProfile == null) return NotFoundResponse<IEnumerable<FollowDto>>("Target profile");
 
-            var query = _followRepository.QueryNoTracking()
-                .Where(f => f.FollowerId == targetProfile.Id);
+            string cacheKey = $"following:{targetProfileId}:{take}";
+            FollowCacheModel cacheData = null;
 
-            if (lastFollowingDate.HasValue)
+            if (lastFollowingDate == null)
             {
-                query = query.Where(f => f.CreatedAt < lastFollowingDate.Value);
+                cacheData = await _cacheService.GetAsync<FollowCacheModel>(cacheKey);
             }
 
-            var following = await query
-                .OrderByDescending(f => f.CreatedAt)
-                .Take(take)
-                .Include(f => f.Following)
-                    .ThenInclude(p => p.User)
-                .ToListAsync();
+            if (cacheData == null)
+            {
+                var query = _followRepository.QueryNoTracking()
+                    .Where(f => f.FollowerId == targetProfile.Id);
 
-            if (!following.Any())
+                if (lastFollowingDate.HasValue)
+                {
+                    query = query.Where(f => f.CreatedAt < lastFollowingDate.Value);
+                }
+
+                var following = await query
+                    .OrderByDescending(f => f.CreatedAt)
+                    .Take(take)
+                    .Include(f => f.Following)
+                        .ThenInclude(p => p.User)
+                    .ToListAsync();
+
+                var profiles = following.Select(f => f.Following).ToList();
+                var rawDtos = _mapper.Map<List<FollowDto>>(profiles);
+
+                cacheData = new FollowCacheModel
+                {
+                    Dtos = rawDtos,
+                    NextCursor = following.LastOrDefault()?.CreatedAt
+                };
+
+                if (lastFollowingDate == null && rawDtos.Any())
+                {
+                    await _cacheService.SetAsync(cacheKey, cacheData, _cacheTtl);
+                }
+            }
+
+            if (!cacheData.Dtos.Any())
                 return ApiResponse<IEnumerable<FollowDto>>.SuccessResponse(new List<FollowDto>(), "No following found.");
 
-            var profiles = following.Select(f => f.Following).ToList();
-            var dtos = await MapProfilesToFollowDtosAsync(profiles, viewerProfileId);
+            var finalDtos = await PopulateViewerRelationshipsAsync(cacheData.Dtos, viewerProfileId);
 
-            var nextCursor = following.LastOrDefault()?.CreatedAt;
-            return ApiResponse<IEnumerable<FollowDto>>.SuccessResponse(dtos, "Following retrieved.", new { nextCursor });
+            return ApiResponse<IEnumerable<FollowDto>>.SuccessResponse(finalDtos, "Following retrieved.", new { nextCursor = cacheData.NextCursor });
         }
 
         public async Task<ApiResponse<IEnumerable<FollowDto>>> GetFollowingAsync(ClaimsPrincipal userClaims, DateTime? lastFollowingDate = null, int take = 20)
@@ -180,7 +253,6 @@ namespace SocialMedia.Services
 
             return await GetFollowingAsync(userClaims, viewerProfileId.Value, lastFollowingDate, take);
         }
-
 
         public async Task<ApiResponse<IEnumerable<FollowDto>>> SearchFollowersAsync(ClaimsPrincipal userClaims, Guid targetProfileId, string query, int take = 20)
         {
@@ -216,9 +288,11 @@ namespace SocialMedia.Services
                 .ToListAsync();
 
             var profiles = followers.Select(f => f.Follower).ToList();
-            var dtos = await MapProfilesToFollowDtosAsync(profiles, viewerProfileId);
+            var rawDtos = _mapper.Map<List<FollowDto>>(profiles);
 
-            return ApiResponse<IEnumerable<FollowDto>>.SuccessResponse(dtos, "Search completed.", new { totalCount = dtos.Count });
+            var finalDtos = await PopulateViewerRelationshipsAsync(rawDtos, viewerProfileId);
+
+            return ApiResponse<IEnumerable<FollowDto>>.SuccessResponse(finalDtos, "Search completed.", new { totalCount = finalDtos.Count });
         }
 
         public async Task<ApiResponse<IEnumerable<FollowDto>>> SearchFollowingAsync(ClaimsPrincipal userClaims, Guid targetProfileId, string query, int take = 20)
@@ -255,11 +329,12 @@ namespace SocialMedia.Services
                 .ToListAsync();
 
             var profiles = following.Select(f => f.Following).ToList();
-            var dtos = await MapProfilesToFollowDtosAsync(profiles, viewerProfileId);
+            var rawDtos = _mapper.Map<List<FollowDto>>(profiles);
 
-            return ApiResponse<IEnumerable<FollowDto>>.SuccessResponse(dtos, "Search completed.", new { totalCount = dtos.Count });
+            var finalDtos = await PopulateViewerRelationshipsAsync(rawDtos, viewerProfileId);
+
+            return ApiResponse<IEnumerable<FollowDto>>.SuccessResponse(finalDtos, "Search completed.", new { totalCount = finalDtos.Count });
         }
-
 
         public async Task<ApiResponse<IEnumerable<FollowSuggestionDto>>> GetFollowSuggestionsAsync(ClaimsPrincipal userClaims, int skip = 0, int take = 10)
         {
@@ -276,7 +351,6 @@ namespace SocialMedia.Services
 
             var excludeIds = new HashSet<Guid>(myFollowingIds) { myProfile.Id };
             var suggestions = new List<FollowSuggestionDto>();
-
 
             if (myFollowingIds.Any())
             {
@@ -305,7 +379,6 @@ namespace SocialMedia.Services
                                    (candidateIds.Contains(f.RequesterId) || candidateIds.Contains(f.AddresseeId)))
                        .Select(f => f.RequesterId == myProfile.Id ? f.AddresseeId : f.RequesterId)
                        .ToListAsync();
-
 
                     suggestions = mutualCandidates.Join(profiles,
                         m => m.ProfileId,
@@ -388,10 +461,8 @@ namespace SocialMedia.Services
             return viewer?.Id;
         }
 
-        private async Task<List<FollowDto>> MapProfilesToFollowDtosAsync(List<Database.Models.Profile> profiles, Guid? viewerProfileId)
+        private async Task<List<FollowDto>> PopulateViewerRelationshipsAsync(List<FollowDto> dtos, Guid? viewerProfileId)
         {
-            var dtos = _mapper.Map<List<FollowDto>>(profiles);
-
             if (!viewerProfileId.HasValue || !dtos.Any())
                 return dtos;
 

@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../lib/axios";
 import { useAuthStore } from "../stores/useAuthStore";
 import { RegisterDto } from "@frontend/lib/types/auth";
@@ -57,6 +57,7 @@ export function useRefreshToken() {
 
 export function useLogout() {
   const logout = useAuthStore((s) => s.logout);
+  const queryClient = useQueryClient(); 
 
   return useMutation<ApiResponse<null>, Error, void>({
     mutationFn: async () => {
@@ -65,9 +66,11 @@ export function useLogout() {
     },
     onSuccess: () => {
       logout();
+      queryClient.clear(); 
     },
     onError: () => {
       logout();
+      queryClient.clear(); 
     },
   });
 }

@@ -2,15 +2,19 @@ import { useQuery, useQueryClient, useMutation, UseQueryOptions } from "@tanstac
 import { ProfileDto, UpdateProfileDto } from "@frontend/lib/types/profile";
 import { profileService } from "@frontend/services/profile-service";
 import { ApiResponse } from "@frontend/lib/types/api";
+import { useAuthStore } from "@frontend/stores/useAuthStore"; 
 
 
 export function useProfile() {
+    const accessToken = useAuthStore((s) => s.accessToken); 
+
     return useQuery({
         queryKey: ["user"],
         queryFn: async () => {
             const { data } = await profileService.getMyProfile();
             return data;
         },
+        enabled: !!accessToken, 
     });
 }
 
@@ -18,22 +22,26 @@ export const useProfileById = (
     userId: string,
     options?: Partial<UseQueryOptions<ApiResponse<ProfileDto>, Error>>
 ) => {
+    const accessToken = useAuthStore((s) => s.accessToken);
+
     return useQuery({
         queryKey: ["user-profile-by-id", userId],
         queryFn: () => profileService.getProfileById(userId),
 
-        enabled: !!userId && (options?.enabled !== false),
+        enabled: !!userId && !!accessToken && (options?.enabled !== false),
 
         ...options
     });
 };
 
 export const useProfileByUsername = (username: string) => {
+    const accessToken = useAuthStore((s) => s.accessToken);
+
     return useQuery({
         queryKey: ["user-profile-by-username", username],
         queryFn: () => profileService.getProfileByUsername(username),
-        enabled: !!username && username !== "",
-        staleTime: 1000 * 60 * 5, // 5 минути
+        enabled: !!username && username !== "" && !!accessToken,
+        staleTime: 1000 * 60 * 5, 
     });
 }
 
@@ -68,4 +76,3 @@ export const useChangePassword = () => {
             profileService.changePassword(data.currentPassword, data.newPassword, data.confirmNewPassword),
     });
 };
-

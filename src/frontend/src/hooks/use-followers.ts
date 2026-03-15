@@ -13,6 +13,7 @@ export const useInfiniteFollowers = (profileId: string) => {
             return lastPage.meta?.nextCursor ?? undefined;
         },
         select: (data) => data.pages.flatMap((page) => page.data),
+        enabled: !!profileId,
     });
 }
 
@@ -27,6 +28,7 @@ export const useInfiniteFollowing = (profileId: string) => {
             return lastPage.meta?.nextCursor ?? undefined;
         },
         select: (data) => data.pages.flatMap((page) => page.data),
+        enabled: !!profileId,
     });
 }
 
