@@ -1,5 +1,4 @@
-﻿using System.Security.Claims;
-using AutoMapper;
+﻿using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SocialMedia.Common;
@@ -8,22 +7,36 @@ using SocialMedia.Database.Models;
 using SocialMedia.Database.Models.Enums;
 using SocialMedia.DTOs.Friendship;
 using SocialMedia.Extensions;
+using SocialMedia.Services.Caching; 
 using SocialMedia.Services.Interfaces;
+using System.Security.Claims;
 
 namespace SocialMedia.Services
 {
+    public class FriendshipCacheModel
+    {
+        public List<FriendDto> Dtos { get; set; } = new();
+        public DateTime? LastFriendshipDate { get; set; }
+        public Guid? LastFriendId { get; set; }
+        public int TotalCount { get; set; }
+    }
+
     public class FriendshipService : BaseService, IFriendshipService
     {
         private readonly IRepository<Friendship, Guid> _friendshipRepository;
         private readonly IRepository<Database.Models.Profile, Guid> _profileRepository;
         private readonly IRepository<Follow, Guid> _followRepository;
         private readonly IMapper _mapper;
+        private readonly ICacheService _cacheService;
+
+        private readonly TimeSpan _cacheTtl = TimeSpan.FromHours(24);
 
         public FriendshipService(
             IRepository<Friendship, Guid> friendshipRepository,
             IRepository<Database.Models.Profile, Guid> profileRepository,
             IRepository<Follow, Guid> followRepository,
             IMapper mapper,
+            ICacheService cacheService, 
             UserManager<ApplicationUser> userManager)
             : base(userManager)
         {
@@ -31,8 +44,9 @@ namespace SocialMedia.Services
             _profileRepository = profileRepository;
             _followRepository = followRepository;
             _mapper = mapper;
+            _cacheService = cacheService;
         }
-
+        
         public async Task<ApiResponse<bool>> SendFriendRequestAsync(ClaimsPrincipal userClaims, Guid targetProfileId)
         {
             try
@@ -86,6 +100,8 @@ namespace SocialMedia.Services
 
                 await _friendshipRepository.SaveChangesAsync();
 
+                await InvalidateFriendshipCachesAsync(requesterId, targetProfileId);
+
                 return ApiResponse<bool>.SuccessResponse(true, "Friend request sent and user followed.");
             }
             catch (Exception ex)
@@ -109,12 +125,14 @@ namespace SocialMedia.Services
                 f.RequesterId == requester.Id &&
                 f.AddresseeId == targetProfileId &&
                 f.Status == FriendshipStatus.Pending);
+
             if (existingRequest == null)
                 return ApiResponse<bool>.ErrorResponse("No pending friend request found to cancel.");
 
             var existingFollow = await _followRepository.FirstOrDefaultAsync(f =>
                 f.FollowerId == requester.Id &&
                 f.FollowingId == targetProfileId);
+
             if (existingFollow != null)
             {
                 await _followRepository.DeleteAsync(existingFollow);
@@ -122,6 +140,8 @@ namespace SocialMedia.Services
 
             await _friendshipRepository.DeleteAsync(existingRequest);
             await _friendshipRepository.SaveChangesAsync();
+
+            await InvalidateFriendshipCachesAsync(requester.Id, targetProfileId);
 
             return ApiResponse<bool>.SuccessResponse(true, "Friend request canceled.");
         }
@@ -166,6 +186,8 @@ namespace SocialMedia.Services
 
             await _friendshipRepository.SaveChangesAsync();
 
+            await InvalidateFriendshipCachesAsync(meId, requesterId);
+
             return ApiResponse<bool>.SuccessResponse(true, "You are now friends and following each other.");
         }
 
@@ -185,6 +207,8 @@ namespace SocialMedia.Services
 
             await _friendshipRepository.DeleteAsync(request);
             await _friendshipRepository.SaveChangesAsync();
+
+            await InvalidateFriendshipCachesAsync(userProfile.Id, request.RequesterId);
 
             return ApiResponse<bool>.SuccessResponse(true, "Friend request declined.");
         }
@@ -219,6 +243,8 @@ namespace SocialMedia.Services
             if (theirFollow != null) await _followRepository.DeleteAsync(theirFollow);
 
             await _friendshipRepository.SaveChangesAsync();
+
+            await InvalidateFriendshipCachesAsync(myProfile.Id, friendProfileId);
 
             return ApiResponse<bool>.SuccessResponse(true, "Friend removed and mutual following stopped.");
         }
@@ -370,50 +396,76 @@ namespace SocialMedia.Services
             var listOwnerProfile = await _profileRepository.GetByIdAsync(profileId);
             if (listOwnerProfile == null) return ApiResponse<IEnumerable<FriendDto>>.ErrorResponse("Profile not found.");
 
-            var totalCount = await _friendshipRepository.QueryNoTracking()
-                .CountAsync(f => (f.RequesterId == listOwnerProfile.Id || f.AddresseeId == listOwnerProfile.Id)
-                                 && f.Status == FriendshipStatus.Accepted);
+            string cacheKey = $"friends:{profileId}:{take}";
+            FriendshipCacheModel cacheData = null;
 
-            var query = _friendshipRepository.QueryNoTracking()
-                .Where(f => (f.RequesterId == listOwnerProfile.Id || f.AddresseeId == listOwnerProfile.Id)
-                            && f.Status == FriendshipStatus.Accepted);
-
-            if (lastFriendshipDate.HasValue && lastFriendId.HasValue)
+            if (lastFriendshipDate == null && lastFriendId == null)
             {
-                query = query.Where(f => f.AcceptedAt < lastFriendshipDate.Value ||
-                                         (f.AcceptedAt == lastFriendshipDate.Value && f.Id.CompareTo(lastFriendId.Value) < 0));
-            }
-            else if (lastFriendshipDate.HasValue)
-            {
-                query = query.Where(f => f.AcceptedAt < lastFriendshipDate.Value);
+                cacheData = await _cacheService.GetAsync<FriendshipCacheModel>(cacheKey);
             }
 
-            query = query
-                .OrderByDescending(f => f.AcceptedAt)
-                .ThenByDescending(f => f.Id);
+            if (cacheData == null)
+            {
+                var totalCount = await _friendshipRepository.QueryNoTracking()
+                    .CountAsync(f => (f.RequesterId == listOwnerProfile.Id || f.AddresseeId == listOwnerProfile.Id)
+                                     && f.Status == FriendshipStatus.Accepted);
 
-            var friendships = await query
-                .Take(take)
-                .Include(f => f.Requester).ThenInclude(p => p.User)
-                .Include(f => f.Addressee).ThenInclude(p => p.User)
-                .ToListAsync();
+                var query = _friendshipRepository.QueryNoTracking()
+                    .Where(f => (f.RequesterId == listOwnerProfile.Id || f.AddresseeId == listOwnerProfile.Id)
+                                && f.Status == FriendshipStatus.Accepted);
 
-            var friendProfiles = friendships
-                .Select(f => f.RequesterId == listOwnerProfile.Id ? f.Addressee : f.Requester)
-                .ToList();
+                if (lastFriendshipDate.HasValue && lastFriendId.HasValue)
+                {
+                    query = query.Where(f => f.AcceptedAt < lastFriendshipDate.Value ||
+                                             (f.AcceptedAt == lastFriendshipDate.Value && f.Id.CompareTo(lastFriendId.Value) < 0));
+                }
+                else if (lastFriendshipDate.HasValue)
+                {
+                    query = query.Where(f => f.AcceptedAt < lastFriendshipDate.Value);
+                }
 
-            var friendDtos = await MapProfilesToFriendDtosAsync(friendProfiles, viewerProfileId);
+                query = query
+                    .OrderByDescending(f => f.AcceptedAt)
+                    .ThenByDescending(f => f.Id);
 
-            var lastItem = friendships.LastOrDefault();
+                var friendships = await query
+                    .Take(take)
+                    .Include(f => f.Requester).ThenInclude(p => p.User)
+                    .Include(f => f.Addressee).ThenInclude(p => p.User)
+                    .ToListAsync();
+
+                var friendProfiles = friendships
+                    .Select(f => f.RequesterId == listOwnerProfile.Id ? f.Addressee : f.Requester)
+                    .ToList();
+
+                var rawDtos = _mapper.Map<List<FriendDto>>(friendProfiles);
+
+                var lastItem = friendships.LastOrDefault();
+
+                cacheData = new FriendshipCacheModel
+                {
+                    Dtos = rawDtos,
+                    TotalCount = totalCount,
+                    LastFriendshipDate = lastItem?.AcceptedAt,
+                    LastFriendId = lastItem?.Id
+                };
+
+                if (lastFriendshipDate == null && lastFriendId == null && rawDtos.Any())
+                {
+                    await _cacheService.SetAsync(cacheKey, cacheData, _cacheTtl);
+                }
+            }
+
+            var finalDtos = await PopulateViewerRelationshipsAsync(cacheData.Dtos, viewerProfileId);
 
             return ApiResponse<IEnumerable<FriendDto>>.SuccessResponse(
-                friendDtos,
+                finalDtos,
                 "Friends list retrieved.",
                 new
                 {
-                    lastFriendshipDate = lastItem?.AcceptedAt,
-                    lastFriendId = lastItem?.Id,
-                    totalCount = totalCount
+                    lastFriendshipDate = cacheData.LastFriendshipDate,
+                    lastFriendId = cacheData.LastFriendId,
+                    totalCount = cacheData.TotalCount
                 });
         }
 
@@ -471,14 +523,16 @@ namespace SocialMedia.Services
                 .Select(f => f.RequesterId == listOwnerProfile.Id ? f.Addressee : f.Requester)
                 .ToList();
 
-            var friendDtos = await MapProfilesToFriendDtosAsync(friendProfiles, viewerProfileId);
+            var rawDtos = _mapper.Map<List<FriendDto>>(friendProfiles);
+
+            var finalDtos = await PopulateViewerRelationshipsAsync(rawDtos, viewerProfileId);
 
             return ApiResponse<IEnumerable<FriendDto>>.SuccessResponse(
-                friendDtos,
+                finalDtos,
                 "Friends search completed.",
                 new
                 {
-                    totalCount = friendDtos.Count
+                    totalCount = finalDtos.Count
                 });
         }
 
@@ -492,67 +546,63 @@ namespace SocialMedia.Services
             return viewer?.Id;
         }
 
-        private async Task<List<FriendDto>> MapProfilesToFriendDtosAsync(
-            List<Database.Models.Profile> friendProfiles,
-            Guid? viewerProfileId)
+        private async Task InvalidateFriendshipCachesAsync(Guid userA, Guid userB)
         {
-            var friendProfileIds = friendProfiles.Select(p => p.Id).ToList();
+            await _cacheService.RemoveAsync($"profile:id:{userA}");
+            await _cacheService.RemoveAsync($"profile:id:{userB}");
+            await _cacheService.RemoveByPrefixAsync($"friends:{userA}");
+            await _cacheService.RemoveByPrefixAsync($"friends:{userB}");
+            await _cacheService.RemoveByPrefixAsync($"followers:{userA}");
+            await _cacheService.RemoveByPrefixAsync($"followers:{userB}");
+            await _cacheService.RemoveByPrefixAsync($"following:{userA}");
+            await _cacheService.RemoveByPrefixAsync($"following:{userB}");
+        }
 
-            List<Friendship> viewerRelationships = new List<Friendship>();
-            HashSet<Guid> viewerFriendIds = new HashSet<Guid>();
+        private async Task<List<FriendDto>> PopulateViewerRelationshipsAsync(List<FriendDto> dtos, Guid? viewerProfileId)
+        {
+            if (!viewerProfileId.HasValue || !dtos.Any())
+                return dtos;
 
-            if (viewerProfileId.HasValue && friendProfileIds.Any())
+            var friendProfileIds = dtos.Select(d => d.ProfileId).ToList();
+
+            var viewerRelationships = await _friendshipRepository.QueryNoTracking()
+                .Where(f => (f.RequesterId == viewerProfileId.Value && friendProfileIds.Contains(f.AddresseeId)) ||
+                            (f.AddresseeId == viewerProfileId.Value && friendProfileIds.Contains(f.RequesterId)))
+                .ToListAsync();
+
+            var viewerFriendIdsList = await _friendshipRepository.QueryNoTracking()
+                .Where(f => (f.RequesterId == viewerProfileId.Value || f.AddresseeId == viewerProfileId.Value)
+                            && f.Status == FriendshipStatus.Accepted)
+                .Select(f => f.RequesterId == viewerProfileId.Value ? f.AddresseeId : f.RequesterId)
+                .ToListAsync();
+
+            var viewerFriendIds = new HashSet<Guid>(viewerFriendIdsList);
+
+            foreach (var dto in dtos)
             {
-                viewerRelationships = await _friendshipRepository.QueryNoTracking()
-                    .Where(f => (f.RequesterId == viewerProfileId.Value && friendProfileIds.Contains(f.AddresseeId)) ||
-                                (f.AddresseeId == viewerProfileId.Value && friendProfileIds.Contains(f.RequesterId)))
-                    .ToListAsync();
+                bool isMe = dto.ProfileId == viewerProfileId.Value;
+                var rel = viewerRelationships.FirstOrDefault(r => r.RequesterId == dto.ProfileId || r.AddresseeId == dto.ProfileId);
 
-                var viewerFriendsList = await _friendshipRepository.QueryNoTracking()
-                    .Where(f => (f.RequesterId == viewerProfileId.Value || f.AddresseeId == viewerProfileId.Value)
-                                && f.Status == FriendshipStatus.Accepted)
-                    .Select(f => f.RequesterId == viewerProfileId.Value ? f.AddresseeId : f.RequesterId)
-                    .ToListAsync();
+                dto.IsMe = isMe;
+                dto.IsFriend = rel?.Status == FriendshipStatus.Accepted;
+                dto.HasSentRequest = rel?.Status == FriendshipStatus.Pending && rel.RequesterId == viewerProfileId;
+                dto.HasReceivedRequest = rel?.Status == FriendshipStatus.Pending && rel.AddresseeId == viewerProfileId;
+                dto.PendingRequestId = (dto.HasSentRequest || dto.HasReceivedRequest) ? rel?.Id : null;
 
-                viewerFriendIds = new HashSet<Guid>(viewerFriendsList);
-            }
-
-            var friendDtos = new List<FriendDto>();
-
-            foreach (var p in friendProfiles)
-            {
-                bool isMe = viewerProfileId.HasValue && p.Id == viewerProfileId.Value;
-                var rel = viewerRelationships.FirstOrDefault(r => r.RequesterId == p.Id || r.AddresseeId == p.Id);
-
-                bool isFriend = rel?.Status == FriendshipStatus.Accepted;
-                bool hasSent = rel?.Status == FriendshipStatus.Pending && rel.RequesterId == viewerProfileId;
-                bool hasReceived = rel?.Status == FriendshipStatus.Pending && rel.AddresseeId == viewerProfileId;
-
-                int mutualCount = 0;
-                if (viewerProfileId.HasValue && !isMe)
+                if (!isMe)
                 {
-                    mutualCount = await _friendshipRepository.QueryNoTracking()
+                    dto.MutualFriendsCount = await _friendshipRepository.QueryNoTracking()
                         .CountAsync(f => f.Status == FriendshipStatus.Accepted &&
-                                    (f.RequesterId == p.Id || f.AddresseeId == p.Id) &&
-                                    (f.RequesterId == p.Id ? viewerFriendIds.Contains(f.AddresseeId) : viewerFriendIds.Contains(f.RequesterId)));
+                                    (f.RequesterId == dto.ProfileId || f.AddresseeId == dto.ProfileId) &&
+                                    (f.RequesterId == dto.ProfileId ? viewerFriendIds.Contains(f.AddresseeId) : viewerFriendIds.Contains(f.RequesterId)));
                 }
-
-                friendDtos.Add(new FriendDto
+                else
                 {
-                    ProfileId = p.Id,
-                    DisplayFullName = p.FullName ?? "Unknown",
-                    Username = p.User.UserName!,
-                    AuthorAvatar = p.Photo,
-                    IsMe = isMe,
-                    IsFriend = isFriend,
-                    HasSentRequest = hasSent,
-                    HasReceivedRequest = hasReceived,
-                    PendingRequestId = (hasSent || hasReceived) ? rel?.Id : null,
-                    MutualFriendsCount = isMe ? 0 : mutualCount
-                });
+                    dto.MutualFriendsCount = 0;
+                }
             }
 
-            return friendDtos;
+            return dtos;
         }
     }
 }

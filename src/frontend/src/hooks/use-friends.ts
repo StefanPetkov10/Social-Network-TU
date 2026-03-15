@@ -43,6 +43,7 @@ export const useInfiniteFriends = (profileId: string) => {
             lastFriendshipDate: meta.lastFriendshipDate
         };
     },
+    enabled: !!profileId,
   });
 };
 
