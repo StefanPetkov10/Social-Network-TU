@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SocialMedia.Database.Models;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Reflection.Emit;
 
 namespace SocialMedia.Database
 {
@@ -31,6 +32,7 @@ namespace SocialMedia.Database
         public DbSet<PasswordResetSession> PasswordResetSessions { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<ReportedPost> ReportedPosts { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -89,6 +91,12 @@ namespace SocialMedia.Database
                 .WithMany()
                 .HasForeignKey(rp => rp.ResolvedById)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<Notification>()
+                .HasOne(n => n.TriggeredBy)
+                .WithMany(p => p.NotificationsTriggered)
+                .HasForeignKey(n => n.TriggeredById)
+                .OnDelete(DeleteBehavior.Restrict);
 
             foreach (var entityType in builder.Model.GetEntityTypes())
             {

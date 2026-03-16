@@ -54,5 +54,12 @@ namespace SocialMedia.Database.Models
         [InverseProperty(nameof(Message.Receiver))]
         public ICollection<Message> MessagesReceived { get; set; } = new List<Message>();
 
+
+        [InverseProperty(nameof(Notification.Recipient))]
+        public ICollection<Notification> NotificationsReceived { get; set; } = new List<Notification>();
+
+        [InverseProperty(nameof(Notification.TriggeredBy))]
+        public ICollection<Notification> NotificationsTriggered { get; set; } = new List<Notification>();
+
     }
 }
