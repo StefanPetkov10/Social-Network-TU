@@ -26,6 +26,7 @@ namespace SocialMedia.Services
         private readonly IRepository<GroupMembership, Guid> _groupMemberRepository;
         private readonly IRepository<Profile, Guid> _profileRepository;
         private readonly IRepository<Friendship, Guid> _friendshipRepository;
+        private readonly INotificationService _notificationService;
         private readonly ICacheService _cacheService;
 
         private readonly TimeSpan _cacheTtl = TimeSpan.FromHours(24);
@@ -35,12 +36,14 @@ namespace SocialMedia.Services
             IRepository<Profile, Guid> profileRepository,
             IRepository<GroupMembership, Guid> groupMemberRepository,
             IRepository<Friendship, Guid> friendshipRepository,
+            INotificationService notificationService,
             ICacheService cacheService) : base(userManager)
         {
             _groupRepository = groupRepository;
             _profileRepository = profileRepository;
             _groupMemberRepository = groupMemberRepository;
             _friendshipRepository = friendshipRepository;
+            _notificationService = notificationService;
             _cacheService = cacheService;
         }
 
@@ -55,9 +58,18 @@ namespace SocialMedia.Services
                 {
                     case MembershipStatus.Approved:
                         return ApiResponse<object>.ErrorResponse("Already a member.", new[] { "You are already a member." });
+
                     case MembershipStatus.Pending:
+                            await _notificationService.TriggerNotificationAsync(
+                                group!.OwnerId,    
+                                profile.Id,         
+                                NotificationType.GroupJoinRequest,
+                                group.Id            
+                            );
                         return ApiResponse<object>.ErrorResponse("Pending.", new[] { "Request already pending." });
+
                     case MembershipStatus.Rejected:
+
                     case MembershipStatus.Left:
                         existingMembership.Status = group!.Privacy == GroupPrivacy.Public ? MembershipStatus.Approved : MembershipStatus.Pending;
                         existingMembership.RequestedOn = DateTime.UtcNow;
@@ -68,6 +80,7 @@ namespace SocialMedia.Services
                         await InvalidateGroupMembershipCachesAsync(profile!.Id, groupId);
 
                         return ApiResponse<object>.SuccessResponse("Rejoined successfully.");
+
                     default:
                         return ApiResponse<object>.ErrorResponse("Error.", new[] { "Invalid status." });
                 }
@@ -87,6 +100,16 @@ namespace SocialMedia.Services
             await _groupMemberRepository.SaveChangesAsync();
 
             await InvalidateGroupMembershipCachesAsync(profile.Id, groupId);
+
+            if (newMembership.Status == MembershipStatus.Pending)
+            {
+                await _notificationService.TriggerNotificationAsync(
+                    group!.OwnerId,     
+                    profile.Id,        
+                    NotificationType.GroupJoinRequest,
+                    group.Id           
+                );
+            }
 
             var msg = newMembership.Status == MembershipStatus.Approved ? "Joined successfully." : "Request sent.";
             return ApiResponse<object>.SuccessResponse(msg);
@@ -130,6 +153,20 @@ namespace SocialMedia.Services
 
             await InvalidateGroupMembershipCachesAsync(targetMembership.ProfileId, groupId);
 
+            await _notificationService.RevertNotificationAsync(
+                group!.OwnerId,
+                profileId, 
+                NotificationType.GroupJoinRequest,
+                group.Id
+            );
+
+            await _notificationService.TriggerNotificationAsync(
+                profileId,          
+                profile!.Id,        
+                NotificationType.GroupJoinAccept,
+                group.Id
+            );
+
             return ApiResponse<object>.SuccessResponse("Member approved.");
         }
 
@@ -149,6 +186,13 @@ namespace SocialMedia.Services
             await _groupMemberRepository.SaveChangesAsync();
 
             await InvalidateGroupMembershipCachesAsync(targetMembership.ProfileId, groupId);
+
+            await _notificationService.RevertNotificationAsync(
+                group!.OwnerId,
+                profileId,
+                NotificationType.GroupJoinRequest,
+                group.Id
+            );
 
             return ApiResponse<object>.SuccessResponse("Request rejected.");
         }

@@ -27,6 +27,7 @@ namespace SocialMedia.Services
         private readonly IRepository<Database.Models.Profile, Guid> _profileRepository;
         private readonly IRepository<Follow, Guid> _followRepository;
         private readonly IMapper _mapper;
+        private readonly INotificationService _notificationService;
         private readonly ICacheService _cacheService;
 
         private readonly TimeSpan _cacheTtl = TimeSpan.FromHours(24);
@@ -35,7 +36,7 @@ namespace SocialMedia.Services
             IRepository<Friendship, Guid> friendshipRepository,
             IRepository<Database.Models.Profile, Guid> profileRepository,
             IRepository<Follow, Guid> followRepository,
-            IMapper mapper,
+            IMapper mapper, INotificationService notificationService,
             ICacheService cacheService, 
             UserManager<ApplicationUser> userManager)
             : base(userManager)
@@ -44,6 +45,7 @@ namespace SocialMedia.Services
             _profileRepository = profileRepository;
             _followRepository = followRepository;
             _mapper = mapper;
+            _notificationService = notificationService;
             _cacheService = cacheService;
         }
         
@@ -102,6 +104,9 @@ namespace SocialMedia.Services
 
                 await InvalidateFriendshipCachesAsync(requesterId, targetProfileId);
 
+                await _notificationService.TriggerNotificationAsync(
+                    targetProfileId, requesterId, NotificationType.FriendRequest, null);
+
                 return ApiResponse<bool>.SuccessResponse(true, "Friend request sent and user followed.");
             }
             catch (Exception ex)
@@ -142,6 +147,9 @@ namespace SocialMedia.Services
             await _friendshipRepository.SaveChangesAsync();
 
             await InvalidateFriendshipCachesAsync(requester.Id, targetProfileId);
+
+            await _notificationService.RevertNotificationAsync(
+                targetProfileId, requester.Id, NotificationType.FriendRequest, null);
 
             return ApiResponse<bool>.SuccessResponse(true, "Friend request canceled.");
         }
@@ -188,6 +196,12 @@ namespace SocialMedia.Services
 
             await InvalidateFriendshipCachesAsync(meId, requesterId);
 
+            await _notificationService.RevertNotificationAsync(
+                userProfile.Id, request.RequesterId, NotificationType.FriendRequest, null);
+
+            await _notificationService.TriggerNotificationAsync(
+                request.RequesterId, userProfile.Id, NotificationType.FriendAccept, null);
+
             return ApiResponse<bool>.SuccessResponse(true, "You are now friends and following each other.");
         }
 
@@ -209,6 +223,9 @@ namespace SocialMedia.Services
             await _friendshipRepository.SaveChangesAsync();
 
             await InvalidateFriendshipCachesAsync(userProfile.Id, request.RequesterId);
+
+            await _notificationService.RevertNotificationAsync(
+                userProfile.Id, request.RequesterId, NotificationType.FriendRequest, null);
 
             return ApiResponse<bool>.SuccessResponse(true, "Friend request declined.");
         }

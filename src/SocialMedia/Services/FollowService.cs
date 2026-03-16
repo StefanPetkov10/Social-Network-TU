@@ -26,6 +26,7 @@ namespace SocialMedia.Services
         private readonly IRepository<Database.Models.Profile, Guid> _profileRepository;
         private readonly IMapper _mapper;
         private readonly ICacheService _cacheService;
+        private readonly INotificationService _notificationService;
 
         private readonly TimeSpan _cacheTtl = TimeSpan.FromHours(24);
 
@@ -33,13 +34,14 @@ namespace SocialMedia.Services
             IRepository<Follow, Guid> followRepository,
             IRepository<Friendship, Guid> friendshipRepository,
             IRepository<Database.Models.Profile, Guid> profileRepository,
-            IMapper mapper,
+            IMapper mapper, INotificationService notificationService,
             ICacheService cacheService) : base(userManager)
         {
             _followRepository = followRepository;
             _friendshipRepository = friendshipRepository;
             _profileRepository = profileRepository;
             _mapper = mapper;
+            _notificationService = notificationService;
             _cacheService = cacheService;
         }
 
@@ -74,6 +76,9 @@ namespace SocialMedia.Services
             await _cacheService.RemoveByPrefixAsync($"following:{follower.Id}");
             await _cacheService.RemoveByPrefixAsync($"followers:{followingId}");
 
+            await _notificationService.TriggerNotificationAsync(
+                followingId, follower.Id, NotificationType.NewFollower, null);
+
             return ApiResponse<bool>.SuccessResponse(true, "Followed successfully.");
         }
 
@@ -98,6 +103,9 @@ namespace SocialMedia.Services
             await _cacheService.RemoveByPrefixAsync($"following:{follower.Id}");
             await _cacheService.RemoveByPrefixAsync($"followers:{followingId}");
 
+            await _notificationService.RevertNotificationAsync(
+                followingId, follower.Id, NotificationType.NewFollower, null);
+
             return ApiResponse<bool>.SuccessResponse(true, "Unfollowed successfully.");
         }
 
@@ -121,6 +129,9 @@ namespace SocialMedia.Services
             await _cacheService.RemoveAsync($"profile:id:{myProfile.Id}");
             await _cacheService.RemoveByPrefixAsync($"following:{followerId}");
             await _cacheService.RemoveByPrefixAsync($"followers:{myProfile.Id}");
+
+            await _notificationService.RevertNotificationAsync(
+                myProfile.Id, followerId, NotificationType.NewFollower, null);
 
             return ApiResponse<bool>.SuccessResponse(true, "Follower removed.");
         }

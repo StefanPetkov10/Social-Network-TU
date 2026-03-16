@@ -1,18 +1,19 @@
-using System.Security.Claims;
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SocialMedia.Common;
 using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database.Models;
+using SocialMedia.Database.Models.Enums;
 using SocialMedia.DTOs.Comment;
 using SocialMedia.Services.Interfaces;
+using System.Security.Claims;
 
 namespace SocialMedia.Services
 {
     public class CommentService : BaseService, ICommentService
     {
-        private const int MaxDepth = 3;
+        private const int MaxDepth = 2;
 
         private readonly IRepository<Comment, Guid> _commentRepository;
         private readonly IRepository<Post, Guid> _postRepository;
@@ -20,13 +21,15 @@ namespace SocialMedia.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IMapper _mapper;
         private readonly IFileService _fileService;
+        private readonly INotificationService _notificationService;
 
         public CommentService(UserManager<ApplicationUser> userManager,
             IRepository<Comment, Guid> commentRepository,
             IRepository<Post, Guid> postRepository,
             IRepository<Database.Models.Profile, Guid> profileRepository,
             IHttpContextAccessor httpContextAccessor, IMapper mapper,
-            IFileService fileService) : base(userManager)
+            IFileService fileService, 
+            INotificationService notificationService) : base(userManager)
         {
             _commentRepository = commentRepository;
             _postRepository = postRepository;
@@ -34,6 +37,7 @@ namespace SocialMedia.Services
             _httpContextAccessor = httpContextAccessor;
             _mapper = mapper;
             _fileService = fileService;
+            _notificationService = notificationService;
         }
 
         public async Task<ApiResponse<CommentDto>> CreateCommentAsPost(ClaimsPrincipal userClaims, Guid postId, CreateCommentDto dto)
@@ -89,6 +93,9 @@ namespace SocialMedia.Services
 
             await _commentRepository.AddAsync(comment);
             await _commentRepository.SaveChangesAsync();
+
+            await _notificationService.TriggerNotificationAsync(
+                post.ProfileId, profile.Id, NotificationType.PostComment, post.Id);
 
             post.CommentsCount += 1;
             _postRepository.Update(post);
@@ -259,6 +266,16 @@ namespace SocialMedia.Services
                     c.IsDeleted = true;
                     c.UpdatedDate = now;
                     _commentRepository.Update(c);
+
+                    if (comment.Post != null)
+                    {
+                        await _notificationService.RevertNotificationAsync(
+                            comment.Post.ProfileId, 
+                            c.ProfileId,            
+                            NotificationType.PostComment,
+                            comment.Post.Id         
+                        );
+                    }
                 }
             }
 

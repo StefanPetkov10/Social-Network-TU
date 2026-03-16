@@ -18,14 +18,16 @@ namespace SocialMedia.Services
         private readonly IRepository<Comment, Guid> _commentRepository;
         private readonly IRepository<Message, Guid> _messageRepository;
         private readonly IRepository<Friendship, Guid> _friendshipRepository;
+        private readonly INotificationService _notificationService;
 
         public ReactionService(IRepository<Reaction, Guid> reactionRepository,
+            UserManager<ApplicationUser> userManager,
             IRepository<Profile, Guid> profileRepository,
             IRepository<Post, Guid> postRepository,
             IRepository<Comment, Guid> commentRepository,
             IRepository<Message, Guid> messageRepository,
-            UserManager<ApplicationUser> userManager,
-            IRepository<Friendship, Guid> friendshipRepository) : base(userManager)
+            IRepository<Friendship, Guid> friendshipRepository,
+            INotificationService notificationService) : base(userManager)
         {
             _reactionRepository = reactionRepository;
             _profileRepository = profileRepository;
@@ -33,6 +35,7 @@ namespace SocialMedia.Services
             _commentRepository = commentRepository;
             _messageRepository = messageRepository;
             _friendshipRepository = friendshipRepository;
+            _notificationService = notificationService;
         }
 
         public async Task<ApiResponse<string>> ReactToPostAsync(ClaimsPrincipal userClaim, Guid postId, ReactionType type)
@@ -68,6 +71,9 @@ namespace SocialMedia.Services
                 post.LikesCount++;
                 await _reactionRepository.AddAsync(newReaction);
                 message = "Reaction added successfully.";
+
+                await _notificationService.TriggerNotificationAsync(
+                    post.ProfileId, profile.Id, NotificationType.PostReaction, post.Id);
             }
             else
             {
@@ -76,6 +82,9 @@ namespace SocialMedia.Services
                     post.LikesCount = Math.Max(0, post.LikesCount - 1);
                     await _reactionRepository.DeleteAsync(existingReaction);
                     message = "Reaction removed successfully.";
+
+                    await _notificationService.RevertNotificationAsync(
+                        post.ProfileId, profile.Id, NotificationType.PostReaction, post.Id);
                 }
                 else
                 {
@@ -124,7 +133,11 @@ namespace SocialMedia.Services
                 comment.LikesCount++;
                 await _reactionRepository.AddAsync(newReaction);
                 message = "Reaction added successfully.";
-            }
+
+                await _notificationService.TriggerNotificationAsync(
+                    comment.ProfileId, profile.Id, NotificationType.CommentReaction, comment.Id);
+            
+        }
             else
             {
                 if (existingReaction.Type == type)
@@ -132,6 +145,9 @@ namespace SocialMedia.Services
                     comment.LikesCount = Math.Max(0, comment.LikesCount - 1);
                     await _reactionRepository.DeleteAsync(existingReaction);
                     message = "Reaction removed successfully.";
+
+                    await _notificationService.RevertNotificationAsync(
+                        comment.ProfileId, profile.Id, NotificationType.CommentReaction, comment.Id);
                 }
                 else
                 {
