@@ -1,10 +1,11 @@
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { postService } from "@frontend/services/post-service";
 import { PostDto } from "@frontend/lib/types/posts";
+import { NotificationDto } from "@frontend/lib/types/notification";
 import { ApiResponse } from "@frontend/lib/types/api";
 import { useProfile } from "@frontend/hooks/use-profile";
-import { MediaTypeGroup } from "@frontend/lib/types/enums";
+import { MediaTypeGroup, NotificationType } from "@frontend/lib/types/enums";
 
 export const useCreatePost = () => {
   const queryClient = useQueryClient();
@@ -39,6 +40,45 @@ export const useCreatePost = () => {
           }
       }
     },
+  });
+};
+
+export const usePostById = (postId: string) => {
+  return useQuery<ApiResponse<PostDto>, Error>({
+    queryKey: ["posts", postId],
+    queryFn: async () => {
+      return await postService.getPostById(postId);
+    },
+    enabled: !!postId,
+  });
+};
+
+export const usePostByCommentId = (commentId: string) => {
+  return useQuery<ApiResponse<PostDto>, Error>({
+    queryKey: ["posts-by-comment", commentId],
+    queryFn: async () => {
+      return await postService.getPostByCommentId(commentId);
+    },
+    enabled: !!commentId,
+  });
+};
+
+export const usePostForNotification = (notification: NotificationDto | null) => {
+  return useQuery({
+    queryKey: ["post-from-notification", notification?.id],
+    queryFn: async () => {
+        if (!notification || !notification.referenceId) return null;
+        
+        if (notification.type === NotificationType.CommentReaction) {
+            const res = await postService.getPostByCommentId(notification.referenceId);
+            return res.data;
+        } 
+        else {
+            const res = await postService.getPostById(notification.referenceId);
+            return res.data;
+        }
+    },
+    enabled: !!notification && !!notification.referenceId,
   });
 };
 

@@ -45,6 +45,17 @@ namespace SocialMedia.Controllers
             return NotFound(response);
         }
 
+        [HttpGet("by-comment/{commentId:guid}")]
+        public async Task<IActionResult> GetPostByCommentId(Guid commentId)
+        {
+            var response = await _postService.GetPostByCommentIdAsync(User, commentId);
+            if (response.Success)
+            {
+                return Ok(response);
+            }
+            return NotFound(response);
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetFeedPosts([FromQuery] Guid? lastPostId, [FromQuery] int take = 20)
         {

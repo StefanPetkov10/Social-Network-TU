@@ -1,15 +1,15 @@
 export enum Gender {
-    Male = 0,
-    Female = 1,
-    Other = 2,
+  Male = 0,
+  Female = 1,
+  Other = 2,
 }
 
 export enum FriendshipStatus {
-    Pending = 0,
-    Accepted = 1,
-    Declined = 2,
-    Blocked = 3,
-    None = -1 
+  Pending = 0,
+  Accepted = 1,
+  Declined = 2,
+  Blocked = 3,
+  None = -1
 }
 
 export enum ReactionType {
@@ -28,8 +28,8 @@ export enum MediaType {
 }
 
 export enum MediaTypeGroup {
-    Visuals = 0,  
-    Documents = 1  
+  Visuals = 0,
+  Documents = 1
 }
 
 export enum GroupPrivacy {
@@ -44,10 +44,21 @@ export enum GroupRole {
 }
 
 export enum ReportReason {
-    SpamOrMisleading = 1,
-    HarassmentOrBullying = 2,
-    HateSpeechOrSymbols = 3,
-    ViolenceOrDangerousOrganizations = 4,
-    NudityOrSexualContent = 5,
-    Other = 6
+  SpamOrMisleading = 1,
+  HarassmentOrBullying = 2,
+  HateSpeechOrSymbols = 3,
+  ViolenceOrDangerousOrganizations = 4,
+  NudityOrSexualContent = 5,
+  Other = 6
+}
+
+export enum NotificationType {
+  PostReaction = 0,
+  CommentReaction = 1,
+  PostComment = 2,
+  NewFollower = 3,
+  FriendRequest = 4,
+  FriendAccept = 5,
+  GroupJoinRequest = 6,
+  GroupJoinAccept = 7
 }

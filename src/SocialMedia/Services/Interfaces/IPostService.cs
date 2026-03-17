@@ -9,6 +9,7 @@ namespace SocialMedia.Services.Interfaces
     {
         Task<ApiResponse<PostDto>> CreatePostAsPost(ClaimsPrincipal userClaims, CreatePostDto dto);
         Task<ApiResponse<PostDto>> GetPostByIdAsync(ClaimsPrincipal userClaims, Guid postId);
+        Task<ApiResponse<PostDto>> GetPostByCommentIdAsync(ClaimsPrincipal userClaims, Guid commentId);
         Task<ApiResponse<IEnumerable<PostDto>>> GetFeedAsync(ClaimsPrincipal userClaims, Guid? lastPostId = null, int take = 20);
         Task<ApiResponse<IEnumerable<PostDto>>> GetUserPostsAsync(
             ClaimsPrincipal userClaims,

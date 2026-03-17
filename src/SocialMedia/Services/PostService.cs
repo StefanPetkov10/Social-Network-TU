@@ -21,6 +21,7 @@ namespace SocialMedia.Services
         private readonly IRepository<Database.Models.Profile, Guid> _profileRepository;
         private readonly IRepository<Friendship, Guid> _friendshipRepository;
         private readonly IRepository<Follow, Guid> _followRepository;
+        private readonly IRepository<Comment, Guid> _commentRepository;
         private readonly IFileService _fileService;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IMapper _mapper;
@@ -35,7 +36,8 @@ namespace SocialMedia.Services
             IRepository<Group, Guid> groupRepository,
             IRepository<PostMedia, Guid> postMediaRepository,
             IHttpContextAccessor httpContextAccessor,
-            IRepository<Reaction, Guid> reactionRepository)
+            IRepository<Reaction, Guid> reactionRepository,
+            IRepository<Comment, Guid> commentRepository)
             : base(userManager)
         {
             _postRepository = postRepository;
@@ -48,6 +50,7 @@ namespace SocialMedia.Services
             _postMediaRepository = postMediaRepository;
             _httpContextAccessor = httpContextAccessor;
             _reactionRepository = reactionRepository;
+            _commentRepository = commentRepository;
         }
 
         public async Task<ApiResponse<PostDto>> CreatePostAsPost(ClaimsPrincipal userClaims, CreatePostDto dto)
@@ -152,6 +155,16 @@ namespace SocialMedia.Services
             }
 
             return ApiResponse<PostDto>.ErrorResponse("You are not authorized to view this post.");
+        }
+
+        public async Task<ApiResponse<PostDto>> GetPostByCommentIdAsync(ClaimsPrincipal userClaims, Guid commentId)
+        {
+            var comment = await _commentRepository.QueryNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == commentId);
+
+            if (comment == null) return NotFoundResponse<PostDto>("Comment");
+
+            return await GetPostByIdAsync(userClaims, comment.PostId);
         }
 
         public async Task<ApiResponse<IEnumerable<PostDto>>> GetFeedAsync(ClaimsPrincipal userClaims, Guid? lastPostId = null, int take = 20)

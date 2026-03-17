@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@frontend/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
 import { Button } from "@frontend/components/ui/button";
@@ -45,6 +45,7 @@ interface PostCommentDialogProps {
   currentUser: ProfileDto;
   parentReaction?: ReactionType | null;
   parentLikesCount?: number;
+  initialReactionConfig?: { entityId: string; entityType: 'post' | 'comment' } | null;
 }
 
 export function PostCommentDialog({ 
@@ -53,10 +54,29 @@ export function PostCommentDialog({
     post, 
     currentUser,
     parentReaction,
-    parentLikesCount
+    parentLikesCount,
+    initialReactionConfig
 }: PostCommentDialogProps) {
 
-  const [isReactionListOpen, setIsReactionListOpen] = useState(false);
+  const [reactionConfig, setReactionConfig] = useState<{
+      isOpen: boolean;
+      entityId: string;
+      entityType: 'post' | 'comment';
+  } | null>(
+      initialReactionConfig 
+          ? { isOpen: true, entityId: initialReactionConfig.entityId, entityType: initialReactionConfig.entityType }
+          : null
+  );
+
+  useEffect(() => {
+      if (initialReactionConfig) {
+          setReactionConfig({
+              isOpen: true,
+              entityId: initialReactionConfig.entityId,
+              entityType: initialReactionConfig.entityType
+          });
+      }
+  }, [initialReactionConfig]);
 
   const { data, fetchNextPage, hasNextPage, isLoading, isFetchingNextPage } = useGetComments(post.id);
   const comments = data?.pages.flatMap((page) => page.data) || [];
@@ -89,7 +109,7 @@ export function PostCommentDialog({
   const visualMedia = post.media?.filter(m => m.mediaType === 0 || m.mediaType === 1) || [];
   
   const displayReactionType = currentReaction ?? (post as any).topReactionType ?? 0;
-    const displayReactionConfig = REACTION_CONFIG[displayReactionType as keyof typeof REACTION_CONFIG];
+  const displayReactionConfig = REACTION_CONFIG[displayReactionType as keyof typeof REACTION_CONFIG];
 
   const getRelativeTime = (dateString: string) => {
       try {
@@ -266,7 +286,7 @@ export function PostCommentDialog({
                                         "flex items-center gap-1 transition-colors",
                                         likesCount > 0 && "cursor-pointer hover:text-blue-600"
                                     )}
-                                    onClick={() => likesCount > 0 && setIsReactionListOpen(true)}
+                                    onClick={() => likesCount > 0 && setReactionConfig({ isOpen: true, entityId: post.id, entityType: 'post' })}
                                 >
                                     {likesCount > 0 && (
                                         <>
@@ -360,12 +380,14 @@ export function PostCommentDialog({
       </DialogContent>
     </Dialog>
 
-    {isReactionListOpen && (
+    {reactionConfig?.isOpen && (
         <ReactionListDialog 
-            open={isReactionListOpen}
-            onOpenChange={setIsReactionListOpen}
-            entityId={post.id}
-            entityType="post"
+            open={reactionConfig.isOpen}
+            onOpenChange={(open) => {
+                if (!open) setReactionConfig(null);
+            }}
+            entityId={reactionConfig.entityId}
+            entityType={reactionConfig.entityType}
         />
     )}
     </>

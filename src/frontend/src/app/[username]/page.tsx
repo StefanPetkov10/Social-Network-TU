@@ -177,7 +177,10 @@ export default function UserProfilePage({ params }: PageProps) {
           toast.success("Поканата е изпратена!");
           queryClient.invalidateQueries({ queryKey: ["user-profile-by-username", username] });
       },
-      onError: () => { setUiStatus("none"); setUiFollowing(false); toast.error("Грешка."); }
+      onError: () => { 
+          toast.error("Действието е невалидно. Обновяване на данните...");
+          queryClient.invalidateQueries({ queryKey: ["user-profile-by-username", username] }); 
+      }
   });
 
   const { mutate: cancelRequest, isPending: isCancelPending } = useCancelFriendRequest();
@@ -186,7 +189,13 @@ export default function UserProfilePage({ params }: PageProps) {
       setUiStatus("none");
       setUiFollowing(false);
       cancelRequest(profileId, {
-          onError: () => { setUiStatus("pending_sent"); setUiFollowing(true); }
+          onSuccess: () => {
+              queryClient.invalidateQueries({ queryKey: ["user-profile-by-username", username] });
+          },
+          onError: () => { 
+              toast.error("Действието е невалидно. Обновяване на данните...");
+              queryClient.invalidateQueries({ queryKey: ["user-profile-by-username", username] });
+          }
       });
   };
 
@@ -200,7 +209,10 @@ export default function UserProfilePage({ params }: PageProps) {
           toast.success("Вече сте приятели!");
           queryClient.invalidateQueries({ queryKey: ["user-profile-by-username", username] });
       },
-      onError: () => { setUiStatus("pending_received"); toast.error("Грешка."); }
+      onError: () => { 
+          toast.error("Действието е невалидно. Обновяване на данните...");
+          queryClient.invalidateQueries({ queryKey: ["user-profile-by-username", username] }); 
+      }
   });
 
   const { mutate: declineRequest, isPending: isDeclinePending } = useMutation({
@@ -213,7 +225,10 @@ export default function UserProfilePage({ params }: PageProps) {
           toast.success("Отхвърлена.");
           queryClient.invalidateQueries({ queryKey: ["user-profile-by-username", username] });
       },
-      onError: () => { setUiStatus("pending_received"); toast.error("Грешка."); }
+      onError: () => { 
+          toast.error("Действието е невалидно. Обновяване на данните...");
+          queryClient.invalidateQueries({ queryKey: ["user-profile-by-username", username] }); 
+      }
   });
 
   const { mutate: removeFriend, isPending: isRemovePending } = useMutation({
@@ -223,21 +238,24 @@ export default function UserProfilePage({ params }: PageProps) {
           toast.success("Премахнат.");
           queryClient.invalidateQueries({ queryKey: ["user-profile-by-username", username] });
       },
-      onError: () => { setUiStatus("friend"); toast.error("Грешка."); }
+      onError: () => { 
+          toast.error("Действието е невалидно. Обновяване на данните...");
+          queryClient.invalidateQueries({ queryKey: ["user-profile-by-username", username] }); 
+      }
   });
 
   const { mutate: followUser, isPending: isFollowPending } = useMutation({
       mutationFn: () => followersService.followUser(profileId),
       onMutate: () => setUiFollowing(true),
       onSuccess: () => queryClient.invalidateQueries({ queryKey: ["user-profile-by-username", username] }),
-      onError: () => setUiFollowing(false)
+      onError: () => queryClient.invalidateQueries({ queryKey: ["user-profile-by-username", username] })
   });
 
   const { mutate: unfollowUser, isPending: isUnfollowPending } = useMutation({
       mutationFn: () => followersService.unfollowUser(profileId),
       onMutate: () => { setShowUnfollowDialog(false); setUiFollowing(false); },
       onSuccess: () => queryClient.invalidateQueries({ queryKey: ["user-profile-by-username", username] }),
-      onError: () => setUiFollowing(true)
+      onError: () => queryClient.invalidateQueries({ queryKey: ["user-profile-by-username", username] })
   });
 
   const {

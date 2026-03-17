@@ -12,6 +12,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useDebounce } from "@frontend/hooks/use-debounce";
 import { searchService } from "@frontend/services/search-service";
+import { cn } from "@frontend/lib/utils";
 
 import {
   DropdownMenu,
@@ -23,6 +24,7 @@ import {
 } from "@frontend/components/ui/dropdown-menu";
 
 import { useLogout } from "@frontend/hooks/use-auth";
+import { NotificationsDropdown } from "./notifications/notification-dropdown";
 
 interface SiteHeaderProps {
   user: { name: string; avatar: string };
@@ -31,6 +33,7 @@ interface SiteHeaderProps {
 export function SiteHeader({ user }: SiteHeaderProps) {
   const [localError, setLocalError] = useState(false);
   const pathname = usePathname();
+  const isMessagesPage = pathname?.startsWith("/messages");
 
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -161,14 +164,19 @@ export function SiteHeader({ user }: SiteHeaderProps) {
       </nav>
 
       <div className="flex items-center gap-2">
-        <Link href="/messages">
-          <Button variant="ghost" size="icon" className="cursor-pointer rounded-full bg-muted/50 relative sm:flex hover:bg-primary hover:text-white">
-            <MessageCircle className="!size-5" />
-          </Button>
+        <Link 
+            href="/messages"
+            className={cn(
+                "flex items-center justify-center h-10 w-10 rounded-full transition-colors group mr-",
+                isMessagesPage ? "bg-primary/10" : "bg-muted hover:bg-primary/10"
+            )}
+        >
+            <MessageCircle className={cn(
+                "!size-6 transition-colors",
+                isMessagesPage ? "text-primary" : "text-foreground group-hover:text-primary"
+            )} />
         </Link>
-        <Button variant="ghost" size="icon" className="cursor-pointer rounded-full bg-muted/50 relative hover:bg-primary hover:text-white">
-          <Bell className="!size-5" />
-        </Button>
+        <NotificationsDropdown />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

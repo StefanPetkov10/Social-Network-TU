@@ -72,7 +72,7 @@ export function GroupsSidebar() {
             placeholder="Търсене на групи"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-gray-100 border-none rounded-full px-4 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+            className="w-full mb-2 bg-gray-100 border-none rounded-full px-4 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
           />
           {searchQuery.trim().length > 0 && (
             <div className="absolute top-11 left-2 right-2 bg-background border shadow-lg rounded-xl overflow-hidden flex flex-col z-[100] max-h-[350px]">

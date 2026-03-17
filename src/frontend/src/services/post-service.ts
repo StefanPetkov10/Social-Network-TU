@@ -28,6 +28,16 @@ export const postService = {
     return data; 
   },
 
+  getPostById: async (postId: string) => {
+    const { data } = await api.get<ApiResponse<PostDto>>(`/api/Posts/${postId}`);
+    return data; 
+  },
+
+  getPostByCommentId: async (commentId: string) => {
+    const { data } = await api.get<ApiResponse<PostDto>>(`/api/Posts/by-comment/${commentId}`);
+    return data;
+  },
+
   createPost: async (formData: FormData) => {
     const { data } = await api.post<ApiResponse<any>>("/api/Posts", formData, {
         headers: { "Content-Type": "multipart/form-data" },

@@ -86,9 +86,11 @@ export const useJoinGroup = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (groupId: string) => groupMembersService.joinGroup(groupId),
-        onSuccess: (data, groupId) => {
-            const isJoinedImmediately = data.message?.toLowerCase().includes("joined");
+        onSuccess: (response: any, groupId: string) => {
 
+            const responseText = (typeof response?.data === 'string' ? response.data : response?.message) || "";
+            const isJoinedImmediately = responseText.toLowerCase().includes("joined");
+            
             if (isJoinedImmediately) {
                 toast.success("Успешно присъединяване!", { 
                     description: "Вече сте член на групата и можете да разглеждате съдържанието." 
