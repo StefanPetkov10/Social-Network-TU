@@ -72,6 +72,10 @@ const invalidateFriendRelatedQueries = (queryClient: any) => {
 
     queryClient.invalidateQueries({ queryKey: ["user-profile-by-username"] });
     queryClient.invalidateQueries({ queryKey: ["profile"] }); 
+
+    queryClient.invalidateQueries({ predicate: (query: { queryKey: string[]; }) => query.queryKey[0] === "notifications" || 
+      query.queryKey[0] === "notifications-infinite" || 
+      query.queryKey[0] === "notifications-unseen-count" });
 };
 
 export const useSendFriendRequest = () => {

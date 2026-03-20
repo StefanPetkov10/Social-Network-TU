@@ -261,6 +261,16 @@ namespace SocialMedia.Services
 
             await _friendshipRepository.SaveChangesAsync();
 
+            await _notificationService.RevertNotificationAsync(
+                myProfile.Id, friendProfileId, NotificationType.FriendRequest, null);
+            await _notificationService.RevertNotificationAsync(
+                friendProfileId, myProfile.Id, NotificationType.FriendRequest, null);
+
+            await _notificationService.RevertNotificationAsync(
+                myProfile.Id, friendProfileId, NotificationType.FriendAccept, null);
+            await _notificationService.RevertNotificationAsync(
+                friendProfileId, myProfile.Id, NotificationType.FriendAccept, null);
+
             await InvalidateFriendshipCachesAsync(myProfile.Id, friendProfileId);
 
             return ApiResponse<bool>.SuccessResponse(true, "Friend removed and mutual following stopped.");
