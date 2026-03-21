@@ -13,6 +13,7 @@ export interface PostDto {
   id: string;
   content: string;
   media: PostMediaDto[];
+  youTubeUrl?: string | null;
   
   profileId: string;
   authorName: string;       

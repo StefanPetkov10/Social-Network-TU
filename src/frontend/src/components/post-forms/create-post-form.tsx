@@ -12,6 +12,7 @@ import {
   Users, 
   Lock, 
   Loader2,
+  Youtube,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
@@ -22,6 +23,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@frontend/components/ui
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@frontend/components/ui/select";
 import { Textarea } from "@frontend/components/ui/textarea";
 import { ScrollArea } from "@frontend/components/ui/scroll-area";
+import { Input } from "@frontend/components/ui/input"; 
 import {
   Form,
   FormControl,
@@ -39,6 +41,7 @@ const createPostSchema = z.object({
     .min(1, "Моля, напишете нещо.") 
     .max(500, "Текстът не може да надвишава 500 символа."),
   visibility: z.string(),
+  youTubeUrl: z.string().url("Моля, въведете валиден YouTube URL.").optional().nullable().or(z.literal(''))
 });
 
 type CreatePostValues = z.infer<typeof createPostSchema>;
@@ -56,6 +59,7 @@ export function CreatePost({ user, groupId }: CreatePostProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState<string | null>(null); 
+  const [showYoutubeUrl, setShowYoutubeUrl] = useState(false);
   
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
@@ -70,6 +74,7 @@ export function CreatePost({ user, groupId }: CreatePostProps) {
     defaultValues: {
       content: "",
       visibility: "0", 
+      youTubeUrl: null
     },
   });
 
@@ -78,14 +83,16 @@ export function CreatePost({ user, groupId }: CreatePostProps) {
         form.reset();
         setFiles([]);
         setFileError(null);
+        setShowYoutubeUrl(false);
     }
   }, [isOpen, form]);
 
-  const handleOpen = (triggerType: "text" | "media" | "doc") => {
+  const handleOpen = (triggerType: "text" | "media" | "doc" | "youtube") => {
     setIsOpen(true);
     setTimeout(() => {
         if (triggerType === "media") mediaInputRef.current?.click();
         if (triggerType === "doc") docInputRef.current?.click();
+        if (triggerType === "youtube") setShowYoutubeUrl(true);
     }, 100);
   };
 
@@ -103,8 +110,8 @@ export function CreatePost({ user, groupId }: CreatePostProps) {
       let hasInvalidType = false;
 
       selectedFiles.forEach((file) => {
-        if (file.size > 100 * 1024 * 1024) {
-             setFileError(`Файлът "${file.name}" е твърде голям (макс 100MB).`);
+        if (file.size > 6 * 1024 * 1024) {
+             setFileError(`Файлът "${file.name}" е твърде голям (макс 6MB).`);
              hasInvalidType = true; 
              return;
         }
@@ -144,7 +151,10 @@ export function CreatePost({ user, groupId }: CreatePostProps) {
     const formData = new FormData();
     formData.append("Content", data.content);
     formData.append("Visibility", data.visibility);
-
+    if (data.youTubeUrl) {
+        formData.append("YouTubeUrl", data.youTubeUrl); 
+    }
+    
     if (groupId) {
         formData.append("GroupId", groupId);
     }
@@ -162,7 +172,7 @@ export function CreatePost({ user, groupId }: CreatePostProps) {
     });
   };
 
-  const isMedia = (file: File) => file.type.startsWith("image/") || file.type.startsWith("video/");
+  const isMedia = (file: File) => file.type.startsWith("image/");
   const isDoc = (file: File) => !isMedia(file);
 
   return (
@@ -190,8 +200,18 @@ export function CreatePost({ user, groupId }: CreatePostProps) {
             onClick={() => handleOpen("media")}
         >
           <ImageIcon className="h-5 w-5 text-green-500" />
-          <span className="hidden sm:inline">Снимка/Видео</span>
+          <span className="hidden sm:inline">Снимка</span>
           <span className="sm:hidden">Медия</span>
+        </Button>
+
+        <Button 
+            variant="ghost" 
+            className="flex-1 gap-2 hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+            onClick={() => handleOpen("youtube")}
+        >
+          <Youtube className="h-5 w-5 text-red-500" />
+          <span className="hidden sm:inline">YouTube Видео</span>
+          <span className="sm:hidden">Видео</span>
         </Button>
         
         <Button 
@@ -200,8 +220,8 @@ export function CreatePost({ user, groupId }: CreatePostProps) {
             onClick={() => handleOpen("doc")}
         >
           <FileText className="h-5 w-5 text-primary" />
-          <span className="hidden sm:inline">Качи Документ</span>
-          <span className="sm:hidden">Документ</span>
+          <span className="hidden sm:inline">Документ</span>
+          <span className="sm:hidden">Файл</span>
         </Button>
       </div>
     </div>
@@ -272,6 +292,42 @@ export function CreatePost({ user, groupId }: CreatePostProps) {
                             </FormItem>
                         )}
                     />
+
+                    {showYoutubeUrl && (
+                        <FormField
+                            control={form.control}
+                            name="youTubeUrl"
+                            render={({ field }) => (
+                                <FormItem className="mt-2 mb-2">
+                                    <FormControl>
+                                        <div className="relative">
+                                            <Youtube className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-4 text-red-500" />
+                                            <Input 
+                                                {...field} 
+                                                value={field.value || ""}
+                                                placeholder="Поставете линк от YouTube тук..." 
+                                                className="pl-10 pr-10 bg-red-50/50 border-red-200 focus-visible:ring-1 focus-visible:ring-red-400 focus-visible:ring-offset-0 transition-all"
+                                            />  
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 hover:bg-red-100 "
+                                                onClick={() => {
+                                                    setShowYoutubeUrl(false);
+                                                    form.setValue("youTubeUrl", null);
+                                                }}
+                                            >
+                                                <X className="h-4 w-4 text-red-600" />
+                                            </Button>
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage className="text-red-500 text-xs mt-1" />
+                                </FormItem>
+                            )}
+                        />
+                    )}
+
                     {fileError && (
                         <div className="text-red-500 text-sm mt-2 p-2 bg-red-50 rounded-md border border-red-100">
                             {fileError}
@@ -323,15 +379,11 @@ export function CreatePost({ user, groupId }: CreatePostProps) {
 
                                 {files.filter(isMedia).map((file, i) => (
                                     <div key={`media-${i}`} className="relative group rounded-md overflow-hidden border bg-muted/20 flex justify-center items-center">
-                                        {file.type.startsWith("image/") ? (
-                                            <img 
-                                                src={URL.createObjectURL(file)} 
-                                                alt="preview" 
-                                                className="w-full h-auto object-contain max-h-[300px]" 
-                                            />
-                                        ) : (
-                                            <video src={URL.createObjectURL(file)} controls className="w-full max-h-[300px]" />
-                                        )}
+                                        <img 
+                                            src={URL.createObjectURL(file)} 
+                                            alt="preview" 
+                                            className="w-full h-auto object-contain max-h-[300px]" 
+                                        />
                                         
                                         <Button 
                                             type="button"
@@ -354,7 +406,8 @@ export function CreatePost({ user, groupId }: CreatePostProps) {
                         <span className="font-semibold text-sm pl-1">Добавете към публикацията</span>
                         
                         <div className="flex gap-1">
-                            <TooltipButton icon={<ImageIcon className="text-green-500" />} onClick={() => mediaInputRef.current?.click()} tooltip="Снимка/Видео" />
+                            <TooltipButton icon={<ImageIcon className="text-green-500" />} onClick={() => mediaInputRef.current?.click()} tooltip="Снимка" />
+                            <TooltipButton icon={<Youtube className="text-red-500" />} onClick={() => setShowYoutubeUrl(true)} tooltip="YouTube Видео" />
                             
                             <Popover>
                                 <PopoverTrigger asChild>
@@ -395,7 +448,7 @@ export function CreatePost({ user, groupId }: CreatePostProps) {
             type="file" 
             ref={mediaInputRef} 
             className="hidden" 
-            accept="image/*,video/*" 
+            accept="image/*" 
             multiple 
             onChange={handleFileChange} 
         />

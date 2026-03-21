@@ -19,6 +19,7 @@ import {
 } from "@frontend/components/ui/carousel";
 import Link from "next/link";
 import { cn, getInitials, getFileDetails } from "@frontend/lib/utils";
+import { getYouTubeEmbedUrl } from "@frontend/lib/file-validation";
 import { PostDto } from "@frontend/lib/types/posts";
 import { ProfileDto } from "@frontend/lib/types/profile";
 import { useProfile } from "@frontend/hooks/use-profile";
@@ -56,6 +57,12 @@ interface PostCardProps {
     isGroupAdmin?: boolean; 
     isSavedPage?: boolean;
 }
+
+type DisplayItem = {
+    id: string;
+    type: 'image' | 'youtube';
+    url: string;
+};
 
 export function PostCard({ 
     post, 
@@ -101,7 +108,27 @@ export function PostCard({
   const canDelete = isOwner || isGroupAdmin;
 
   const documents = post.media?.filter(m => m.mediaType !== 0 && m.mediaType !== 1) || [];
-  const visualMedia = post.media?.filter(m => m.mediaType === 0 || m.mediaType === 1) || [];
+  
+  const visualDisplayItems: DisplayItem[] = [];
+
+  post.media?.forEach(m => {
+      if (m.mediaType === 0) { 
+          visualDisplayItems.push({
+              id: m.id,
+              type: 'image',
+              url: m.url
+          });
+      }
+  });
+
+  const youtubeEmbedUrl = getYouTubeEmbedUrl(post.youTubeUrl);
+  if (youtubeEmbedUrl) {
+      visualDisplayItems.push({
+          id: `youtube-${post.id}`, 
+          type: 'youtube',
+          url: youtubeEmbedUrl
+      });
+  }
 
   const displayReactionType = currentReaction ?? (post as any).topReactionType ?? 0;
   const displayReactionConfig = REACTION_CONFIG[displayReactionType as keyof typeof REACTION_CONFIG];
@@ -223,26 +250,49 @@ export function PostCard({
         </div>
       )}
 
-      {visualMedia.length > 0 && (
+      {visualDisplayItems.length > 0 && (
         <div className="mb-4 -mx-4 md:mx-0">
-          {visualMedia.length === 1 ? (
-            <div className="flex justify-center items-center md:rounded-lg overflow-hidden relative bg-transparent">
-              {visualMedia[0].mediaType === 1 ? (
-                <video controls src={visualMedia[0].url} className="w-full h-auto max-h-[60vh] md:rounded-lg border" />
-              ) : (
-                <img src={visualMedia[0].url} alt="post content" className="w-auto h-auto max-w-full max-h-[60vh] mx-auto md:rounded-lg border" />
-              )}
+          {visualDisplayItems.length === 1 ? (
+            <div className="flex justify-center items-center md:rounded-lg overflow-hidden relative bg-transparent border">
+                {visualDisplayItems[0].type === 'image' && (
+                    <img src={visualDisplayItems[0].url} alt="post content" className="w-auto h-auto max-w-full max-h-[60vh] mx-auto md:rounded-lg" />
+                )}
+                {visualDisplayItems[0].type === 'youtube' && (
+                    <div className="relative w-full aspect-video bg-black flex items-center justify-center md:rounded-lg overflow-hidden border shadow-inner">
+                        <iframe
+                            className="absolute top-0 left-0 w-full h-full"
+                            src={visualDisplayItems[0].url}
+                            title="YouTube video player"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                        ></iframe>
+                    </div>
+                )}
             </div>
           ) : (
             <Carousel className="w-full md:rounded-lg overflow-hidden border">
               <CarouselContent>
-                {visualMedia.map((item, index) => (
-                 <CarouselItem key={index} className="basis-full">
-                    <div className="flex items-center justify-center relative w-full h-full bg-transparent">
-                        {item.mediaType === 1 ? (
-                        <video controls src={item.url} className="w-full h-auto max-h-[600px] object-contain" />
-                        ) : (
-                        <img src={item.url} alt={`slide-${index}`} className="w-full h-auto max-h-[600px] object-contain" />
+                {visualDisplayItems.map((item) => (
+                 <CarouselItem key={item.id} className="basis-full">
+                    <div className={cn(
+                        "flex items-center justify-center relative w-full h-full bg-transparent",
+                        item.type === 'youtube' && "bg-black"
+                    )}>
+                        {item.type === 'image' && (
+                            <img src={item.url} alt={`slide-${item.id}`} className="w-full h-auto max-h-[600px] object-contain" />
+                        )}
+                        {item.type === 'youtube' && (
+                            <div className="relative w-full aspect-video">
+                                <iframe
+                                    className="absolute top-0 left-0 w-full h-full"
+                                    src={item.url}
+                                    title="YouTube video player"
+                                    frameBorder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    allowFullScreen
+                                ></iframe>
+                            </div>
                         )}
                     </div>
                 </CarouselItem>

@@ -12,11 +12,7 @@ import {
   Users, 
   Lock, 
   Loader2,
-  FileSpreadsheet,
-  FilePieChart,
-  FileArchive,
-  FileIcon,
-  File
+  Youtube
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@frontend/components/ui/avatar";
@@ -25,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@frontend/comp
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@frontend/components/ui/select";
 import { Textarea } from "@frontend/components/ui/textarea";
 import { ScrollArea } from "@frontend/components/ui/scroll-area";
+import { Input } from "@frontend/components/ui/input";
 import {
   Form,
   FormControl,
@@ -44,6 +41,7 @@ const editPostSchema = z.object({
     .min(1, "Моля, напишете нещо.")
     .max(500, "Текстът не може да надвишава 500 символа."),
   visibility: z.string(),
+  youTubeUrl: z.string().url("Моля, въведете валиден YouTube URL.").optional().nullable().or(z.literal(''))
 });
 
 type EditPostValues = z.infer<typeof editPostSchema>;
@@ -62,6 +60,7 @@ export function EditPostDialog({ open, onOpenChange, post }: EditPostDialogProps
   
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [showYoutubeUrl, setShowYoutubeUrl] = useState(!!post.youTubeUrl);
 
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
@@ -73,6 +72,7 @@ export function EditPostDialog({ open, onOpenChange, post }: EditPostDialogProps
     defaultValues: {
       content: post.content || "",
       visibility: post.visibility.toString(),
+      youTubeUrl: post.youTubeUrl || null
     },
   });
 
@@ -81,11 +81,13 @@ export function EditPostDialog({ open, onOpenChange, post }: EditPostDialogProps
         form.reset({
             content: post.content || "",
             visibility: post.visibility.toString(),
+            youTubeUrl: post.youTubeUrl || null
         });
         setExistingMedia(post.media || []);
         setFilesToDelete([]);
         setNewFiles([]);
         setFileError(null);
+        setShowYoutubeUrl(!!post.youTubeUrl);
     }
   }, [open, post, form]);
 
@@ -104,8 +106,8 @@ export function EditPostDialog({ open, onOpenChange, post }: EditPostDialogProps
       let hasInvalidFile = false;
 
       selectedFiles.forEach((file) => {
-        if (file.size > 100 * 1024 * 1024) {
-            setFileError(`Файлът "${file.name}" е твърде голям.`);
+        if (file.size > 6 * 1024 * 1024) { 
+            setFileError(`Файлът "${file.name}" е твърде голям (макс 6MB).`);
             hasInvalidFile = true;
             return;
         }
@@ -151,6 +153,12 @@ export function EditPostDialog({ open, onOpenChange, post }: EditPostDialogProps
         formData.append("PostVisibility", data.visibility);
     }
 
+    if (data.youTubeUrl) {
+        formData.append("YouTubeUrl", data.youTubeUrl); 
+    } else {
+        formData.append("YouTubeUrl", ""); 
+    }
+
     filesToDelete.forEach((id) => {
         formData.append("FilesToDelete", id);
     });
@@ -166,7 +174,7 @@ export function EditPostDialog({ open, onOpenChange, post }: EditPostDialogProps
     });
   };
 
-  const isMedia = (file: File) => file.type.startsWith("image/") || file.type.startsWith("video/");
+  const isMedia = (file: File) => file.type.startsWith("image/");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -230,6 +238,41 @@ export function EditPostDialog({ open, onOpenChange, post }: EditPostDialogProps
                             </FormItem>
                         )}
                     />
+
+                    {showYoutubeUrl && (
+                        <FormField
+                            control={form.control}
+                            name="youTubeUrl"
+                            render={({ field }) => (
+                                <FormItem className="mt-2 mb-2">
+                                    <FormControl>
+                                        <div className="relative">
+                                            <Youtube className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-red-500" />
+                                            <Input 
+                                                {...field} 
+                                                value={field.value || ""}
+                                                placeholder="Поставете линк от YouTube тук..." 
+                                                className="pl-10 pr-10 bg-red-50/50 border-red-200 focus-visible:ring-1 focus-visible:ring-red-400 focus-visible:ring-offset-0 transition-all"
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 hover:bg-red-100"
+                                                onClick={() => {
+                                                    setShowYoutubeUrl(false);
+                                                    form.setValue("youTubeUrl", null);
+                                                }}
+                                            >
+                                                <X className="h-4 w-4 text-red-600" />
+                                            </Button>
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage className="text-red-500 text-xs mt-1" />
+                                </FormItem>
+                            )}
+                        />
+                    )}
                     
                     {fileError && (
                         <div className="text-red-500 text-sm mt-2 p-2 bg-red-50 rounded-md border border-red-100">
@@ -244,8 +287,6 @@ export function EditPostDialog({ open, onOpenChange, post }: EditPostDialogProps
                                  <div key={media.id} className="relative group rounded-md overflow-hidden border bg-background">
                                     {media.mediaType === 0 ? ( 
                                          <img src={media.url} alt="media" className="w-full h-auto max-h-[300px] object-contain" />
-                                    ) : media.mediaType === 1 ? (
-                                         <video src={media.url} controls className="w-full max-h-[300px]" />
                                     ) : ( 
                                          <div className="flex items-center p-3 gap-3">
                                             {(() => {
@@ -280,11 +321,7 @@ export function EditPostDialog({ open, onOpenChange, post }: EditPostDialogProps
                                  <div key={`new-${i}`} className="relative group rounded-md overflow-hidden border bg-background border-green-200">
                                     {isMedia(file) ? (
                                         <div className="flex justify-center bg-black/5">
-                                            {file.type.startsWith("image/") ? (
-                                                <img src={URL.createObjectURL(file)} alt="preview" className="w-full h-auto max-h-[300px] object-contain" />
-                                            ) : (
-                                                <video src={URL.createObjectURL(file)} controls className="w-full max-h-[300px]" />
-                                            )}
+                                            <img src={URL.createObjectURL(file)} alt="preview" className="w-full h-auto max-h-[300px] object-contain" />
                                         </div>
                                     ) : (
                                         <div className="flex items-center p-3 gap-3">
@@ -324,7 +361,10 @@ export function EditPostDialog({ open, onOpenChange, post }: EditPostDialogProps
                         <span className="text-sm font-medium text-muted-foreground">Добави още:</span>
                         <div className="flex gap-2">
                              <Button type="button" variant="outline" size="sm" onClick={() => mediaInputRef.current?.click()}>
-                                <ImageIcon className="h-4 w-4 mr-2 text-green-600" /> Медия
+                                <ImageIcon className="h-4 w-4 mr-2 text-green-600" /> Снимка
+                             </Button>
+                             <Button type="button" variant="outline" size="sm" onClick={() => setShowYoutubeUrl(true)}>
+                                <Youtube className="h-4 w-4 mr-2 text-red-500" /> YouTube
                              </Button>
                              <Button type="button" variant="outline" size="sm" onClick={() => docInputRef.current?.click()}>
                                 <FileText className="h-4 w-4 mr-2 text-orange-500" /> Документ
@@ -349,7 +389,7 @@ export function EditPostDialog({ open, onOpenChange, post }: EditPostDialogProps
             type="file" 
             ref={mediaInputRef} 
             className="hidden" 
-            accept="image/*,video/*" 
+            accept="image/*" 
             multiple 
             onChange={handleFileChange} 
         />
