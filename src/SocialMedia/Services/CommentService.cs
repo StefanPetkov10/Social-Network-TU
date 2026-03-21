@@ -264,6 +264,7 @@ namespace SocialMedia.Services
                 if (!c.IsDeleted)
                 {
                     c.IsDeleted = true;
+                    c.DeletedAt = now;
                     c.UpdatedDate = now;
                     _commentRepository.Update(c);
 

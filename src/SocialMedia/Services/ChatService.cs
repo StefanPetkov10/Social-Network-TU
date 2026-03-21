@@ -365,6 +365,7 @@ namespace SocialMedia.Services
                 return ApiResponse<MessageDto>.ErrorResponse("Message is already deleted.");
 
             messageToDelete.IsDeleted = true;
+            messageToDelete.DeletedAt = DateTime.UtcNow;
             messageToDelete.UpdatedDate = DateTime.UtcNow;
 
             await _messageRepository.UpdateAsync(messageToDelete);

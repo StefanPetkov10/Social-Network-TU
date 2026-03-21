@@ -139,6 +139,7 @@ namespace SocialMedia.Services
             if (request.DeletePost && report.Post != null)
             {
                 report.Post.IsDeleted = true;
+                report.Post.DeletedAt = DateTime.UtcNow;
                 report.Post.UpdatedDate = DateTime.UtcNow;
                 _postRepository.Update(report.Post);
                 

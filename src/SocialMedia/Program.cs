@@ -138,6 +138,7 @@ namespace SocialMedia
             builder.Services.AddScoped<IRepository<GroupMembership, Guid>, BaseRepository<GroupMembership, Guid>>();
             builder.Services.RegisterUserDefinedServices(typeof(IProfileService).Assembly);
             builder.Services.AddScoped<ISearchService, SearchService>();
+            builder.Services.AddHostedService<SoftDeleteCleanupService>();
 
             builder.Services.AddAutoMapper(config =>
             {

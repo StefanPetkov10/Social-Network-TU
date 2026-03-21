@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SocialMedia.Database.Models
@@ -29,6 +29,7 @@ namespace SocialMedia.Database.Models
         public bool IsEdited => UpdatedDate.HasValue;
 
         public bool IsDeleted { get; set; }
+        public DateTime? DeletedAt { get; set; }
 
         public ICollection<MessageMedia> Media { get; set; } = new List<MessageMedia>();
         public ICollection<Reaction> Reactions { get; set; } = new List<Reaction>();

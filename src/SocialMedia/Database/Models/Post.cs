@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using SocialMedia.Database.Models.Enums;
 
@@ -25,6 +25,7 @@ namespace SocialMedia.Database.Models
         public int CommentsCount { get; set; }
 
         public bool IsDeleted { get; set; }
+        public DateTime? DeletedAt { get; set; }
 
         [ForeignKey(nameof(GroupId))]
         public Guid? GroupId { get; set; }

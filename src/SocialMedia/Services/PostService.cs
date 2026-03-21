@@ -356,6 +356,7 @@ namespace SocialMedia.Services
                 return ApiResponse<object>.ErrorResponse("Unauthorized delete. You are not the author or a group administrator.");
 
             post.IsDeleted = true;
+            post.DeletedAt = DateTime.UtcNow;
             await _postRepository.UpdateAsync(post);
             await _postRepository.SaveChangesAsync();
 
