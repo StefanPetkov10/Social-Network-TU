@@ -382,7 +382,7 @@ namespace SocialMedia.Services
                 .Where(m => m.Post.Visibility == PostVisibility.Public || isOwner ||
                            (m.Post.Visibility == PostVisibility.FriendsOnly && isFriend));
 
-            var images = await query.Where(m => m.MediaType == MediaType.Image || m.MediaType == MediaType.Video)
+            var images = await query.Where(m => m.MediaType == MediaType.Image)
                 .OrderByDescending(m => m.Post.CreatedDate).Take(6)
                 .Select(m => new PostMediaDto
                 {
@@ -440,7 +440,6 @@ namespace SocialMedia.Services
             else
             {
                 query = query.Where(m => m.MediaType == MediaType.Image ||
-                                         m.MediaType == MediaType.Video ||
                                          m.MediaType == MediaType.Gif);
             }
 
@@ -493,7 +492,6 @@ namespace SocialMedia.Services
             else
             {
                 query = query.Where(m => m.MediaType == MediaType.Image ||
-                                         m.MediaType == MediaType.Video ||
                                          m.MediaType == MediaType.Gif);
             }
 

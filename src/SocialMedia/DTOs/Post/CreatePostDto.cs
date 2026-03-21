@@ -13,5 +13,8 @@ namespace SocialMedia.DTOs.Post
 
         [AllowNull]
         public Guid? GroupId { get; set; }
+
+        [AllowNull]
+        public string? YouTubeUrl { get; set; }
     }
 }

@@ -13,5 +13,8 @@ namespace SocialMedia.DTOs.Post
         public List<Guid>? FilesToDelete { get; set; }
         [AllowNull]
         public List<IFormFile>? NewFiles { get; set; }
+
+        [AllowNull]
+        public string? YouTubeUrl { get; set; }
     }
 }

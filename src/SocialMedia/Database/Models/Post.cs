@@ -12,6 +12,8 @@ namespace SocialMedia.Database.Models
         [Required]
         public string Content { get; set; } = null!;
 
+        public string? YouTubeUrl { get; set; }
+
         [Required]
         public Guid ProfileId { get; set; }
         [ForeignKey(nameof(ProfileId))]

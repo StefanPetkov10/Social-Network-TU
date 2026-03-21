@@ -44,9 +44,6 @@ namespace SocialMedia.Services
                 ".jpg" or ".jpeg" or ".png" or ".webp"
                         => MediaType.Image,
 
-                ".mp4" or ".avi" or ".mov"
-                        => MediaType.Video,
-
                 ".pdf" or ".docx" or ".doc" or ".txt" or ".rtf" or
                 ".ppt" or ".pptx" or ".odp" or
                 ".xls" or ".xlsx" or ".csv" or ".ods" or

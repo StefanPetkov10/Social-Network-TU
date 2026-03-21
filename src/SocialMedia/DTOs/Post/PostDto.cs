@@ -8,6 +8,7 @@ namespace SocialMedia.DTOs.Post
         public string Content { get; set; } = null!;
 
         public List<PostMediaDto> Media { get; set; } = new();
+        public string? YouTubeUrl { get; set; }
 
         public Guid ProfileId { get; set; }
         public string AuthorName { get; set; } = null!;

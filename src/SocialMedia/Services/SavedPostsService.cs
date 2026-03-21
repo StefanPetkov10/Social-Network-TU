@@ -66,7 +66,7 @@ namespace SocialMedia.Services
                     Count = g.Count(),
                     LatestMedia = g.OrderByDescending(sp => sp.SavedAt)
                                    .SelectMany(sp => sp.Post.Media)
-                                   .Where(m => m.MediaType == MediaType.Image || m.MediaType == MediaType.Video)
+                                   .Where(m => m.MediaType == MediaType.Image)
                                    .FirstOrDefault()
                 })
                 .ToListAsync();

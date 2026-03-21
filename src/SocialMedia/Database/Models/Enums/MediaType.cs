@@ -3,9 +3,8 @@
     public enum MediaType
     {
         Image = 0,
-        Video = 1,
-        Document = 2,
-        Gif = 3,
+        Document = 1,
+        Gif = 2,
         Other = 99
     }
 }
