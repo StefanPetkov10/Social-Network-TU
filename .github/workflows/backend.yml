@@ -26,3 +26,6 @@ jobs:
 
       - name: Build
         run: dotnet build backend/SocialMedia.sln --no-restore
+
+      - name: Run Tests
+        run: dotnet test backend/SocialMedia.sln --no-build --verbosity normal
