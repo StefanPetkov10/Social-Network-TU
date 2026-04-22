@@ -45,7 +45,7 @@ jobs:
         run: dotnet build backend/SocialMedia.sln --no-restore
 
       - name: Run Tests and Collect Coverage
-        run: dotnet test backend/SocialMedia.sln --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory TestResults
+        run: dotnet test backend/SocialMedia.sln --no-build --verbosity normal --collect:"XPlat Code Coverage;Format=opencover" --results-directory TestResults
 
       - name: End SonarCloud Analysis
         env:
