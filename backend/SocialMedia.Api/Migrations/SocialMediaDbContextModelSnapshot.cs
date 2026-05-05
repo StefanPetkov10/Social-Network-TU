@@ -268,7 +268,7 @@ namespace SocialMedia.Migrations
 
                     b.HasIndex("ProfileId");
 
-                    b.ToTable("Comments");
+                    b.ToTable("Comments", (string)null);
                 });
 
             modelBuilder.Entity("SocialMedia.Database.Models.CommentMedia", b =>
@@ -296,7 +296,7 @@ namespace SocialMedia.Migrations
                     b.HasIndex("CommentId")
                         .IsUnique();
 
-                    b.ToTable("CommentMedias");
+                    b.ToTable("CommentMedias", (string)null);
                 });
 
             modelBuilder.Entity("SocialMedia.Database.Models.EmailOtpCode", b =>
@@ -328,7 +328,7 @@ namespace SocialMedia.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("EmailOtpCodes");
+                    b.ToTable("EmailOtpCodes", (string)null);
                 });
 
             modelBuilder.Entity("SocialMedia.Database.Models.Follow", b =>
@@ -352,7 +352,7 @@ namespace SocialMedia.Migrations
 
                     b.HasIndex("FollowingId");
 
-                    b.ToTable("Follows");
+                    b.ToTable("Follows", (string)null);
                 });
 
             modelBuilder.Entity("SocialMedia.Database.Models.Friendship", b =>
@@ -382,7 +382,7 @@ namespace SocialMedia.Migrations
 
                     b.HasIndex("RequesterId");
 
-                    b.ToTable("Friendships");
+                    b.ToTable("Friendships", (string)null);
                 });
 
             modelBuilder.Entity("SocialMedia.Database.Models.Group", b =>
@@ -414,7 +414,7 @@ namespace SocialMedia.Migrations
 
                     b.HasIndex("OwnerId");
 
-                    b.ToTable("Groups");
+                    b.ToTable("Groups", (string)null);
                 });
 
             modelBuilder.Entity("SocialMedia.Database.Models.GroupMembership", b =>
@@ -441,7 +441,7 @@ namespace SocialMedia.Migrations
 
                     b.HasIndex("GroupId");
 
-                    b.ToTable("GroupMemberships");
+                    b.ToTable("GroupMemberships", (string)null);
                 });
 
             modelBuilder.Entity("SocialMedia.Database.Models.Message", b =>
@@ -486,7 +486,7 @@ namespace SocialMedia.Migrations
 
                     b.HasIndex("SenderId");
 
-                    b.ToTable("Messages");
+                    b.ToTable("Messages", (string)null);
                 });
 
             modelBuilder.Entity("SocialMedia.Database.Models.MessageMedia", b =>
@@ -516,7 +516,7 @@ namespace SocialMedia.Migrations
 
                     b.HasIndex("MessageId");
 
-                    b.ToTable("MessageMedias");
+                    b.ToTable("MessageMedias", (string)null);
                 });
 
             modelBuilder.Entity("SocialMedia.Database.Models.MessageReadReceipt", b =>
@@ -540,7 +540,7 @@ namespace SocialMedia.Migrations
 
                     b.HasIndex("ProfileId");
 
-                    b.ToTable("MessageReadReceipts");
+                    b.ToTable("MessageReadReceipts", (string)null);
                 });
 
             modelBuilder.Entity("SocialMedia.Database.Models.Notification", b =>
@@ -582,7 +582,7 @@ namespace SocialMedia.Migrations
 
                     b.HasIndex("TriggeredById");
 
-                    b.ToTable("Notifications");
+                    b.ToTable("Notifications", (string)null);
                 });
 
             modelBuilder.Entity("SocialMedia.Database.Models.PasswordResetSession", b =>
@@ -619,7 +619,7 @@ namespace SocialMedia.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("PasswordResetSessions");
+                    b.ToTable("PasswordResetSessions", (string)null);
                 });
 
             modelBuilder.Entity("SocialMedia.Database.Models.Post", b =>
@@ -668,7 +668,7 @@ namespace SocialMedia.Migrations
 
                     b.HasIndex("ProfileId");
 
-                    b.ToTable("Posts");
+                    b.ToTable("Posts", (string)null);
                 });
 
             modelBuilder.Entity("SocialMedia.Database.Models.PostMedia", b =>
@@ -698,7 +698,7 @@ namespace SocialMedia.Migrations
 
                     b.HasIndex("PostId");
 
-                    b.ToTable("PostMedias");
+                    b.ToTable("PostMedias", (string)null);
                 });
 
             modelBuilder.Entity("SocialMedia.Database.Models.Profile", b =>
@@ -746,7 +746,7 @@ namespace SocialMedia.Migrations
                     NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("FirstName", "LastName"), "gin");
                     NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex("FirstName", "LastName"), new[] { "gin_trgm_ops", "gin_trgm_ops" });
 
-                    b.ToTable("Profiles");
+                    b.ToTable("Profiles", (string)null);
                 });
 
             modelBuilder.Entity("SocialMedia.Database.Models.Reaction", b =>
@@ -783,7 +783,7 @@ namespace SocialMedia.Migrations
 
                     b.HasIndex("ProfileId");
 
-                    b.ToTable("Reactions");
+                    b.ToTable("Reactions", (string)null);
                 });
 
             modelBuilder.Entity("SocialMedia.Database.Models.RefreshToken", b =>
@@ -812,7 +812,7 @@ namespace SocialMedia.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("RefreshTokens");
+                    b.ToTable("RefreshTokens", (string)null);
                 });
 
             modelBuilder.Entity("SocialMedia.Database.Models.ReportedPost", b =>
@@ -857,7 +857,7 @@ namespace SocialMedia.Migrations
 
                     b.HasIndex("ResolvedById");
 
-                    b.ToTable("ReportedPosts");
+                    b.ToTable("ReportedPosts", (string)null);
                 });
 
             modelBuilder.Entity("SocialMedia.Database.Models.SavedPosts", b =>
@@ -885,7 +885,7 @@ namespace SocialMedia.Migrations
 
                     b.HasIndex("ProfileId");
 
-                    b.ToTable("SavedPosts");
+                    b.ToTable("SavedPosts", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
