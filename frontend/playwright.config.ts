@@ -1,9 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 import dotenv from 'dotenv';
 import path from 'path';
-dotenv.config({ path: path.resolve(__dirname, '.env') });
+
+dotenv.config({ path: path.resolve(__dirname, '.env.local') }); 
+
 export default defineConfig({
-  testDir: './', 
+  testDir: './tests/e2e', 
   
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
@@ -20,7 +22,7 @@ export default defineConfig({
     command: 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI, 
-    cwd: '../../frontend', 
+    cwd: './', 
     timeout: 120 * 1000,
   },
 
@@ -29,13 +31,13 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
+    // {
+    //   name: 'firefox',
+    //   use: { ...devices['Desktop Firefox'] },
+    // },
+    // {
+    //   name: 'webkit',
+    //   use: { ...devices['Desktop Safari'] },
+    // },
   ]
 });

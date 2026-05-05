@@ -1,4 +1,4 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database;

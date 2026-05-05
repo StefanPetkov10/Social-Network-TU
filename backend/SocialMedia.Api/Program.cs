@@ -136,6 +136,7 @@ namespace SocialMedia
 
             builder.Services.RegisterRepositories(typeof(ApplicationUser).Assembly);
             builder.Services.AddScoped<IRepository<GroupMembership, Guid>, BaseRepository<GroupMembership, Guid>>();
+            builder.Services.AddScoped<IFriendShipRepository, FriendShipRepository>();
             builder.Services.RegisterUserDefinedServices(typeof(IProfileService).Assembly);
             builder.Services.AddScoped<ISearchService, SearchService>();
             builder.Services.AddHostedService<SoftDeleteCleanupService>();
