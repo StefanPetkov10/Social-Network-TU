@@ -186,14 +186,15 @@ namespace SocialMedia
 
             var redisConnectionString = builder.Configuration.GetSection("Redis:ConnectionString").Value;
 
-            builder.Services.AddStackExchangeRedisCache(options =>
+            if (!string.IsNullOrEmpty(redisConnectionString))
             {
-                options.Configuration = redisConnectionString;
-            });
+                builder.Services.AddStackExchangeRedisCache(options => {
+                    options.Configuration = redisConnectionString;
+                });
 
-            //ConnectionMultiplexer (трябва за триенето на множество ключове наведнъж)
-            builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
-                StackExchange.Redis.ConnectionMultiplexer.Connect(redisConnectionString!));
+                builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
+                    StackExchange.Redis.ConnectionMultiplexer.Connect(redisConnectionString));
+            }
 
             var app = builder.Build();
 
@@ -217,9 +218,16 @@ namespace SocialMedia
             app.UseAuthentication();
             app.UseAuthorization();
 
+            var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "Uploads");
+
+            if (!Directory.Exists(uploadsPath))
+            {
+                Directory.CreateDirectory(uploadsPath);
+            }
+
             app.UseStaticFiles(new StaticFileOptions
             {
-                FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "Uploads")),
+                FileProvider = new PhysicalFileProvider(uploadsPath),
                 RequestPath = "/Uploads"
             });
 
