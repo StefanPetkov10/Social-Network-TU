@@ -69,6 +69,17 @@ namespace SocialMedia.Migrations
                 table: "Groups",
                 column: "OwnerId");
 
+            migrationBuilder.AddColumn<Guid>(
+                name: "GroupId",
+                table: "Posts",
+                type: "uuid",
+                nullable: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Posts_GroupId",
+                table: "Posts",
+                column: "GroupId");
+
             migrationBuilder.AddForeignKey(
                 name: "FK_Posts_Groups_GroupId",
                 table: "Posts",

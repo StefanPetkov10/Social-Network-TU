@@ -1,7 +1,8 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SocialMedia.Common;
+using SocialMedia.Data.Repository;
 using SocialMedia.Data.Repository.Interfaces;
 using SocialMedia.Database.Models;
 using SocialMedia.Database.Models.Enums;
@@ -23,7 +24,7 @@ namespace SocialMedia.Services
 
     public class FriendshipService : BaseService, IFriendshipService
     {
-        private readonly IRepository<Friendship, Guid> _friendshipRepository;
+        private readonly IFriendShipRepository _friendshipRepository;
         private readonly IRepository<Database.Models.Profile, Guid> _profileRepository;
         private readonly IRepository<Follow, Guid> _followRepository;
         private readonly IMapper _mapper;
@@ -33,7 +34,7 @@ namespace SocialMedia.Services
         private readonly TimeSpan _cacheTtl = TimeSpan.FromHours(24);
 
         public FriendshipService(
-            IRepository<Friendship, Guid> friendshipRepository,
+            IFriendShipRepository friendshipRepository,
             IRepository<Database.Models.Profile, Guid> profileRepository,
             IRepository<Follow, Guid> followRepository,
             IMapper mapper, INotificationService notificationService,
@@ -514,37 +515,8 @@ namespace SocialMedia.Services
 
             var cleanQuery = EscapeLikePattern.EscapeLikePatternMethod(query.Trim().ToLower());
 
-            var dbQuery = _friendshipRepository.QueryNoTracking()
-                .Where(f => (f.RequesterId == listOwnerProfile.Id || f.AddresseeId == listOwnerProfile.Id)
-                             && f.Status == FriendshipStatus.Accepted);
-
-            dbQuery = dbQuery.Where(f =>
-                    (f.RequesterId == listOwnerProfile.Id && (
-                        EF.Functions.ILike(f.Addressee.FirstName + " " + f.Addressee.LastName, $"%{cleanQuery}%") ||
-                        EF.Functions.ILike(f.Addressee.User.UserName, $"%{cleanQuery}%") ||
-                        EF.Functions.TrigramsWordSimilarity(f.Addressee.FirstName + " " + f.Addressee.LastName, cleanQuery) > 0.3 ||
-                        EF.Functions.TrigramsWordSimilarity(f.Addressee.User.UserName, cleanQuery) > 0.3
-                    )) ||
-                    (f.AddresseeId == listOwnerProfile.Id && (
-                        EF.Functions.ILike(f.Requester.FirstName + " " + f.Requester.LastName, $"%{cleanQuery}%") ||
-                        EF.Functions.ILike(f.Requester.User.UserName, $"%{cleanQuery}%") ||
-                        EF.Functions.TrigramsWordSimilarity(f.Requester.FirstName + " " + f.Requester.LastName, cleanQuery) > 0.3 ||
-                        EF.Functions.TrigramsWordSimilarity(f.Requester.User.UserName, cleanQuery) > 0.3
-                    ))
-                );
-
-            dbQuery = dbQuery.OrderByDescending(f => f.RequesterId == listOwnerProfile.Id
-                    ? Math.Max(EF.Functions.TrigramsWordSimilarity(f.Addressee.FirstName + " " + f.Addressee.LastName, cleanQuery),
-                               EF.Functions.TrigramsWordSimilarity(f.Addressee.User.UserName, cleanQuery))
-                    : Math.Max(EF.Functions.TrigramsWordSimilarity(f.Requester.FirstName + " " + f.Requester.LastName, cleanQuery),
-                               EF.Functions.TrigramsWordSimilarity(f.Requester.User.UserName, cleanQuery))
-                ).ThenByDescending(f => f.AcceptedAt).ThenByDescending(f => f.Id);
-
-            var friendships = await dbQuery
-                .Take(take)
-                .Include(f => f.Requester).ThenInclude(p => p.User)
-                .Include(f => f.Addressee).ThenInclude(p => p.User)
-                .ToListAsync();
+            var friendships = await _friendshipRepository.SearchFriendsAsync(
+                listOwnerProfile.Id, cleanQuery, take);
 
             var friendProfiles = friendships
                 .Select(f => f.RequesterId == listOwnerProfile.Id ? f.Addressee : f.Requester)
