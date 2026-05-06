@@ -646,3 +646,7 @@ export default function GroupPage({ params }: PageProps) {
     </ProtectedRoute>
     );
 }
+
+export function generateStaticParams() {
+  return [];
+}

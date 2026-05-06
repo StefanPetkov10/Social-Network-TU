@@ -677,3 +677,7 @@ function ProfilePageSkeleton() {
         </div>
     )
 }
+
+export function generateStaticParams() {
+  return [];
+}

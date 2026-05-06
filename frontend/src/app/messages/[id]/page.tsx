@@ -922,3 +922,7 @@ export default function ChatPage() {
         </div>
     );
 }
+
+export function generateStaticParams() {
+  return [];
+}
