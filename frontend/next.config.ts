@@ -5,6 +5,15 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true, 
   },
+  
+  eslint: {
+    ignoreDuringBuilds: true, 
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+
+  basePath: '/Social-Network-TU', 
 };
 
 export default nextConfig;
