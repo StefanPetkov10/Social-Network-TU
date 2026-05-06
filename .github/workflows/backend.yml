@@ -1,4 +1,4 @@
-name: Backend CI
+name: Backend CI and Deployment
 
 on:
   push:
@@ -9,12 +9,14 @@ on:
     branches: [ main ]
     paths:
       - 'backend/**'
+  workflow_dispatch: 
 
 jobs:
   build-and-analyze:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -52,10 +54,13 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
+  deploy:
       - name: Publish project for deployment
+        if: github.event_name == 'push'
         run: dotnet publish backend/SocialMedia.Api/SocialMedia.Api.csproj -c Release -o ./publish_output
 
       - name: Deploy to Azure Web App
+        if: github.event_name == 'push'
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'SocialMedia-TU' 
