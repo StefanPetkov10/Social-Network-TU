@@ -37,7 +37,7 @@ export default function EmailConfirmedPage() {
     }
 
     if (!userId || !token) {
-      router.replace("/auth/login");
+      router.replace("/Social-Network-TU/auth/login");
       return;
     }
 
@@ -70,11 +70,11 @@ export default function EmailConfirmedPage() {
     window.location.reload();
   };
   
-  const handleLogin = () => router.push("/auth/login");
+  const handleLogin = () => router.push("/Social-Network-TU/auth/login");
   const handleGoToResend = () => {
 
     startRegistrationFlow();
-    router.push("/auth/confirmation-sent");
+    router.push("/Social-Network-TU/auth/confirmation-sent");
   };
   const handleGoToHome = () => router.push("/");
 

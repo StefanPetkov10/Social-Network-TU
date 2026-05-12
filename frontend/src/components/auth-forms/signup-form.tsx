@@ -224,7 +224,7 @@ export default function SignupForm({ ...props }) {
               <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">Or continue with</FieldSeparator>
 
               <FieldDescription className="text-center">
-                Already have an account? <a href="/auth/login" className="text-primary hover:underline">Login</a>
+                Already have an account? <a href="/Social-Network-TU/auth/login" className="text-primary hover:underline">Login</a>
               </FieldDescription>
 
             </FieldGroup>

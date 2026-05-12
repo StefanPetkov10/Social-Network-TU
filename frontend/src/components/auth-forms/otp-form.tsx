@@ -38,7 +38,7 @@ export function OTPForm({ className, ...props }: React.ComponentProps<"div">) {
 
     const token = sessionStorage.getItem("resetPasswordSessionToken");
     if (!token) {
-      router.replace("/auth/login");
+      router.replace("/Social-Network-TU/auth/login");
       return;
     }
 
