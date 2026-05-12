@@ -1,7 +1,7 @@
 import ClientPage from "./client-page";
 
 export function generateStaticParams() {
-  return [];
+  return [{ id: "1" }]; 
 }
 
 export default function Page(props: any) {
