@@ -4,4 +4,6 @@ export function generateStaticParams() {
   return [];
 }
 
-export default ClientPage;
+export default function Page(props: any) {
+  return <ClientPage {...props} />;
+}
