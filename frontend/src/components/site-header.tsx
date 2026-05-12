@@ -47,7 +47,7 @@ export function SiteHeader({ user }: SiteHeaderProps) {
       console.warn("Server logout failed, clearing local session anyway.");
     }
     queryClient.clear();
-    router.replace("/auth/login");
+    router.replace("/Social-Network-TU/auth/login");
   };
 
   const handleHomeClick = (e: React.MouseEvent) => {

@@ -62,7 +62,7 @@ export const refreshAuthToken = async (): Promise<string | null> => {
       useAuthStore.getState().logout();
       const isOnAuthPage = typeof window !== "undefined" && window.location.pathname.startsWith("/auth");
       if (!isOnAuthPage && typeof window !== "undefined") {
-        window.location.href = "/auth/login";
+        window.location.href = "/Social-Network-TU/auth/login";
       }
       reject(error);
     } finally {

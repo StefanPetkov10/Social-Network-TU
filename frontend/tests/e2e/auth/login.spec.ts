@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Login Page', () => {
 
     test.beforeEach(async ({ page }) => {
-        await page.goto('/auth/login');
+        await page.goto('/Social-Network-TU/auth/login');
         await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
     });
 

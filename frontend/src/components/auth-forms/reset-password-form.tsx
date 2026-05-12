@@ -43,7 +43,7 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
 
     const token = sessionStorage.getItem("resetPasswordSessionToken");
     if (!token) {
-      router.replace("/auth/login");
+      router.replace("/Social-Network-TU/auth/login");
       return;
     }
 
@@ -99,7 +99,7 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
               : "You can now login with your new password.",
             duration: 5000,
           });
-          router.push(wasPasswordChangeFlow ? "/profile" : "/auth/login");
+          router.push(wasPasswordChangeFlow ? "/profile" : "/Social-Network-TU/auth/login");
         },
       }
     );
@@ -158,7 +158,7 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
               </Field>
 
               <FieldDescription className="text-center mt-4">
-                <a href="/auth/login" className="text-primary hover:underline">
+                <a href="/Social-Network-TU/auth/login" className="text-primary hover:underline">
                   Back to Login
                 </a>
               </FieldDescription>
