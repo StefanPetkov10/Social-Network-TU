@@ -16,7 +16,7 @@ import {
 import { Input } from "@frontend/components/ui/input";
 import { useForgotPasswordOtp, useLogin } from "@frontend/hooks/use-auth";
 import { useAuthStore } from "@frontend/stores/useAuthStore";
-import { Link } from "lucide-react";
+import Link from "next/link";
 
 export function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
   const [identifier, setIdentifier] = useState("");
