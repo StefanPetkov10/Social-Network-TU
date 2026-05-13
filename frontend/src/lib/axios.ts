@@ -1,7 +1,7 @@
 import axios, { AxiosError } from "axios";
 import { useAuthStore } from "@frontend/stores/useAuthStore";
 
-const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://socialmedia-tu-aaeycag4aeeuhge0.germanywestcentral-01.azurewebsites.net";
 
 const api = axios.create({
   baseURL: API_URL,
