@@ -428,8 +428,11 @@ FodyWeavers.xsd
 .env
 
 # ── SECRETS — never commit these ──────────────────────────────
-# appsettings.Development.json contains real DB/JWT/SMTP credentials
-src/SocialMedia/appsettings.Development.json
+# Блокираме всички Development файлове, където и да се намират в проекта
+**/appsettings.Development.json
+**/appsettings.*.json
+!**/appsettings.json
 
 # Runtime file uploads (user content)
+**/Uploads/
 src/SocialMedia/Uploads/

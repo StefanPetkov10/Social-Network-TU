@@ -54,15 +54,49 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
-  deploy:
       - name: Publish project for deployment
         if: github.event_name == 'push'
         run: dotnet publish backend/SocialMedia.Api/SocialMedia.Api.csproj -c Release -o ./publish_output
 
-      - name: Deploy to Azure Web App
+      - name: Upload artifact for deployment
         if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-app
+          path: ./publish_output
+
+  deploy:
+    if: github.event_name == 'push'
+    needs: build-and-analyze
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-app
+          path: ./publish_output
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Update Azure App Service Settings
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az webapp config appsettings set \
+              --name "SocialMedia-TU" \
+              --resource-group "SocialMedia-TU_group" \
+              --settings \
+                FrontendUrl="https://stefanpetkov10.github.io/Social-Network-TU" \
+                Email__Smtp__Password="${{ secrets.EMAIL_PASSWORD }}" \
+                JWT__SecretKey="${{ secrets.JWT_SECRET_KEY }}" \
+                ConnectionStrings__DefaultConnection="${{ secrets.DB_CONNECTION_STRING }}" \
+                Otp__Secret="${{ secrets.JWT_SECRET_KEY }}"
+
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'SocialMedia-TU' 
-          publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
           package: ./publish_output
