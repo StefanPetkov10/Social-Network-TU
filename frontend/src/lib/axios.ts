@@ -1,8 +1,10 @@
 import axios, { AxiosError } from "axios";
 import { useAuthStore } from "@frontend/stores/useAuthStore";
 
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://socialmedia-tu-aaeycag4aeeuhge0.germanywestcentral-01.azurewebsites.net";
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
+  baseURL: API_URL,
   withCredentials: true, 
   headers: {
     "Content-Type": "application/json",
@@ -43,8 +45,8 @@ export const refreshAuthToken = async (): Promise<string | null> => {
   isRefreshing = true;
   refreshPromise = new Promise(async (resolve, reject) => {
     try {
-      const { data } = await axios.post<{ success: boolean; data: { accessToken: string } }>(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/Auth/refresh`,
+      const { data } = await api.post<{ success: boolean; data: { accessToken: string } }>(
+        `/api/Auth/refresh`,
         {},
         { withCredentials: true, headers: { "Content-Type": "application/json" } }
       );
@@ -60,9 +62,8 @@ export const refreshAuthToken = async (): Promise<string | null> => {
     } catch (error) {
       processQueue(error, null);
       useAuthStore.getState().logout();
-      const isOnAuthPage = typeof window !== "undefined" && window.location.pathname.startsWith("/auth");
-
-      if (!window.location.pathname.includes('/auth/login')) {
+      
+      if (typeof window !== "undefined" && !window.location.pathname.includes('/auth/login')) {
         window.location.href = "/Social-Network-TU/auth/login";
       }
       
