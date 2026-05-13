@@ -14,6 +14,8 @@ const nextConfig: NextConfig = {
   },
 
   basePath: '/Social-Network-TU', 
+  assetPrefix: '/Social-Network-TU',
+  trailingSlash: true,
 };
 
 export default nextConfig;

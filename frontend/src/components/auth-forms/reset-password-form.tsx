@@ -3,6 +3,7 @@
 import { useState, useEffect, FormEvent, use } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { toast } from "sonner";
 
 import { cn, getAxiosErrorMessage } from "@frontend/lib/utils";
@@ -43,7 +44,7 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
 
     const token = sessionStorage.getItem("resetPasswordSessionToken");
     if (!token) {
-      router.replace("/Social-Network-TU/auth/login");
+      router.replace("/auth/login");
       return;
     }
 
@@ -99,7 +100,7 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
               : "You can now login with your new password.",
             duration: 5000,
           });
-          router.push(wasPasswordChangeFlow ? "/profile" : "/Social-Network-TU/auth/login");
+          router.push(wasPasswordChangeFlow ? "/profile" : "/auth/login");
         },
       }
     );
@@ -158,9 +159,9 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
               </Field>
 
               <FieldDescription className="text-center mt-4">
-                <a href="/Social-Network-TU/auth/login" className="text-primary hover:underline">
+                <Link href="/auth/login" className="text-primary hover:underline">
                   Back to Login
-                </a>
+                </Link>
               </FieldDescription>
             </FieldGroup>
           </form>

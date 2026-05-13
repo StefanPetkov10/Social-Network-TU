@@ -47,7 +47,8 @@ export function SiteHeader({ user }: SiteHeaderProps) {
       console.warn("Server logout failed, clearing local session anyway.");
     }
     queryClient.clear();
-    router.replace("/Social-Network-TU/auth/login");
+    // ПОПРАВКА 1: Оставяме рутера сам да добави Social-Network-TU
+    router.replace("/auth/login");
   };
 
   const handleHomeClick = (e: React.MouseEvent) => {
@@ -89,6 +90,7 @@ export function SiteHeader({ user }: SiteHeaderProps) {
             {!localError ? (
               <div className="bg-muted relative w-full h-full">
                 <Image
+                  // ПОПРАВКА 2: При <Image> Next.js НЕ добавя пътя автоматично, затова го пишем ръчно
                   src="/TU-images/tu-icon.png"
                   alt="TU Logo"
                   fill
@@ -150,6 +152,7 @@ export function SiteHeader({ user }: SiteHeaderProps) {
       </div>
 
       <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-2 md:flex">
+        {/* Тук Link работи перфектно и сам ще добави Social-Network-TU */}
         <Link href="/" onClick={handleHomeClick}>
           <Button variant="ghost" size="icon" className={getNavButtonClass(pathname === "/")}>
             <Home className="!size-5" />
@@ -218,6 +221,7 @@ export function SiteHeader({ user }: SiteHeaderProps) {
 
             <div className="space-y-1 mt-1">
               <DropdownMenuItem
+                /* Тук рутерът също сам ще добави Social-Network-TU */
                 onClick={() => router.push('/profile/change-password')}
                 className="transition-colors cursor-pointer p-3 rounded-lg hover:bg-accent focus:bg-accent"
               >

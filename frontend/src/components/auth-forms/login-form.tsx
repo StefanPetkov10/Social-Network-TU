@@ -16,6 +16,7 @@ import {
 import { Input } from "@frontend/components/ui/input";
 import { useForgotPasswordOtp, useLogin } from "@frontend/hooks/use-auth";
 import { useAuthStore } from "@frontend/stores/useAuthStore";
+import { Link } from "lucide-react";
 
 export function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
   const [identifier, setIdentifier] = useState("");
@@ -178,9 +179,9 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
 
               <FieldDescription className="text-center">
                 Don&apos;t have an account?{" "}
-                <a href="/auth/signup" className="text-primary">
+                <Link href="/auth/signup" className="text-primary">
                   Sign up
-                </a>
+                </Link>
               </FieldDescription>
             </FieldGroup>
           </form>

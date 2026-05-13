@@ -21,7 +21,7 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
     if (isInitializing) return;
 
     if (!accessToken) {
-      router.replace("/Social-Network-TU/auth/login");
+      router.replace("/auth/login");
       return;
     }
 
@@ -40,9 +40,9 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
           router.replace("/");
           return;
         }
-      } catch (error) {
+        } catch (error) {
         console.error("Грешка при декодиране на тоукъна:", error);
-        router.replace("/Social-Network-TU/auth/login");
+        router.replace("/auth/login");
         return;
       }
     }

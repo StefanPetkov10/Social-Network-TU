@@ -42,7 +42,7 @@ export default function ConfirmationSentPage() {
     }
 
     if (isMounted && !isInProgress) {
-      router.replace("/Social-Network-TU/auth/login");
+      router.replace("/auth/login");
       return;
     }
     
@@ -160,7 +160,7 @@ export default function ConfirmationSentPage() {
           </div>
 
           <Button 
-            onClick={() => router.push("/Social-Network-TU/auth/login")}
+            onClick={() => router.push("/auth/login")}
             variant="ghost"
             className="w-full"
           >
