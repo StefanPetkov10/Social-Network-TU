@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -224,7 +225,7 @@ export default function SignupForm({ ...props }) {
               <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">Or continue with</FieldSeparator>
 
               <FieldDescription className="text-center">
-                Already have an account? <a href="/Social-Network-TU/auth/login" className="text-primary hover:underline">Login</a>
+                Already have an account? <Link href="/auth/login" className="text-primary hover:underline">Login</Link>
               </FieldDescription>
 
             </FieldGroup>

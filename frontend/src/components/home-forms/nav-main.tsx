@@ -1,6 +1,7 @@
 "use client"
 
 import { ChevronRight, type LucideIcon } from "lucide-react"
+import Link from "next/link"
 
 import {
   Collapsible,
@@ -55,7 +56,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
                     group-data-[collapsible=icon]:hover:bg-primary/10 /* Хубавия син ховър */
                 "
               >
-                <a href={item.url} className="flex items-center gap-4 group-data-[collapsible=icon]:justify-center">
+                <Link href={item.url} className="flex items-center gap-4 group-data-[collapsible=icon]:justify-center">
                   <div
                     className="
                         relative
@@ -75,7 +76,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
                   </div>
 
                   <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
-                </a>
+                </Link>
               </SidebarMenuButton>
 
               {item.items && item.items.length > 0 && (
@@ -97,11 +98,11 @@ export function NavMain({ items }: { items: NavItem[] }) {
                             asChild
                             className="h-10 rounded-lg text-sm text-muted-foreground hover:bg-gray-50 hover:text-primary"
                           >
-                            <a href={subItem.url}>
+                            <Link href={subItem.url}>
                               <span className="font-medium">
                                 {subItem.title}
                               </span>
-                            </a>
+                            </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                       ))}

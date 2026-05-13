@@ -17,6 +17,7 @@ import { jwtDecode } from "jwt-decode"
 import { useAuthStore } from "@frontend/stores/useAuthStore"
 
 import { NavMain } from "@frontend/components/home-forms/nav-main"
+import Link from "next/link"
 import { NavSecondary } from "@frontend/components/home-forms/nav-secondary"
 import {
   Sidebar,
@@ -113,7 +114,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
       className="top-16 h-[calc(100vh-4rem)] border-r z-30"
     >
       <SidebarHeader className="p-4 pb-2">
-        <a
+        <Link
           href="/profile"
           className="flex items-center gap-4 p-3 hover:bg-sidebar-accent rounded-xl transition-colors group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-1"
         >
@@ -126,7 +127,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
             <span className="truncate font-bold text-lg text-foreground">{user.name}</span>
             <span className="truncate text-sm text-muted-foreground">Студент @ ТУ-София</span>
           </div>
-        </a>
+        </Link>
       </SidebarHeader>
 
       <SidebarContent className="px-3 flex flex-col h-full gap-6 [&_svg]:size-6 [&_span]:text-base [&_a]:py-3">
