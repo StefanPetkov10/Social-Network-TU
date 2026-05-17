@@ -22,6 +22,7 @@ using SocialMedia.Validators.CommentValidation;
 using SocialMedia.Validators.GroupValidation;
 using SocialMedia.Validators.PostValidation;
 using SocialMedia.Validators.Profile_Validation;
+using Azure.Identity;
 
 namespace SocialMedia
 {
@@ -31,6 +32,15 @@ namespace SocialMedia
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            var keyVaultUrl = builder.Configuration["KeyVaultUrl"];
+
+            if (!string.IsNullOrEmpty(keyVaultUrl))
+            {
+                builder.Configuration.AddAzureKeyVault(
+                    new Uri(keyVaultUrl),
+                    new DefaultAzureCredential());
+            }
+
             builder.Logging.ClearProviders();
             builder.Logging.SetMinimumLevel(LogLevel.Information);
             builder.Host.UseNLog();
@@ -39,6 +49,7 @@ namespace SocialMedia
 
             builder.Services.AddSignalR();
 
+            // When this runs, it will now pull the connection string from Key Vault if deployed!
             builder.Services.AddDbContext<SocialMediaDbContext>(options =>
                 options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -66,6 +77,7 @@ namespace SocialMedia
                     ValidateAudience = true,
                     ValidAudience = builder.Configuration["JWT:Audience"],
                     ValidateIssuerSigningKey = true,
+                    // When this runs, it will also pull the SecretKey from Key Vault if I add it later!
                     IssuerSigningKey = new SymmetricSecurityKey(
                         System.Text.Encoding.UTF8.GetBytes(builder.Configuration["JWT:SecretKey"])
                     ),
@@ -249,4 +261,3 @@ namespace SocialMedia
         }
     }
 }
-
