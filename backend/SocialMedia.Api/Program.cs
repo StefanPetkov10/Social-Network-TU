@@ -1,4 +1,6 @@
 using AutoMapper;
+using Azure.Identity;
+using Azure.Storage.Blobs;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -7,6 +9,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using NLog.Web;
+using SocialMedia.Api.Services.Interfaces;
 using SocialMedia.AutoMapper;
 using SocialMedia.Data.Repository;
 using SocialMedia.Data.Repository.Interfaces;
@@ -22,7 +25,6 @@ using SocialMedia.Validators.CommentValidation;
 using SocialMedia.Validators.GroupValidation;
 using SocialMedia.Validators.PostValidation;
 using SocialMedia.Validators.Profile_Validation;
-using Azure.Identity;
 
 namespace SocialMedia
 {
@@ -40,6 +42,15 @@ namespace SocialMedia
                     new Uri(keyVaultUrl),
                     new DefaultAzureCredential());
             }
+
+            var blobConnectionString = builder.Configuration.GetConnectionString("BlobStorage");
+
+            if (!string.IsNullOrEmpty(blobConnectionString))
+            {
+                builder.Services.AddSingleton(x => new BlobServiceClient(blobConnectionString));
+            }
+
+            builder.Services.AddScoped<IFileUploadService, FileUploadService>();
 
             builder.Logging.ClearProviders();
             builder.Logging.SetMinimumLevel(LogLevel.Information);
