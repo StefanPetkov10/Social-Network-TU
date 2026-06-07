@@ -171,5 +171,14 @@ namespace SocialMedia.Controllers
             }
             return NotFound(response);
         }
+
+        [HttpGet("media/{mediaId:guid}/download")]
+        public async Task<IActionResult> DownloadMedia(Guid mediaId)
+        {
+            var result = await _postService.DownloadMediaAsync(User, mediaId);
+            if (result == null) return NotFound();
+
+            return File(result.Value.Content, result.Value.ContentType, result.Value.FileName);
+        }
     }
 }
