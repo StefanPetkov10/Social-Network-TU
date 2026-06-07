@@ -9,7 +9,9 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using NLog.Web;
+using SocialMedia.Api.Configuration;
 using SocialMedia.Api.Services.Interfaces;
+using SocialMedia.Services;
 using SocialMedia.AutoMapper;
 using SocialMedia.Data.Repository;
 using SocialMedia.Data.Repository.Interfaces;
@@ -17,8 +19,6 @@ using SocialMedia.Database;
 using SocialMedia.Database.Models;
 using SocialMedia.Extensions;
 using SocialMedia.Hubs;
-using SocialMedia.Services;
-using SocialMedia.Services.Caching;
 using SocialMedia.Services.Interfaces;
 using SocialMedia.Validators;
 using SocialMedia.Validators.CommentValidation;
@@ -50,7 +50,8 @@ namespace SocialMedia
                 builder.Services.AddSingleton(x => new BlobServiceClient(blobConnectionString));
             }
 
-            builder.Services.AddScoped<IFileUploadService, FileUploadService>();
+            builder.Services.Configure<BlobStorageOptions>(
+                builder.Configuration.GetSection(BlobStorageOptions.SectionName));
 
             builder.Logging.ClearProviders();
             builder.Logging.SetMinimumLevel(LogLevel.Information);
@@ -60,7 +61,6 @@ namespace SocialMedia
 
             builder.Services.AddSignalR();
 
-            // When this runs, it will now pull the connection string from Key Vault if deployed!
             builder.Services.AddDbContext<SocialMediaDbContext>(options =>
                 options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -88,7 +88,6 @@ namespace SocialMedia
                     ValidateAudience = true,
                     ValidAudience = builder.Configuration["JWT:Audience"],
                     ValidateIssuerSigningKey = true,
-                    // When this runs, it will also pull the SecretKey from Key Vault if I add it later!
                     IssuerSigningKey = new SymmetricSecurityKey(
                         System.Text.Encoding.UTF8.GetBytes(builder.Configuration["JWT:SecretKey"])
                     ),
@@ -227,7 +226,6 @@ namespace SocialMedia
                 await RoleSeeder.SeedRolesAndAdminAsync(scope.ServiceProvider, config);
             }
 
-            // Configure the HTTP request pipeline.  
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();

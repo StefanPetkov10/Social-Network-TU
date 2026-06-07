@@ -1,6 +1,8 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using SocialMedia.Api.Configuration;
 using SocialMedia.Api.Services.Interfaces;
 using SocialMedia.Common;
 using SocialMedia.Data.Repository.Interfaces;
@@ -15,6 +17,9 @@ namespace SocialMedia.Services
 {
     public class PostService : BaseService, IPostService
     {
+        private const string PreviewFileName = "preview.jpg";
+        private const string ThumbnailFileName = "thumb.jpg";
+
         private readonly IRepository<Post, Guid> _postRepository;
         private readonly IRepository<Reaction, Guid> _reactionRepository;
         private readonly IRepository<PostMedia, Guid> _postMediaRepository;
@@ -23,7 +28,8 @@ namespace SocialMedia.Services
         private readonly IRepository<Friendship, Guid> _friendshipRepository;
         private readonly IRepository<Follow, Guid> _followRepository;
         private readonly IRepository<Comment, Guid> _commentRepository;
-        private readonly IFileUploadService _fileUploadService; 
+        private readonly IFileUploadService _fileUploadService;
+        private readonly BlobStorageOptions _blobOptions;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IMapper _mapper;
 
@@ -33,7 +39,8 @@ namespace SocialMedia.Services
             IRepository<Database.Models.Profile, Guid> profileRepository,
             IRepository<Friendship, Guid> friendshipRepository,
             IRepository<Follow, Guid> followRepository,
-            IFileUploadService fileUploadService, 
+            IFileUploadService fileUploadService,
+            IOptions<BlobStorageOptions> blobOptions,
             IRepository<Group, Guid> groupRepository,
             IRepository<PostMedia, Guid> postMediaRepository,
             IHttpContextAccessor httpContextAccessor,
@@ -46,7 +53,8 @@ namespace SocialMedia.Services
             _friendshipRepository = friendshipRepository;
             _profileRepository = profileRepository;
             _followRepository = followRepository;
-            _fileUploadService = fileUploadService; 
+            _fileUploadService = fileUploadService;
+            _blobOptions = blobOptions.Value;
             _groupRepository = groupRepository;
             _postMediaRepository = postMediaRepository;
             _httpContextAccessor = httpContextAccessor;
@@ -90,15 +98,18 @@ namespace SocialMedia.Services
                     if (mediaType == MediaType.Other)
                         return ApiResponse<PostDto>.ErrorResponse($"File '{file.FileName}' is not supported type.");
 
-                    var azureBlobUrl = await _fileUploadService.UploadFileAsync(file, "posts");
+                    var mediaId = Guid.NewGuid();
+
+                    var relativePath = await _fileUploadService.UploadOriginalAsync(
+                        file, _blobOptions.PostsFolder, mediaId);
 
                     post.Media.Add(new PostMedia
                     {
-                        Id = Guid.NewGuid(),
+                        Id = mediaId,
                         PostId = post.Id,
-                        FilePath = azureBlobUrl, 
+                        FilePath = relativePath,
                         MediaType = mediaType,
-                        FileName = file.FileName,
+                        FileName = $"full{extension}",
                         Order = order++
                     });
                 }
@@ -308,15 +319,18 @@ namespace SocialMedia.Services
                     string extension = Path.GetExtension(file.FileName).ToLower();
                     MediaType mediaType = GetMediaType(extension);
 
-                    var azureBlobUrl = await _fileUploadService.UploadFileAsync(file, "posts");
+                    var mediaId = Guid.NewGuid();
+
+                    var relativePath = await _fileUploadService.UploadOriginalAsync(
+                        file, _blobOptions.PostsFolder, mediaId);
 
                     var media = new PostMedia
                     {
-                        Id = Guid.NewGuid(),
-                        FilePath = azureBlobUrl, 
+                        Id = mediaId,
+                        FilePath = relativePath,
                         PostId = post.Id,
                         MediaType = mediaType,
-                        FileName = file.FileName,
+                        FileName = $"full{extension}",
                         Order = ++order
                     };
                     postToAddMedia.UpdatedDate = DateTime.UtcNow;
@@ -390,29 +404,19 @@ namespace SocialMedia.Services
                 .Where(m => m.Post.Visibility == PostVisibility.Public || isOwner ||
                            (m.Post.Visibility == PostVisibility.FriendsOnly && isFriend));
 
-            var baseUrl = $"{_httpContextAccessor.HttpContext!.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}";
-
-            var images = await query.Where(m => m.MediaType == MediaType.Image)
+            var imageRows = await query.Where(m => m.MediaType == MediaType.Image)
                 .OrderByDescending(m => m.Post.CreatedDate).Take(6)
-                .Select(m => new PostMediaDto
-                {
-                    Id = m.Id,
-                    Url = m.FilePath.StartsWith("http") ? m.FilePath : $"{baseUrl}/{m.FilePath}",
-                    MediaType = m.MediaType,
-                    FileName = m.FileName,
-                    Order = m.Order
-                }).ToListAsync();
+                .Select(m => new { m.Id, m.FilePath, m.MediaType, m.FileName, m.Order })
+                .ToListAsync();
 
-            var documents = await query.Where(m => m.MediaType == MediaType.Document)
+            var images = imageRows.Select(m => BuildMediaDto(m.Id, m.FilePath, m.MediaType, m.FileName, m.Order)).ToList();
+
+            var documentRows = await query.Where(m => m.MediaType == MediaType.Document)
                 .OrderByDescending(m => m.Post.CreatedDate).Take(3)
-                .Select(m => new PostMediaDto
-                {
-                    Id = m.Id,
-                    Url = m.FilePath.StartsWith("http") ? m.FilePath : $"{baseUrl}/{m.FilePath}",
-                    MediaType = m.MediaType,
-                    FileName = m.FileName,
-                    Order = m.Order
-                }).ToListAsync();
+                .Select(m => new { m.Id, m.FilePath, m.MediaType, m.FileName, m.Order })
+                .ToListAsync();
+
+            var documents = documentRows.Select(m => BuildMediaDto(m.Id, m.FilePath, m.MediaType, m.FileName, m.Order)).ToList();
 
             return ApiResponse<ProfileMediaDto>.SuccessResponse(new ProfileMediaDto { Images = images, Documents = documents });
         }
@@ -453,20 +457,14 @@ namespace SocialMedia.Services
                                          m.MediaType == MediaType.Gif);
             }
 
-            var baseUrl = $"{_httpContextAccessor.HttpContext!.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}";
-
-            var mediaList = await query
+            var rows = await query
                 .OrderByDescending(m => m.Post.CreatedDate)
                 .Skip(skip)
                 .Take(take)
-                .Select(m => new PostMediaDto
-                {
-                    Id = m.Id,
-                    Url = m.FilePath.StartsWith("http") ? m.FilePath : $"{baseUrl}/{m.FilePath}",
-                    MediaType = m.MediaType,
-                    FileName = m.FileName,
-                    Order = m.Order
-                }).ToListAsync();
+                .Select(m => new { m.Id, m.FilePath, m.MediaType, m.FileName, m.Order })
+                .ToListAsync();
+
+            var mediaList = rows.Select(m => BuildMediaDto(m.Id, m.FilePath, m.MediaType, m.FileName, m.Order)).ToList();
 
             return ApiResponse<IEnumerable<PostMediaDto>>.SuccessResponse(mediaList, "Profile media retrieved.");
         }
@@ -507,22 +505,27 @@ namespace SocialMedia.Services
                                          m.MediaType == MediaType.Gif);
             }
 
-            var baseUrl = $"{_httpContextAccessor.HttpContext!.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}";
-
-            var mediaList = await query
+            var rows = await query
                 .OrderByDescending(m => m.Post.CreatedDate)
                 .Skip(skip)
                 .Take(take)
-                .Select(m => new PostMediaDto
-                {
-                    Id = m.Id,
-                    Url = m.FilePath.StartsWith("http") ? m.FilePath : $"{baseUrl}/{m.FilePath}",
-                    MediaType = m.MediaType,
-                    FileName = m.FileName,
-                    Order = m.Order
-                }).ToListAsync();
+                .Select(m => new { m.Id, m.FilePath, m.MediaType, m.FileName, m.Order })
+                .ToListAsync();
+
+            var mediaList = rows.Select(m => BuildMediaDto(m.Id, m.FilePath, m.MediaType, m.FileName, m.Order)).ToList();
 
             return ApiResponse<IEnumerable<PostMediaDto>>.SuccessResponse(mediaList, "Group media retrieved.");
+        }
+
+        public async Task<(Stream Content, string ContentType, string FileName)?> DownloadMediaAsync(
+            ClaimsPrincipal userClaims, Guid mediaId)
+        {
+            var media = await _postMediaRepository.QueryNoTracking()
+                .FirstOrDefaultAsync(m => m.Id == mediaId);
+
+            if (media == null) return null;
+
+            return await _fileUploadService.DownloadAsync(media.FilePath);
         }
 
         private ApiResponse<PostDto> SuccessPostDto(Post post, Database.Models.Profile profile, string message, Guid? currentUserId = null)
@@ -542,7 +545,6 @@ namespace SocialMedia.Services
 
             dto.LikesCount = post.LikesCount;
 
-
             if (currentUserId.HasValue && post.Reactions != null)
             {
                 var myReaction = post.Reactions.FirstOrDefault(r => r.ProfileId == currentUserId.Value);
@@ -560,18 +562,46 @@ namespace SocialMedia.Services
                 dto.TopReactionType = topReaction;
             }
 
-            var baseUrl = $"{_httpContextAccessor.HttpContext!.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}";
-
             dto.Media = post.Media.Select(m => new PostMediaDto
             {
                 Id = m.Id,
-                Url = m.FilePath.StartsWith("http") ? m.FilePath : $"{baseUrl}/{m.FilePath}",
+                Url = _fileUploadService.GetPublicUrl(m.FilePath),
+                PreviewUrl = m.MediaType == MediaType.Image
+                    ? _fileUploadService.GetPublicUrl(GetSiblingBlobPath(m.FilePath, PreviewFileName))
+                    : null,
+                ThumbnailUrl = m.MediaType == MediaType.Image
+                    ? _fileUploadService.GetPublicUrl(GetSiblingBlobPath(m.FilePath, ThumbnailFileName))
+                    : null,
                 MediaType = m.MediaType,
                 FileName = m.FileName,
                 Order = m.Order
             }).ToList();
 
             return ApiResponse<PostDto>.SuccessResponse(dto, message);
+        }
+
+        private PostMediaDto BuildMediaDto(Guid id, string filePath, MediaType mediaType, string fileName, int order)
+        {
+            return new PostMediaDto
+            {
+                Id = id,
+                Url = _fileUploadService.GetPublicUrl(filePath),
+                PreviewUrl = mediaType == MediaType.Image
+                    ? _fileUploadService.GetPublicUrl(GetSiblingBlobPath(filePath, PreviewFileName))
+                    : null,
+                ThumbnailUrl = mediaType == MediaType.Image
+                    ? _fileUploadService.GetPublicUrl(GetSiblingBlobPath(filePath, ThumbnailFileName))
+                    : null,
+                MediaType = mediaType,
+                FileName = fileName,
+                Order = order
+            };
+        }
+
+        private static string GetSiblingBlobPath(string fullPath, string siblingFileName)
+        {
+            var lastSlash = fullPath.LastIndexOf('/');
+            return lastSlash >= 0 ? $"{fullPath[..lastSlash]}/{siblingFileName}" : siblingFileName;
         }
 
         private MediaType GetMediaType(string extension)

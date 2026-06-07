@@ -33,5 +33,8 @@ namespace SocialMedia.Services.Interfaces
             MediaTypeGroup mediaTypeGroup,
             int skip,
             int take);
+
+        Task<(Stream Content, string ContentType, string FileName)?> DownloadMediaAsync(
+            ClaimsPrincipal userClaims, Guid mediaId);
     }
 }
