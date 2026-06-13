@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.Mail;
 using System.Text.Json;
-using Microsoft.Azure.ServiceBus;
+using Azure.Storage.Queues;
 using SocialMedia.Api.DTOs.Email;
 using SocialMedia.Service.Interfaces;
 
