@@ -1,74 +1,52 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using System.Threading.Tasks;
+using Azure.Storage.Queues;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using SocialMedia.Service;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using Xunit;
 
 namespace SocialMedia.Api.Tests.Services
 {
     public class EmailSenderServiceTests
     {
-        private IConfiguration BuildFakeConfiguration(Dictionary<string, string> configuration)
-        {
-            return new ConfigurationBuilder()
-                .AddInMemoryCollection(configuration)
-                .Build();
-
-        }
-
-        #region SendEmailAsync
-
         [Fact]
-        public async Task SendEmailAsync_WithValidConfig_AttemptToSendAndThrowsNetworkError()
+        public async Task SendEmailAsync_WithValidData_PutsMessageInQueue()
         {
-            //Arrange
-            var inMemorySttings = new Dictionary<string, string>
-            {
-                {"Email:Smtp:Host", "fake.smtp.server.com"},
-                {"Email:Smtp:Port", "587"},
-                {"Email:Smtp:User", "test_user@gmail.com"},
-                {"Email:Smtp:Password", "fake_password"},
-                {"Email:Smtp:Sender", "test_sender@gmail.com"}
-            };
+            // Arrange
+            var queueClientMock = new Mock<QueueClient>();
 
-            var config = BuildFakeConfiguration(inMemorySttings);
-            var service = new EmailSenderService(config);
+            queueClientMock
+                .Setup(q => q.SendMessageAsync(It.IsAny<string>()))
+                .ReturnsAsync((Azure.Response<Azure.Storage.Queues.Models.SendReceipt>)null!);
 
-            //Act and Assert
-            await Assert.ThrowsAnyAsync<Exception>(() => 
-                service.SendEmailAsync("target@example.com", "Test Subject", "Test Body"));
+            var logger = NullLogger<EmailSenderService>.Instance;
+
+            var service = new EmailSenderService(queueClientMock.Object, logger);
+
+            // Act
+            await service.SendEmailAsync("target@example.com", "Test Subject", "Test Body");
+
+            // Assert
+            queueClientMock.Verify(q => q.SendMessageAsync(It.IsAny<string>()), Times.Once);
         }
 
         [Fact]
-        public async Task SendEmailAsync_WithMissingSmtpSection_ThrowsNullReferenceException()
+        public async Task SendEmailAsync_WithEmptySubject_StillPutsMessageInQueue()
         {
-            var inMemorySttings = new Dictionary<string, string>();
-            var config = BuildFakeConfiguration(inMemorySttings);
-            var service = new EmailSenderService(config);
+            // Arrange
+            var queueClientMock = new Mock<QueueClient>();
+            queueClientMock
+                .Setup(q => q.SendMessageAsync(It.IsAny<string>()))
+                .ReturnsAsync((Azure.Response<Azure.Storage.Queues.Models.SendReceipt>)null!);
 
-            await Assert.ThrowsAsync<ArgumentNullException>(() =>
-                service.SendEmailAsync("target@example.com", "Test Subject", "Test Body"));
+            var logger = NullLogger<EmailSenderService>.Instance;
+            var service = new EmailSenderService(queueClientMock.Object, logger);
+
+            // Act
+            await service.SendEmailAsync("target@example.com", "", "Test Body");
+
+            // Assert
+            queueClientMock.Verify(q => q.SendMessageAsync(It.IsAny<string>()), Times.Once);
         }
-
-        [Fact]
-        public async Task SendEmailAsync_WithInvalidPortFormat_ThrowsFormatException()
-        {
-            var inMemorySettings = new Dictionary<string, string>
-            {
-                {"Email:Smtp:Host", "smtp.gmail.com"},
-                {"Email:Smtp:Port", "xxx"}, 
-                {"Email:Smtp:User", "test_user@gmail.com"},
-                {"Email:Smtp:Password", "fake_password"},
-                {"Email:Smtp:Sender", "test_sender@gmail.com"}
-            };
-
-            var fakeConfig = BuildFakeConfiguration(inMemorySettings);
-            var emailService = new EmailSenderService(fakeConfig);
-
-            await Assert.ThrowsAsync<FormatException>(() =>
-                emailService.SendEmailAsync("target@example.com", "Test Subject", "Test Body"));
-        }
-
-        #endregion
     }
 }
