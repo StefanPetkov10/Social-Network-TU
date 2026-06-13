@@ -56,7 +56,7 @@ namespace SocialMedia
                     MessageEncoding = QueueMessageEncoding.Base64
                 };
                 builder.Services.AddSingleton(sp =>
-                    new QueueClient(blobConnectionString, "email-queue", queueOptions));
+                    new Azure.Storage.Queues.QueueClient(blobConnectionString, "email-queue", queueOptions));
             }
 
             builder.Services.Configure<BlobStorageOptions>(
