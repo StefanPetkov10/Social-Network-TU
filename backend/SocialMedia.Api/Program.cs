@@ -1,9 +1,11 @@
 using AutoMapper;
 using Azure.Identity;
 using Azure.Storage.Blobs;
+using Azure.Storage.Queues;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Azure.ServiceBus;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
@@ -11,7 +13,6 @@ using Microsoft.OpenApi.Models;
 using NLog.Web;
 using SocialMedia.Api.Configuration;
 using SocialMedia.Api.Services.Interfaces;
-using SocialMedia.Services;
 using SocialMedia.AutoMapper;
 using SocialMedia.Data.Repository;
 using SocialMedia.Data.Repository.Interfaces;
@@ -19,6 +20,7 @@ using SocialMedia.Database;
 using SocialMedia.Database.Models;
 using SocialMedia.Extensions;
 using SocialMedia.Hubs;
+using SocialMedia.Services;
 using SocialMedia.Services.Interfaces;
 using SocialMedia.Validators;
 using SocialMedia.Validators.CommentValidation;
@@ -48,6 +50,13 @@ namespace SocialMedia
             if (!string.IsNullOrEmpty(blobConnectionString))
             {
                 builder.Services.AddSingleton(x => new BlobServiceClient(blobConnectionString));
+
+                var queueOptions = new QueueClientOptions
+                {
+                    MessageEncoding = QueueMessageEncoding.Base64
+                };
+                builder.Services.AddSingleton(sp =>
+                    new Azure.Storage.Queues.QueueClient(blobConnectionString, "email-queue", queueOptions));
             }
 
             builder.Services.Configure<BlobStorageOptions>(

@@ -1,37 +1,37 @@
 ﻿using System.Net;
 using System.Net.Mail;
+using System.Text.Json;
+using Azure.Storage.Queues;
+using SocialMedia.Api.DTOs.Email;
 using SocialMedia.Service.Interfaces;
 
 namespace SocialMedia.Service
 {
     public class EmailSenderService : IEmailSenderService
     {
-        private readonly IConfiguration _config;
+        private readonly QueueClient _queueClient;
+        private readonly ILogger<EmailSenderService> _logger;
 
-        public EmailSenderService(IConfiguration config)
+        public EmailSenderService(QueueClient queueClient, ILogger<EmailSenderService> logger)
         {
-            _config = config;
+            _queueClient = queueClient;
+            _logger = logger;
         }
 
         public async Task SendEmailAsync(string toEmail, string subject, string body)
         {
-            var smtpSection = _config.GetSection("Email:Smtp");
-            var client = new SmtpClient(smtpSection["Host"], int.Parse(smtpSection["Port"]))
+            var message = new EmailMessage
             {
-                Credentials = new NetworkCredential(smtpSection["User"], smtpSection["Password"]),
-                EnableSsl = true
-            };
-
-            var mailMessage = new MailMessage
-            {
-                From = new MailAddress(smtpSection["Sender"]),
+                To = toEmail,
                 Subject = subject,
-                Body = body,
-                IsBodyHtml = true
+                Body = body
             };
 
-            mailMessage.To.Add(toEmail);
-            await client.SendMailAsync(mailMessage);
+            var json = JsonSerializer.Serialize(message);
+
+            await _queueClient.SendMessageAsync(json);
+
+            _logger.LogInformation("Email queued for {To} (subject: {Subject})", toEmail, subject);
         }
     }
 }

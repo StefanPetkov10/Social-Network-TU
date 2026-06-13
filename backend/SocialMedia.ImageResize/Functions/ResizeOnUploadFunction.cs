@@ -29,7 +29,7 @@ namespace SocialMedia.ImageResize.Functions
 
         [Function(nameof(ResizeOnUploadFunction))]
         public async Task Run(
-            [BlobTrigger("user-uploads/{name}", Connection = "BlobStorageConnection")]
+            [BlobTrigger("user-uploads/{name}", Source = BlobTriggerSource.EventGrid, Connection = "BlobStorageConnection")]
             Stream blobStream,
             string name)
         {
